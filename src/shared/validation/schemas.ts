@@ -229,24 +229,7 @@ export const fileExistsSchema = z.object({
 export const getAppVersionSchema = z.object({});
 
 export const getAppPathSchema = z.object({
-	name: z.enum([
-		"home",
-		"appData",
-		"userData",
-		"sessionData",
-		"temp",
-		"exe",
-		"module",
-		"desktop",
-		"documents",
-		"downloads",
-		"music",
-		"pictures",
-		"videos",
-		"recent",
-		"logs",
-		"crashDumps",
-	]),
+	// Empty object - this endpoint returns all paths at once
 });
 
 export const openExternalSchema = z.object({

@@ -35,9 +35,7 @@ export function wrapIPCHandler<TArgs, TResult>(
 ) => Promise<{ success: true; data: TResult } | ErrorResponse> {
 	return async (_event: unknown, args: TArgs) => {
 		try {
-			console.log("🔧 IPC Handler called with args:", args);
 			const data = await handler(args);
-			console.log("✅ IPC Handler success");
 			return {
 				success: true,
 				data,

@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { prisma } from "./client-CzweRmzs.js";
-import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-B149rIaV.js";
+import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-BmR0P6pG.js";
 function $constructor(name, initializer2, params) {
   function init(inst, def) {
     var _a;
@@ -3426,24 +3426,7 @@ object({
 });
 const getAppVersionSchema = object({});
 const getAppPathSchema = object({
-  name: _enum([
-    "home",
-    "appData",
-    "userData",
-    "sessionData",
-    "temp",
-    "exe",
-    "module",
-    "desktop",
-    "documents",
-    "downloads",
-    "music",
-    "pictures",
-    "videos",
-    "recent",
-    "logs",
-    "crashDumps"
-  ])
+  // Empty object - this endpoint returns all paths at once
 });
 object({
   url: string().url()
@@ -3484,6 +3467,7 @@ function wrapIPCHandler(handler) {
         data
       };
     } catch (error) {
+      console.error("❌ IPC Handler error:", error);
       return handleIPCError(error);
     }
   };
@@ -4023,14 +4007,14 @@ function registerIPCHandlers() {
   ipcMain.handle(
     "theme:get",
     wrapIPCHandler(async () => {
-      const { themeService } = await import("./theme-service-7AhLIkcN.js");
+      const { themeService } = await import("./theme-service-BCkw-ay1.js");
       return themeService.getTheme();
     })
   );
   ipcMain.handle(
     "theme:set",
     wrapIPCHandler(async (args) => {
-      const { themeService } = await import("./theme-service-7AhLIkcN.js");
+      const { themeService } = await import("./theme-service-BCkw-ay1.js");
       const theme = args;
       if (theme !== "light" && theme !== "dark") {
         throw new Error(
@@ -4054,22 +4038,14 @@ function registerIPCHandlers() {
   ipcMain.handle(
     "app:paths",
     wrapIPCHandler(async (args) => {
-      console.log("📂 app:paths called with args:", args);
       getAppPathSchema.parse(args);
-      try {
-        const paths = {
-          appData: getAppDataPath(),
-          projects: getProjectsPath(),
-          themes: getThemesPath(),
-          fonts: getFontsPath(),
-          ...getSystemPaths()
-        };
-        console.log("📂 app:paths returning:", paths);
-        return paths;
-      } catch (error) {
-        console.error("❌ app:paths error:", error);
-        throw error;
-      }
+      return {
+        appData: getAppDataPath(),
+        projects: getProjectsPath(),
+        themes: getThemesPath(),
+        fonts: getFontsPath(),
+        ...getSystemPaths()
+      };
     })
   );
 }
