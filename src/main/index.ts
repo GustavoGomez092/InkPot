@@ -10,29 +10,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function createWindow() {
-	// Preload script path - Electron Forge Vite plugin provides this via environment variable
-	// Log all VITE-related environment variables to debug
-	const viteEnvVars = Object.keys(process.env)
-		.filter((key) => key.includes("VITE"))
-		.reduce(
-			(obj, key) => {
-				obj[key] = process.env[key];
-				return obj;
-			},
-			{} as Record<string, string | undefined>,
-		);
-
-	console.log("All VITE environment variables:", viteEnvVars);
-
-	// Try different possible environment variable names
-	const preloadPath =
-		process.env.MAIN_VITE_PRELOAD_WEBPACK_ENTRY ||
-		process.env.VITE_PRELOAD_ENTRY ||
-		process.env.MAIN_VITE_PRELOAD_ENTRY ||
-		path.join(__dirname, "preload.js");
+	// Preload script path - Electron Forge Vite plugin builds to .vite/build directory
+	// In development, check both .vite/build and dist/main locations
+	const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+	
+	let preloadPath: string;
+	if (isDev) {
+		// Development: Forge Vite plugin builds to .vite/build/
+		preloadPath = path.join(process.cwd(), ".vite", "build", "preload.cjs");
+	} else {
+		// Production: Built files are in dist/main/
+		preloadPath = path.join(__dirname, "preload.cjs");
+	}
 
 	console.log("Using preload path:", preloadPath);
-	console.log("__dirname:", __dirname);
 	console.log("Preload file exists:", existsSync(preloadPath));
 
 	const mainWindow = new BrowserWindow({
@@ -41,10 +32,7 @@ function createWindow() {
 		minWidth: 800,
 		minHeight: 600,
 		webPreferences: {
-			// TODO: Fix preload script path resolution with Electron Forge Vite plugin
-			// The preload script is not being built/found correctly
-			// Temporarily disabled until Forge configuration is fixed
-			// preload: preloadPath,
+			preload: preloadPath,
 			contextIsolation: true,
 			nodeIntegration: false,
 			sandbox: false, // Temporarily disable sandbox for testing
@@ -55,9 +43,6 @@ function createWindow() {
 
 	// Register with window manager
 	setMainWindow(mainWindow);
-
-	// Load the app based on environment
-	const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
 	// Add comprehensive error logging
 	mainWindow.webContents.on(

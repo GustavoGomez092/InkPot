@@ -143,17 +143,14 @@ function getSystemPaths() {
 const __filename$1 = fileURLToPath(import.meta.url);
 const __dirname$1 = path$1.dirname(__filename$1);
 function createWindow() {
-  const viteEnvVars = Object.keys(process.env).filter((key) => key.includes("VITE")).reduce(
-    (obj, key) => {
-      obj[key] = process.env[key];
-      return obj;
-    },
-    {}
-  );
-  console.log("All VITE environment variables:", viteEnvVars);
-  const preloadPath = process.env.MAIN_VITE_PRELOAD_WEBPACK_ENTRY || process.env.VITE_PRELOAD_ENTRY || process.env.MAIN_VITE_PRELOAD_ENTRY || path$1.join(__dirname$1, "preload.js");
+  const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+  let preloadPath;
+  if (isDev) {
+    preloadPath = path$1.join(process.cwd(), ".vite", "build", "preload.cjs");
+  } else {
+    preloadPath = path$1.join(__dirname$1, "preload.cjs");
+  }
   console.log("Using preload path:", preloadPath);
-  console.log("__dirname:", __dirname$1);
   console.log("Preload file exists:", existsSync(preloadPath));
   const mainWindow2 = new BrowserWindow({
     width: 1200,
@@ -172,7 +169,6 @@ function createWindow() {
     // Show immediately to debug
   });
   setMainWindow(mainWindow2);
-  const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
   mainWindow2.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription) => {
@@ -232,7 +228,7 @@ app.whenReady().then(async () => {
     console.error("❌ Database initialization failed:", error);
   }
   try {
-    const { registerIPCHandlers } = await import("./handlers-DiRXCAOk.js");
+    const { registerIPCHandlers } = await import("./handlers-AGFw3zMX.js");
     registerIPCHandlers();
     console.log("✅ IPC handlers registered");
   } catch (error) {
