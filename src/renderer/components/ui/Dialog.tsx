@@ -55,7 +55,7 @@ function Dialog({ open, onClose, title, children, footer, size = 'md' }: DialogP
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -63,20 +63,20 @@ function Dialog({ open, onClose, title, children, footer, size = 'md' }: DialogP
       {/* Dialog */}
       <div
         ref={dialogRef}
-        className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col`}
+        className={`relative bg-popover text-popover-foreground rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <h2 id="dialog-title" className="text-xl font-semibold text-gray-900">
+            <h2 id="dialog-title" className="text-xl font-semibold text-popover-foreground">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Close dialog"
             >
               <svg
@@ -98,7 +98,7 @@ function Dialog({ open, onClose, title, children, footer, size = 'md' }: DialogP
         <div className="px-6 py-4 overflow-y-auto">{children}</div>
 
         {/* Footer */}
-        {footer && <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">{footer}</div>}
+        {footer && <div className="px-6 py-4 border-t border-border bg-muted/50">{footer}</div>}
       </div>
     </div>
   );

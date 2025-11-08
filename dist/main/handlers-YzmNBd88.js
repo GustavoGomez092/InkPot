@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { prisma } from "./client-CzweRmzs.js";
-import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-DYoUh25F.js";
+import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-1_YVr09B.js";
 function $constructor(name, initializer2, params) {
   function init(inst, def) {
     var _a;
@@ -4018,6 +4018,27 @@ function registerIPCHandlers() {
       const projectData = JSON.parse(fileContent);
       const pageBreaks = calculatePageBreaks(projectData.content || "", theme);
       return { pageBreaks };
+    })
+  );
+  ipcMain.handle(
+    "theme:get",
+    wrapIPCHandler(async () => {
+      const { themeService } = await import("./theme-service-7AhLIkcN.js");
+      return themeService.getTheme();
+    })
+  );
+  ipcMain.handle(
+    "theme:set",
+    wrapIPCHandler(async (args) => {
+      const { themeService } = await import("./theme-service-7AhLIkcN.js");
+      const theme = args;
+      if (theme !== "light" && theme !== "dark") {
+        throw new Error(
+          `Invalid theme: ${theme}. Must be "light" or "dark".`
+        );
+      }
+      themeService.setTheme(theme);
+      return void 0;
     })
   );
   ipcMain.handle(

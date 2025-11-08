@@ -225,7 +225,7 @@ app.whenReady().then(async () => {
     console.error("❌ Database initialization failed:", error);
   }
   try {
-    const { registerIPCHandlers } = await import("./handlers-CJOdRBPr.js");
+    const { registerIPCHandlers } = await import("./handlers-YzmNBd88.js");
     registerIPCHandlers();
     console.log("✅ IPC handlers registered");
   } catch (error) {

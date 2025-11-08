@@ -21,7 +21,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, helperText, options, className = '', ...props }, ref) => {
     return (
       <div className="w-full">
-        {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+        {label && <label className="block text-sm font-medium text-foreground mb-1">{label}</label>}
         <select
           ref={ref}
           className={`
@@ -30,12 +30,15 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             py-2
             border
             rounded-lg
+            bg-background
+            text-foreground
             focus:outline-none
-            focus:ring-2
-            focus:ring-blue-500
-            disabled:bg-gray-100
+            focus-visible:ring-2
+            focus-visible:ring-ring
+            disabled:bg-muted
+            disabled:text-muted-foreground
             disabled:cursor-not-allowed
-            ${error ? 'border-red-500' : 'border-gray-300'}
+            ${error ? 'border-destructive' : 'border-input'}
             ${className}
           `}
           {...props}
@@ -46,8 +49,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-        {helperText && !error && <p className="mt-1 text-sm text-gray-500">{helperText}</p>}
+        {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
+        {helperText && !error && <p className="mt-1 text-sm text-muted-foreground">{helperText}</p>}
       </div>
     );
   }

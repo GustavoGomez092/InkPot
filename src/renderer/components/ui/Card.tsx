@@ -9,13 +9,13 @@ interface CardProps {
 
 function Card({ children, className = '', onClick, hover = false }: CardProps) {
   const hoverStyles = hover
-    ? 'hover:shadow-lg hover:border-gray-300 cursor-pointer transition-all'
+    ? 'hover:shadow-lg hover:border-border/50 cursor-pointer transition-all'
     : '';
   const clickableStyles = onClick ? 'cursor-pointer' : '';
 
   return (
     <div
-      className={`bg-white rounded-lg border border-gray-200 shadow-md ${hoverStyles} ${clickableStyles} ${className}`}
+      className={`bg-card text-card-foreground rounded-lg border border-border shadow-md ${hoverStyles} ${clickableStyles} ${className}`}
       onClick={onClick}
     >
       {children}
@@ -29,7 +29,7 @@ interface CardHeaderProps {
 }
 
 function CardHeader({ children, className = '' }: CardHeaderProps) {
-  return <div className={`px-6 py-4 border-b border-gray-200 ${className}`}>{children}</div>;
+  return <div className={`px-6 py-4 border-b border-border ${className}`}>{children}</div>;
 }
 
 interface CardBodyProps {
@@ -48,7 +48,7 @@ interface CardFooterProps {
 
 function CardFooter({ children, className = '' }: CardFooterProps) {
   return (
-    <div className={`px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg ${className}`}>
+    <div className={`px-6 py-4 border-t border-border bg-muted/50 rounded-b-lg ${className}`}>
       {children}
     </div>
   );
