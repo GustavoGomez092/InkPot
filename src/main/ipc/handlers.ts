@@ -729,14 +729,23 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"app:paths",
 		wrapIPCHandler(async (args) => {
+			console.log("📂 app:paths called with args:", args);
 			getAppPathSchema.parse(args);
-			return {
-				appData: appData.getAppDataPath(),
-				projects: appData.getProjectsPath(),
-				themes: appData.getThemesPath(),
-				fonts: appData.getFontsPath(),
-				...appData.getSystemPaths(),
-			};
+			
+			try {
+				const paths = {
+					appData: appData.getAppDataPath(),
+					projects: appData.getProjectsPath(),
+					themes: appData.getThemesPath(),
+					fonts: appData.getFontsPath(),
+					...appData.getSystemPaths(),
+				};
+				console.log("📂 app:paths returning:", paths);
+				return paths;
+			} catch (error) {
+				console.error("❌ app:paths error:", error);
+				throw error;
+			}
 		}),
 	);
 }

@@ -66,7 +66,8 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
       // Get projects path
       const pathsResult = await (window as any).electronAPI.app.paths({});
       if (!pathsResult.success) {
-        throw new Error('Failed to get app paths');
+        console.error('App paths error:', pathsResult.error);
+        throw new Error(pathsResult.error?.message || 'Failed to get app paths');
       }
       const projectsPath = pathsResult.data.projects;
 

@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { prisma } from "./client-CzweRmzs.js";
-import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-Ce-DyvlX.js";
+import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-B149rIaV.js";
 function $constructor(name, initializer2, params) {
   function init(inst, def) {
     var _a;
@@ -4054,14 +4054,22 @@ function registerIPCHandlers() {
   ipcMain.handle(
     "app:paths",
     wrapIPCHandler(async (args) => {
+      console.log("📂 app:paths called with args:", args);
       getAppPathSchema.parse(args);
-      return {
-        appData: getAppDataPath(),
-        projects: getProjectsPath(),
-        themes: getThemesPath(),
-        fonts: getFontsPath(),
-        ...getSystemPaths()
-      };
+      try {
+        const paths = {
+          appData: getAppDataPath(),
+          projects: getProjectsPath(),
+          themes: getThemesPath(),
+          fonts: getFontsPath(),
+          ...getSystemPaths()
+        };
+        console.log("📂 app:paths returning:", paths);
+        return paths;
+      } catch (error) {
+        console.error("❌ app:paths error:", error);
+        throw error;
+      }
     })
   );
 }
