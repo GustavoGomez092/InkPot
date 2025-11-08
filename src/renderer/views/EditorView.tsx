@@ -123,8 +123,9 @@ function EditorView() {
 
       if (result.success && result.data.pdfDataUrl) {
         setPdfDataUrl(result.data.pdfDataUrl);
+        console.log('✅ PDF preview updated successfully');
       } else {
-        console.error('Failed to generate PDF preview');
+        console.error('Failed to generate PDF preview:', result);
       }
     } catch (error) {
       console.error('Failed to preview PDF:', error);
