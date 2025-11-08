@@ -16,12 +16,12 @@ import { parseMarkdown } from './markdown-parser.js';
 // Map all custom fonts to built-in Helvetica (sans-serif)
 const fontFamilyMap: Record<string, string> = {
   'Open Sans': 'Helvetica',
-  'Roboto': 'Helvetica',
-  'Montserrat': 'Helvetica',
-  'Merriweather': 'Times-Roman',
+  Roboto: 'Helvetica',
+  Montserrat: 'Helvetica',
+  Merriweather: 'Times-Roman',
   'Playfair Display': 'Times-Roman',
-  'Lora': 'Times-Roman',
-  'Georgia': 'Times-Roman',
+  Lora: 'Times-Roman',
+  Georgia: 'Times-Roman',
   'PT Serif': 'Times-Roman',
   'Source Code Pro': 'Courier',
   'Courier New': 'Courier',

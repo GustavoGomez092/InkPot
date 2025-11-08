@@ -9,12 +9,14 @@ function EditorView() {
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [projectName, setProjectName] = useState('Loading...');
+  const [pdfDataUrl, setPdfDataUrl] = useState<string>('');
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const contentRef = useRef(content);
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep ref in sync with content
   useEffect(() => {
@@ -105,56 +107,59 @@ function EditorView() {
     }
   }, [isSaving, projectId]);
 
-  // PDF Preview function
-  const handlePreview = async () => {
-    if (isPreviewing || !content) return;
+  // Generate PDF preview
+  const generatePreview = useCallback(async () => {
+    if (!content || isGeneratingPreview) return;
 
     if (typeof window === 'undefined' || !('electronAPI' in window)) {
-      alert('Electron API not available');
+      console.error('Electron API not available');
       return;
     }
 
-    setIsPreviewing(true);
+    setIsGeneratingPreview(true);
     try {
-      // Save first to ensure latest content
-      await handleSave();
-
       const api = window.electronAPI;
       const result = await api.pdf.preview({ projectId });
 
       if (result.success && result.data.pdfDataUrl) {
-        // Open preview in new window
-        const win = window.open('', '_blank', 'width=800,height=1000');
-        if (win) {
-          win.document.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>PDF Preview - ${projectName}</title>
-                <style>
-                  body { margin: 0; padding: 0; }
-                  iframe { width: 100%; height: 100vh; border: none; }
-                </style>
-              </head>
-              <body>
-                <iframe src="${result.data.pdfDataUrl}"></iframe>
-              </body>
-            </html>
-          `);
-          win.document.close();
-        } else {
-          alert('Failed to open preview window. Please allow popups.');
-        }
+        setPdfDataUrl(result.data.pdfDataUrl);
       } else {
-        alert('Failed to generate PDF preview');
+        console.error('Failed to generate PDF preview');
       }
     } catch (error) {
       console.error('Failed to preview PDF:', error);
-      alert(`Failed to preview PDF: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
-      setIsPreviewing(false);
+      setIsGeneratingPreview(false);
     }
-  };
+  }, [content, isGeneratingPreview, projectId]);
+
+  // Debounced preview update - regenerate preview 1 second after content stops changing
+  useEffect(() => {
+    if (!content) return;
+
+    // Clear existing timeout
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+    }
+
+    // Set new timeout to generate preview
+    previewTimeoutRef.current = setTimeout(() => {
+      void generatePreview();
+    }, 1000);
+
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, [content, generatePreview]);
+
+  // Generate initial preview on load
+  useEffect(() => {
+    if (content && !isLoading) {
+      void generatePreview();
+    }
+  }, [isLoading]); // Only run once after initial load
 
   // PDF Export function
   const handleExport = async () => {
@@ -262,9 +267,9 @@ function EditorView() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="bg-card border-b border-border px-6 py-4">
+      <div className="bg-card border-b border-border px-6 py-4 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button size="sm" variant="ghost" onClick={() => navigate({ to: '/' })}>
@@ -272,17 +277,10 @@ function EditorView() {
             </Button>
             <h1 className="text-xl font-semibold text-foreground">{projectName}</h1>
             {isSaving && <span className="text-sm text-muted-foreground">Saving...</span>}
+            {isGeneratingPreview && <span className="text-sm text-muted-foreground">Updating preview...</span>}
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground">Last saved: {formatLastSaved()}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handlePreview}
-              disabled={isPreviewing || !content}
-            >
-              {isPreviewing ? 'Generating...' : 'Preview PDF'}
-            </Button>
             <Button
               size="sm"
               variant="primary"
@@ -295,42 +293,59 @@ function EditorView() {
         </div>
       </div>
 
-      {/* Editor Content */}
-      <div className="p-6">
-        <Card>
-          <Card.Header>
-            <h2 className="text-lg font-semibold">Markdown Editor</h2>
-          </Card.Header>
-          <Card.Body>
-            <TiptapEditor
-              content={content}
-              onUpdate={(newContent) => setContent(newContent)}
-              placeholder="Start writing your document in markdown..."
-            />
-          </Card.Body>
-          <Card.Footer>
+      {/* Split Screen: Editor + Preview */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Editor */}
+        <div className="w-1/2 flex flex-col border-r border-border overflow-hidden">
+          <div className="p-4 border-b border-border bg-card shrink-0">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Last saved: {formatLastSaved()} • {content.length} characters
-              </span>
+              <h2 className="text-lg font-semibold">Markdown Editor</h2>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    console.log('Markdown content:', content);
-                    alert('Markdown content logged to console');
-                  }}
-                >
-                  View Markdown
-                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {content.length} characters
+                </span>
                 <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
             </div>
-          </Card.Footer>
-        </Card>
+          </div>
+          <div className="flex-1 overflow-auto p-4 bg-card">
+            <TiptapEditor
+              content={content}
+              onUpdate={(newContent) => setContent(newContent)}
+              placeholder="Start writing your document in markdown..."
+            />
+          </div>
+        </div>
+
+        {/* Right: PDF Preview */}
+        <div className="w-1/2 flex flex-col overflow-hidden bg-muted">
+          <div className="p-4 border-b border-border bg-card shrink-0">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">PDF Preview</h2>
+              {isGeneratingPreview && (
+                <span className="text-sm text-muted-foreground animate-pulse">
+                  Generating...
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden bg-zinc-700 flex items-center justify-center">
+            {pdfDataUrl ? (
+              <iframe
+                src={pdfDataUrl}
+                className="w-full h-full border-0"
+                title="PDF Preview"
+              />
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p>Generating initial preview...</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
