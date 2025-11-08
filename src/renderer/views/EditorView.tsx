@@ -134,33 +134,34 @@ function EditorView() {
     }
   }, [content, isGeneratingPreview, projectId]);
 
-  // Debounced preview update - regenerate preview 1 second after content stops changing
+  // Generate initial preview on load
   useEffect(() => {
-    if (!content) return;
+    if (content && !isLoading && !pdfDataUrl) {
+      void generatePreview();
+    }
+  }, [isLoading, content, pdfDataUrl, generatePreview]);
+
+  // Debounced preview update - regenerate preview after content changes
+  useEffect(() => {
+    // Don't run on initial load (when pdfDataUrl is empty)
+    if (!content || !pdfDataUrl) return;
 
     // Clear existing timeout
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
     }
 
-    // Set new timeout to generate preview
+    // Set new timeout to generate preview after 1.5 seconds of no typing
     previewTimeoutRef.current = setTimeout(() => {
       void generatePreview();
-    }, 1000);
+    }, 1500);
 
     return () => {
       if (previewTimeoutRef.current) {
         clearTimeout(previewTimeoutRef.current);
       }
     };
-  }, [content, generatePreview]);
-
-  // Generate initial preview on load
-  useEffect(() => {
-    if (content && !isLoading) {
-      void generatePreview();
-    }
-  }, [isLoading]); // Only run once after initial load
+  }, [content]); // Only depend on content, not generatePreview
 
   // PDF Export function
   const handleExport = async () => {
