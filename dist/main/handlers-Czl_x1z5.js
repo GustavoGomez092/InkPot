@@ -1,6 +1,6 @@
 import { ipcMain, shell } from "electron";
 import { prisma } from "./client-CzweRmzs.js";
-import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile$1, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-C4LnjLMF.js";
+import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile$1, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-BqXZj5oJ.js";
 import { writeFile } from "node:fs/promises";
 import fs from "fs";
 import { Buffer as Buffer$1 } from "buffer";
@@ -216327,6 +216327,7 @@ const pdf = (initialValue) => {
     updateContainer
   };
 };
+const Font = fontStore;
 const renderToStream = async (element) => {
   const instance = pdf(element);
   const stream2 = await instance.toBuffer();
@@ -217055,6 +217056,83 @@ function parseInlineFormatting(text) {
   }
   return elements;
 }
+Font.register({
+  family: "Open Sans",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/opensans/v40/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0B4gaVI.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/opensans/v40/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsg-1x4gaVI.ttf", fontWeight: "bold" },
+    { src: "https://fonts.gstatic.com/s/opensans/v40/memQYaGs126MiZpBA-UFUIcVXSCEkx2cmqvXlWq8tWZ0Pw86hd0Rk5hkaVc.ttf", fontWeight: "normal", fontStyle: "italic" }
+  ]
+});
+Font.register({
+  family: "Merriweather",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/merriweather/v30/u-440qyriQwlOrhSvowK_l5-fCZMdeX3rg.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSvowK_l52xwNZVcf6lvg.ttf", fontWeight: "bold" },
+    { src: "https://fonts.gstatic.com/s/merriweather/v30/u-4m0qyriQwlOrhSvowK_l5-eR7lXcf_hP3hPGWH.ttf", fontWeight: "normal", fontStyle: "italic" }
+  ]
+});
+Font.register({
+  family: "Roboto",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4AMP6lQ.ttf", fontWeight: "bold" },
+    { src: "https://fonts.gstatic.com/s/roboto/v30/KFOkCnqEu92Fr1Mu51xIIzIXKMny.ttf", fontWeight: "normal", fontStyle: "italic" }
+  ]
+});
+Font.register({
+  family: "Montserrat",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459WlhyyTh89Y.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459WRhyyTh89Y.ttf", fontWeight: "bold" },
+    { src: "https://fonts.gstatic.com/s/montserrat/v26/JTUFjIg1_i6t8kCHKm459Wx7xQYXK0vOoz6jq6R8aX9-p7K5ILg.ttf", fontWeight: "normal", fontStyle: "italic" }
+  ]
+});
+Font.register({
+  family: "Playfair Display",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/playfairdisplay/v36/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDQZNLo_U2r.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/playfairdisplay/v36/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKd3vXDQZNLo_U2r.ttf", fontWeight: "bold" },
+    { src: "https://fonts.gstatic.com/s/playfairdisplay/v36/nuFRD-vYSZviVYUb_rj3ij__anPXDTnCjmHKM4nYO7KN_qiTbtbK-F2rA0s.ttf", fontWeight: "normal", fontStyle: "italic" }
+  ]
+});
+Font.register({
+  family: "Lora",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/lora/v35/0QI6MX1D_JOuGQbT0gvTJPa787weuxJBkq0.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/lora/v35/0QI6MX1D_JOuGQbT0gvTJPa787z_uRJBkq0.ttf", fontWeight: "bold" },
+    { src: "https://fonts.gstatic.com/s/lora/v35/0QI8MX1D_JOuMw_hLdO6T2wV9KnW-MoFkqh8ndeZzZ0.ttf", fontWeight: "normal", fontStyle: "italic" }
+  ]
+});
+Font.register({
+  family: "Source Code Pro",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/sourcecodepro/v23/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMRrTEcVpaKKxg.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/sourcecodepro/v23/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DJyVtMRrTEcVpaKKxg.ttf", fontWeight: "bold" }
+  ]
+});
+Font.register({
+  family: "Courier New",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/courierprime/v9/u-450q2lgwslOqpF_6gQ8kELWwZjW-_-tvg.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/courierprime/v9/u-4k0q2lgwslOqpF_6gQ8kELY7pMf-fVqvHoJXw.ttf", fontWeight: "bold" }
+  ]
+});
+Font.register({
+  family: "Georgia",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/ebgaramond/v27/SlGDmQSNjdsmc35JDF1K5E55YMjF_7DPuGi-6_RUA4V-e6yHgQ.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/ebgaramond/v27/SlGDmQSNjdsmc35JDF1K5E55YMjF_7DPuGi-NfVUA4V-e6yHgQ.ttf", fontWeight: "bold" }
+  ]
+});
+Font.register({
+  family: "PT Serif",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/ptserif/v18/EJRVQgYoZZY2vCFuvAFWzr-_dSb_.ttf", fontWeight: "normal" },
+    { src: "https://fonts.gstatic.com/s/ptserif/v18/EJRSQgYoZZY2vCFuvAnt65qVXSr3pNNB.ttf", fontWeight: "bold" },
+    { src: "https://fonts.gstatic.com/s/ptserif/v18/EJRTQgYoZZY2vCFuvAFT_r21VTz9pNNB4Q.ttf", fontWeight: "normal", fontStyle: "italic" }
+  ]
+});
 function createPDFDocument(content, theme) {
   const elements = parseMarkdown(content);
   const pages = [];
@@ -217116,11 +217194,11 @@ function createPDFDocument(content, theme) {
 const EmptyPage = () => {
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(View, { style: { flex: 1, justifyContent: "center", alignItems: "center" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Text, { style: { fontSize: 12, color: "#999999" }, children: "Empty page" }, void 0, false, {
     fileName: "/Users/gustavogomez/projects/InkForge/InkForge/src/main/pdf/Document.tsx",
-    lineNumber: 92,
+    lineNumber: 181,
     columnNumber: 7
   }, void 0) }, void 0, false, {
     fileName: "/Users/gustavogomez/projects/InkForge/InkForge/src/main/pdf/Document.tsx",
-    lineNumber: 91,
+    lineNumber: 180,
     columnNumber: 5
   }, void 0);
 };
@@ -217756,14 +217834,14 @@ function registerIPCHandlers() {
   ipcMain.handle(
     "theme:get",
     wrapIPCHandler(async () => {
-      const { themeService } = await import("./theme-service-B-z4Q59-.js");
+      const { themeService } = await import("./theme-service-Bhj6kNa4.js");
       return themeService.getTheme();
     })
   );
   ipcMain.handle(
     "theme:set",
     wrapIPCHandler(async (args) => {
-      const { themeService } = await import("./theme-service-B-z4Q59-.js");
+      const { themeService } = await import("./theme-service-Bhj6kNa4.js");
       const theme = args;
       if (theme !== "light" && theme !== "dark") {
         throw new Error(

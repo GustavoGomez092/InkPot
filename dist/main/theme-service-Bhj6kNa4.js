@@ -8,7 +8,7 @@ import assert from "node:assert";
 import os from "node:os";
 import "node:events";
 import "node:stream";
-import { r as requireFastDeepEqual, g as getDefaultExportFromCjs } from "./handlers-BUqzNS6Z.js";
+import { r as requireFastDeepEqual, g as getDefaultExportFromCjs } from "./handlers-Czl_x1z5.js";
 const isObject = (value) => {
   const type2 = typeof value;
   return value !== null && (type2 === "object" || type2 === "function");
@@ -491,7 +491,7 @@ if (!IS_WINDOWS) {
 if (IS_LINUX) {
   Signals.push("SIGIO", "SIGPOLL", "SIGPWR", "SIGSTKFLT");
 }
-class Interceptor {
+let Interceptor$1 = class Interceptor {
   /* CONSTRUCTOR */
   constructor() {
     this.callbacks = /* @__PURE__ */ new Set();
@@ -528,9 +528,9 @@ class Interceptor {
     };
     this.hook();
   }
-}
-const Interceptor$1 = new Interceptor();
-const whenExit = Interceptor$1.register;
+};
+const Interceptor2 = new Interceptor$1();
+const whenExit = Interceptor2.register;
 const Temp = {
   /* VARIABLES */
   store: {},

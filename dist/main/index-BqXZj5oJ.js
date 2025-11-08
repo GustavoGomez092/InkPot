@@ -251,7 +251,7 @@ app.whenReady().then(async () => {
     return;
   }
   try {
-    const { registerIPCHandlers } = await import("./handlers-BUqzNS6Z.js").then((n) => n.h);
+    const { registerIPCHandlers } = await import("./handlers-Czl_x1z5.js").then((n) => n.h);
     registerIPCHandlers();
     console.log("✅ IPC handlers registered");
   } catch (error) {
