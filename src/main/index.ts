@@ -10,9 +10,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function createWindow() {
-	// Preload script path - Electron Forge Vite plugin handles this
-	// During development, the built files are in a temp location managed by Forge
-	const preloadPath = path.join(__dirname, "preload.js");
+	// Preload script path - Electron Forge Vite plugin provides this via environment variable
+	// Log all VITE-related environment variables to debug
+	const viteEnvVars = Object.keys(process.env)
+		.filter((key) => key.includes("VITE"))
+		.reduce(
+			(obj, key) => {
+				obj[key] = process.env[key];
+				return obj;
+			},
+			{} as Record<string, string | undefined>,
+		);
+
+	console.log("All VITE environment variables:", viteEnvVars);
+
+	// Try different possible environment variable names
+	const preloadPath =
+		process.env.MAIN_VITE_PRELOAD_WEBPACK_ENTRY ||
+		process.env.VITE_PRELOAD_ENTRY ||
+		process.env.MAIN_VITE_PRELOAD_ENTRY ||
+		path.join(__dirname, "preload.js");
 
 	console.log("Using preload path:", preloadPath);
 	console.log("__dirname:", __dirname);
@@ -24,7 +41,10 @@ function createWindow() {
 		minWidth: 800,
 		minHeight: 600,
 		webPreferences: {
-			preload: preloadPath,
+			// TODO: Fix preload script path resolution with Electron Forge Vite plugin
+			// The preload script is not being built/found correctly
+			// Temporarily disabled until Forge configuration is fixed
+			// preload: preloadPath,
 			contextIsolation: true,
 			nodeIntegration: false,
 			sandbox: false, // Temporarily disable sandbox for testing

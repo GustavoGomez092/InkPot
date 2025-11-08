@@ -143,7 +143,15 @@ function getSystemPaths() {
 const __filename$1 = fileURLToPath(import.meta.url);
 const __dirname$1 = path$1.dirname(__filename$1);
 function createWindow() {
-  const preloadPath = path$1.join(__dirname$1, "preload.js");
+  const viteEnvVars = Object.keys(process.env).filter((key) => key.includes("VITE")).reduce(
+    (obj, key) => {
+      obj[key] = process.env[key];
+      return obj;
+    },
+    {}
+  );
+  console.log("All VITE environment variables:", viteEnvVars);
+  const preloadPath = process.env.MAIN_VITE_PRELOAD_WEBPACK_ENTRY || process.env.VITE_PRELOAD_ENTRY || process.env.MAIN_VITE_PRELOAD_ENTRY || path$1.join(__dirname$1, "preload.js");
   console.log("Using preload path:", preloadPath);
   console.log("__dirname:", __dirname$1);
   console.log("Preload file exists:", existsSync(preloadPath));
@@ -224,7 +232,7 @@ app.whenReady().then(async () => {
     console.error("❌ Database initialization failed:", error);
   }
   try {
-    const { registerIPCHandlers } = await import("./handlers-Bvpq_YWa.js");
+    const { registerIPCHandlers } = await import("./handlers-DiRXCAOk.js");
     registerIPCHandlers();
     console.log("✅ IPC handlers registered");
   } catch (error) {
