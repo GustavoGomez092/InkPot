@@ -2,4 +2,4 @@ import "electron";
 import "fs";
 import "path";
 import "url";
-import "./index-DRfBw5Zd.js";
+import "./index-BmR0P6pG.js";

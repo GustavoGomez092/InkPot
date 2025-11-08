@@ -51,11 +51,17 @@ export interface ListRecentProjectsRequest {
 
 export interface RecentProject {
 	id: string;
-	name: string;
+	title: string;
+	subtitle?: string | null;
+	author?: string | null;
 	filePath: string;
 	themeName: string | null;
 	lastOpenedAt: string;
-	hasCoverPage: boolean;
+}
+
+export interface ListRecentProjectsResponse {
+	projects: RecentProject[];
+	total: number;
 }
 
 export interface CreateProjectRequest {
@@ -120,15 +126,24 @@ export interface CoverAssetData {
 	height: number | null;
 }
 
-export interface LoadProjectResponse {
+export interface LoadedProject {
 	id: string;
 	name: string;
 	content: string;
-	themeId: string;
-	theme: ThemeData;
-	coverPage: CoverPageData | null;
-	coverAssets: CoverAssetData[];
-	lastOpenedAt: string;
+	filePath: string;
+	themeId: string | null;
+	themeName: string | null;
+	coverTitle: string | null;
+	coverSubtitle: string | null;
+	coverAuthor: string | null;
+	coverDate: string | null;
+	coverTemplateId: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface LoadProjectResponse {
+	project: LoadedProject;
 }
 
 export interface SaveProjectRequest {
@@ -411,7 +426,7 @@ export interface ElectronAPI {
 	projects: {
 		listRecent: (
 			req: ListRecentProjectsRequest,
-		) => Promise<IPCResponse<RecentProject[]>>;
+		) => Promise<IPCResponse<ListRecentProjectsResponse>>;
 		create: (
 			req: CreateProjectRequest,
 		) => Promise<IPCResponse<CreateProjectResponse>>;

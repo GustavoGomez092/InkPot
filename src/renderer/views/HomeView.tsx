@@ -1,24 +1,21 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { Button, Card } from '../components/ui';
+import { Button, Card, Input } from '../components/ui';
 import NewProjectDialog from './NewProjectDialog';
 
-interface AppInfo {
-  version: string;
-  name: string;
-}
-
-interface Theme {
+interface RecentProject {
   id: string;
-  name: string;
-  isBuiltIn: boolean;
-  headingFont: string;
-  bodyFont: string;
+  title: string;
+  subtitle?: string | null;
+  author?: string | null;
+  filePath: string;
+  lastOpenedAt: string;
+  themeName?: string | null;
 }
 
 function HomeView() {
-  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
-  const [themes, setThemes] = useState<Theme[]>([]);
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const navigate = useNavigate();
@@ -33,112 +30,200 @@ function HomeView() {
 
     const api = window.electronAPI;
 
-    // Fetch app version
-    api.app.version().then((result) => {
+    // Fetch recent projects
+    api.projects.listRecent({ limit: 20 }).then((result) => {
       if (result.success) {
-        setAppInfo(result.data);
+        setRecentProjects(result.data.projects);
       }
-    });
-
-    // Fetch themes
-    api.themes.list({}).then((result) => {
-      if (result.success) {
-        setThemes(result.data);
-      }
+      setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to load recent projects:', err);
       setLoading(false);
     });
   }, [hasElectronAPI]);
 
+  const filteredProjects = recentProjects.filter((project) =>
+    project.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)} weeks ago`;
+    return `${Math.floor(diffInSeconds / 2592000)} months ago`;
+  };
+
+  const handleOpenProject = (projectId: string) => {
+    navigate({
+      to: '/editor/$projectId',
+      params: { projectId },
+    });
+  };
+
+  const handleOpenFile = async () => {
+    if (!hasElectronAPI) return;
+    
+    const api = window.electronAPI;
+    const result = await api.file.selectFile({
+      title: 'Open InkForge Project',
+      filters: [{ name: 'InkForge Projects', extensions: ['inkforge'] }],
+    });
+
+    if (result.success && result.data.filePath) {
+      // Load the project and navigate to editor
+      const loadResult = await api.projects.load({ filePath: result.data.filePath });
+      if (loadResult.success) {
+        navigate({
+          to: '/editor/$projectId',
+          params: { projectId: loadResult.data.project.id },
+        });
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-4xl font-bold text-gray-900">InkForge</h1>
-            {appInfo && <span className="text-sm text-gray-600">v{appInfo.version}</span>}
-          </div>
-          <Button variant="primary" onClick={() => setShowNewProjectDialog(true)}>
-            + New Project
-          </Button>
-        </div>
-        <p className="text-lg text-gray-700 mb-8">Professional Markdown to PDF Conversion</p>
-
-        <Card className="mb-6">
-          <Card.Header>
-            <h2 className="text-2xl font-semibold">System Status</h2>
-          </Card.Header>
-          <Card.Body>
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <span className={`mr-2 ${hasElectronAPI ? 'text-green-600' : 'text-red-600'}`}>
-                  {hasElectronAPI ? '✓' : '✗'}
-                </span>
-                <span>Preload Script: {hasElectronAPI ? 'Connected' : 'Not Connected'}</span>
-              </div>
-              {hasElectronAPI && (
-                <div className="mt-4 p-4 bg-green-50 rounded">
-                  <p className="text-green-800">
-                    Database operational • IPC ready • {themes.length} themes available
-                  </p>
-                </div>
-              )}
+    <div className="flex h-screen bg-background text-foreground">
+      {/* Sidebar */}
+      <aside className="w-60 bg-card border-r border-border flex flex-col">
+        {/* App Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
-          </Card.Body>
-        </Card>
+            <div>
+              <h1 className="text-sm font-semibold text-foreground">Markdown PDF</h1>
+              <p className="text-xs text-muted-foreground">Converter App</p>
+            </div>
+          </div>
+        </div>
 
-        {!loading && themes.length > 0 && (
-          <Card>
-            <Card.Header>
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold">Available Themes</h2>
-                <Button size="sm" variant="outline">
-                  Create New Theme
-                </Button>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <div className="grid gap-4">
-                {themes.map((theme: Theme) => (
-                  <Card key={theme.id} hover className="border-gray-200">
-                    <Card.Body className="py-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-medium text-gray-900">{theme.name}</h3>
-                        {theme.isBuiltIn && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            Built-in
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Heading: {theme.headingFont} • Body: {theme.bodyFont}
-                      </p>
-                    </Card.Body>
-                  </Card>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        )}
-
-        <div className="mt-6">
-          <Button
-            variant="outline"
-            onClick={() => {
-              // For demo purposes, navigate to demo editor
-              navigate({
-                to: '/editor/$projectId',
-                params: { projectId: 'demo' },
-              });
-            }}
+        {/* Actions */}
+        <div className="p-4 space-y-2">
+          <Button 
+            variant="primary" 
+            className="w-full justify-start font-semibold"
+            onClick={() => setShowNewProjectDialog(true)}
           >
-            Open Demo Editor
+            New Document
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-primary hover:text-primary hover:bg-primary/10"
+            onClick={handleOpenFile}
+          >
+            Open File...
           </Button>
         </div>
-      </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-2 py-4 space-y-1">
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md bg-accent text-accent-foreground">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Recent Projects
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Settings
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Help
+          </button>
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="px-8 py-6 border-b border-border">
+          <h2 className="text-3xl font-bold text-foreground mb-4">Recent Projects</h2>
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <Input
+              type="text"
+              placeholder="Search your projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </header>
+
+        {/* Projects Grid */}
+        <div className="flex-1 overflow-y-auto px-8 py-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">Loading projects...</p>
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <svg className="w-16 h-16 text-muted-foreground mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No projects yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">Create your first document to get started</p>
+              <Button variant="primary" onClick={() => setShowNewProjectDialog(true)}>
+                New Document
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredProjects.map((project) => (
+                <Card
+                  key={project.id}
+                  hover
+                  className="cursor-pointer transition-all"
+                  onClick={() => handleOpenProject(project.id)}
+                >
+                  <Card.Body className="p-4">
+                    <h3 className="text-base font-semibold text-foreground mb-1 line-clamp-1">
+                      {project.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2 min-h-10">
+                      {project.subtitle || 'No description'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Last updated: {formatRelativeTime(project.lastOpenedAt)}
+                    </p>
+                  </Card.Body>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
 
       <NewProjectDialog
         open={showNewProjectDialog}
-        onClose={() => setShowNewProjectDialog(false)}
+        onClose={() => {
+          setShowNewProjectDialog(false);
+          // Reload projects after creating a new one
+          if (hasElectronAPI) {
+            window.electronAPI.projects.listRecent({ limit: 20 }).then((result) => {
+              if (result.success) {
+                setRecentProjects(result.data.projects);
+              }
+            });
+          }
+        }}
       />
     </div>
   );
