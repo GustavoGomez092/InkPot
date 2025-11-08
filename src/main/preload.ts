@@ -1,0 +1,50 @@
+// Electron Preload Script - Context Bridge
+
+import type { ElectronAPI } from "@shared/types/ipc-contracts";
+import { contextBridge, ipcRenderer } from "electron";
+
+const electronAPI: ElectronAPI = {
+	projects: {
+		listRecent: (req) => ipcRenderer.invoke("projects:list-recent", req),
+		create: (req) => ipcRenderer.invoke("projects:create", req),
+		load: (req) => ipcRenderer.invoke("projects:load", req),
+		save: (req) => ipcRenderer.invoke("projects:save", req),
+		delete: (req) => ipcRenderer.invoke("projects:delete", req),
+	},
+	themes: {
+		list: (req) => ipcRenderer.invoke("themes:list", req),
+		get: (req) => ipcRenderer.invoke("themes:get", req),
+		create: (req) => ipcRenderer.invoke("themes:create", req),
+		update: (req) => ipcRenderer.invoke("themes:update", req),
+		delete: (req) => ipcRenderer.invoke("themes:delete", req),
+	},
+	fonts: {
+		search: (req) => ipcRenderer.invoke("fonts:search", req),
+		download: (req) => ipcRenderer.invoke("fonts:download", req),
+		isCached: (req) => ipcRenderer.invoke("fonts:is-cached", req),
+	},
+	pdf: {
+		preview: (req) => ipcRenderer.invoke("pdf:preview", req),
+		export: (req) => ipcRenderer.invoke("pdf:export", req),
+		calculatePageBreaks: (req) =>
+			ipcRenderer.invoke("pdf:calculate-page-breaks", req),
+	},
+	cover: {
+		listTemplates: (req) => ipcRenderer.invoke("cover:list-templates", req),
+		uploadAsset: (req) => ipcRenderer.invoke("cover:upload-asset", req),
+	},
+	file: {
+		selectFile: (req) => ipcRenderer.invoke("file:select-file", req),
+		saveDialog: (req) => ipcRenderer.invoke("file:save-dialog", req),
+		read: (req) => ipcRenderer.invoke("file:read", req),
+		write: (req) => ipcRenderer.invoke("file:write", req),
+		delete: (req) => ipcRenderer.invoke("file:delete", req),
+		exists: (req) => ipcRenderer.invoke("file:exists", req),
+	},
+	app: {
+		version: () => ipcRenderer.invoke("app:version", {}),
+		paths: (req) => ipcRenderer.invoke("app:paths", req),
+	},
+};
+
+contextBridge.exposeInMainWorld("electronAPI", electronAPI);

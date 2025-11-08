@@ -20,10 +20,12 @@ description: "Task list template for feature implementation"
 
 ## Path Conventions
 
-- **Single project**: `src/`, `tests/` at repository root
-- **Web app**: `backend/src/`, `frontend/src/`
-- **Mobile**: `api/src/`, `ios/src/` or `android/src/`
-- Paths shown below assume single project - adjust based on plan.md structure
+- **Electron main process**: `src/main/` (Node.js/Electron APIs, IPC handlers)
+- **Electron renderer process**: `src/renderer/` (React components, Tiptap editor)
+- **Shared types**: `src/shared/types/` (IPC contracts, common interfaces)
+- **Preload script**: `src/main/preload.ts` (contextBridge definitions)
+- **Tests**: `tests/unit/`, `tests/integration/`, `tests/e2e/`
+- Paths shown below follow Electron structure from plan.md
 
 <!-- 
   ============================================================================
@@ -60,14 +62,16 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-Examples of foundational tasks (adjust based on your project):
+Examples of foundational tasks for Electron apps (adjust based on your project):
 
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
+- [ ] T004 Setup Electron main process entry point (src/main/index.ts)
+- [ ] T005 Configure context bridge and preload script (src/main/preload.ts)
+- [ ] T006 [P] Define IPC contract types in src/shared/types/
+- [ ] T007 [P] Setup React 19 renderer process with Tailwind (src/renderer/App.tsx)
+- [ ] T008 Initialize Tiptap editor base configuration (src/renderer/editor/)
+- [ ] T009 Configure build tooling (Vite/Webpack for Electron)
+- [ ] T010 Implement error handling and logging infrastructure
+- [ ] T011 [P] Setup TypeScript strict mode and ESLint rules
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -88,12 +92,14 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+- [ ] T012 [P] [US1] Define IPC contract types in src/shared/types/[feature].ts
+- [ ] T013 [P] [US1] Create React components in src/renderer/components/[Feature]/
+- [ ] T014 [US1] Implement main process IPC handlers in src/main/ipc/[feature].ts
+- [ ] T015 [US1] Add contextBridge exposure in src/main/preload.ts
+- [ ] T016 [US1] Implement renderer-side logic in src/renderer/[feature]/
+- [ ] T017 [US1] Add Tiptap extensions if needed in src/renderer/editor/extensions/
+- [ ] T018 [US1] Add validation and error handling (both processes)
+- [ ] T019 [US1] Add logging for user story 1 operations
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 

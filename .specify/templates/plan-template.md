@@ -17,21 +17,25 @@
   the iteration process.
 -->
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript 5.x with strict mode, React 19
+**Primary Dependencies**: Electron (latest stable), Tiptap 2.x, Tailwind CSS 4.x
+**Storage**: [if applicable, e.g., local file system, IndexedDB, SQLite or N/A]
+**Testing**: Vitest/Jest with React Testing Library, Electron testing utilities
+**Target Platform**: Desktop (macOS, Windows, Linux) via Electron
+**Project Type**: Electron desktop application
+**Performance Goals**: Initial render <1s, document operations up to 10k nodes without lag
+**Constraints**: Main process responsiveness, bundle size optimization, strict security model
+**Scale/Scope**: [e.g., single-user documents, collaborative editing, plugin system or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Component Isolation**: Components use props/events, no direct Electron API access
+- [ ] **Type Safety**: All IPC contracts typed, strict TypeScript mode enabled
+- [ ] **Performance First**: React 19 compiler used, code-split heavy dependencies, <1s initial render
+- [ ] **Content Model Integrity**: Tiptap schema validated, atomic undo/redo, serialization fidelity
+- [ ] **Cross-Process Communication**: IPC via contextBridge only, input validation in handlers
 
 ## Project Structure
 
@@ -56,39 +60,28 @@ specs/[###-feature]/
 -->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+# Electron Desktop Application Structure
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+├── main/                 # Main process (Node.js/Electron APIs)
+│   ├── index.ts         # Entry point, BrowserWindow setup
+│   ├── ipc/             # IPC handler implementations
+│   ├── services/        # File system, system integration
+│   └── preload.ts       # Context bridge definitions
+├── renderer/            # Renderer process (React UI)
+│   ├── components/      # React components (isolated, typed)
+│   ├── editor/          # Tiptap editor setup and extensions
+│   ├── hooks/           # Custom React hooks
+│   ├── styles/          # Tailwind config and global styles
+│   ├── types/           # TypeScript type definitions
+│   ├── utils/           # Pure utility functions
+│   └── App.tsx          # Root React component
+└── shared/              # Code shared between processes
+    └── types/           # IPC contract interfaces
 
 tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+├── e2e/                 # End-to-end Electron tests
+├── integration/         # IPC contract tests
+└── unit/                # Component and logic tests
 ```
 
 **Structure Decision**: [Document the selected structure and reference the real

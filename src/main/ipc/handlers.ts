@@ -1,0 +1,742 @@
+/**
+ * IPC Handlers Registration
+ * This file registers all IPC handlers for communication between renderer and main process
+ */
+
+// Import validation schemas
+import {
+	createProjectSchema,
+	deleteProjectSchema,
+	getAppPathSchema,
+	getAppVersionSchema,
+	getThemeSchema,
+	listRecentProjectsSchema,
+	listThemesSchema,
+	loadProjectSchema,
+	saveProjectSchema,
+} from "@shared/validation/schemas.js";
+import { ipcMain } from "electron";
+// Import database client
+import { prisma } from "../database/client.js";
+
+// Import services
+import * as appData from "../services/app-data.js";
+import * as fileSystem from "../services/file-system.js";
+import { wrapIPCHandler } from "./error-handler.js";
+
+/**
+ * Register all IPC handlers
+ */
+export function registerIPCHandlers(): void {
+	// ==================== Projects Channel ====================
+
+	/**
+	 * Create a new project
+	 */
+	ipcMain.handle(
+		"projects:create",
+		wrapIPCHandler(async (args) => {
+			const { name, filePath, themeId } = createProjectSchema.parse(args);
+
+			// Validate file path is in app data directory
+			if (!appData.isPathInProjects(filePath)) {
+				throw new Error("Project file must be in the projects directory");
+			}
+
+			// Ensure file has .inkforge extension
+			const validFilePath = fileSystem.ensureExtension(filePath, ".inkforge");
+
+			// Check if file already exists
+			if (await fileSystem.fileExists(validFilePath)) {
+				throw new Error(`Project file already exists: ${validFilePath}`);
+			}
+
+			// Validate theme exists if provided
+			if (themeId) {
+				const theme = await prisma.theme.findUnique({ where: { id: themeId } });
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
+				}
+			}
+
+			// Create project in database
+			const project = await prisma.project.create({
+				data: {
+					name,
+					filePath: validFilePath,
+					themeId,
+				},
+				include: { theme: true },
+			});
+
+			// Create empty project file
+			const projectData = {
+				id: project.id,
+				name: project.name,
+				content: "", // Empty markdown content for new project
+				createdAt: project.createdAt.toISOString(),
+				updatedAt: project.updatedAt.toISOString(),
+			};
+
+			await fileSystem.writeFile(
+				validFilePath,
+				JSON.stringify(projectData, null, 2),
+			);
+
+			// Add to recent projects
+			await prisma.recentProject.create({
+				data: {
+					projectId: project.id,
+					position: 0,
+				},
+			});
+
+			// Update positions of other recent projects
+			await prisma.$executeRaw`
+				UPDATE RecentProject 
+				SET position = position + 1 
+				WHERE projectId != ${project.id}
+			`;
+
+			return {
+				project: {
+					id: project.id,
+					name: project.name,
+					filePath: project.filePath,
+					themeId: project.themeId,
+					themeName: project.theme?.name ?? null,
+					createdAt: project.createdAt.toISOString(),
+					updatedAt: project.updatedAt.toISOString(),
+				},
+			};
+		}),
+	);
+
+	/**
+	 * Load project from file
+	 */
+	ipcMain.handle(
+		"projects:load",
+		wrapIPCHandler(async (args) => {
+			const { filePath } = loadProjectSchema.parse(args);
+
+			// Read project file
+			const fileContent = await fileSystem.readFile(filePath);
+			const projectData = JSON.parse(fileContent);
+
+			// Get or create project in database
+			let project = await prisma.project.findFirst({
+				where: { filePath },
+				include: { theme: true },
+			});
+
+			if (!project) {
+				// Create project record if it doesn't exist
+				project = await prisma.project.create({
+					data: {
+						id: projectData.id,
+						name: projectData.name || "Untitled Project",
+						filePath,
+					},
+					include: { theme: true },
+				});
+			}
+
+			// Update recent projects
+			const recentProject = await prisma.recentProject.findUnique({
+				where: { projectId: project.id },
+			});
+
+			if (recentProject) {
+				// Update accessed time and move to top
+				await prisma.recentProject.update({
+					where: { projectId: project.id },
+					data: { position: 0, accessedAt: new Date() },
+				});
+
+				// Increment positions of other recent projects
+				await prisma.$executeRaw`
+					UPDATE RecentProject 
+					SET position = position + 1 
+					WHERE projectId != ${project.id}
+				`;
+			} else {
+				// Add to recent projects
+				await prisma.recentProject.create({
+					data: { projectId: project.id, position: 0 },
+				});
+
+				// Increment positions of other recent projects
+				await prisma.$executeRaw`
+					UPDATE RecentProject 
+					SET position = position + 1 
+					WHERE projectId != ${project.id}
+				`;
+			}
+
+			return {
+				project: {
+					id: project.id,
+					name: project.name,
+					filePath: project.filePath,
+					content: projectData.content || "",
+					themeId: project.themeId,
+					themeName: project.theme?.name ?? null,
+					coverTitle: project.coverTitle,
+					coverSubtitle: project.coverSubtitle,
+					coverAuthor: project.coverAuthor,
+					coverDate: project.coverDate,
+					coverTemplateId: project.coverTemplateId,
+					createdAt: project.createdAt.toISOString(),
+					updatedAt: project.updatedAt.toISOString(),
+				},
+			};
+		}),
+	);
+
+	/**
+	 * Save project to file
+	 */
+	ipcMain.handle(
+		"projects:save",
+		wrapIPCHandler(async (args) => {
+			const { id, content, themeId, coverPage } = saveProjectSchema.parse(args);
+
+			// Get project
+			const project = await prisma.project.findUnique({
+				where: { id },
+				include: { theme: true },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${id}`);
+			}
+
+			// Validate theme if provided
+			if (themeId) {
+				const theme = await prisma.theme.findUnique({ where: { id: themeId } });
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
+				}
+			}
+
+			// Update project metadata in database
+			const updates: {
+				themeId?: string;
+				hasCoverPage?: boolean;
+				coverTitle?: string | null;
+				coverSubtitle?: string | null;
+				coverAuthor?: string | null;
+				coverDate?: string | null;
+				coverTemplateId?: string | null;
+			} = {};
+
+			if (themeId !== undefined) {
+				updates.themeId = themeId;
+			}
+
+			if (coverPage) {
+				if (coverPage.enabled !== undefined) {
+					updates.hasCoverPage = coverPage.enabled;
+				}
+				if (coverPage.title !== undefined) {
+					updates.coverTitle = coverPage.title;
+				}
+				if (coverPage.subtitle !== undefined) {
+					updates.coverSubtitle = coverPage.subtitle;
+				}
+				if (coverPage.author !== undefined) {
+					updates.coverAuthor = coverPage.author;
+				}
+				if (coverPage.date !== undefined) {
+					updates.coverDate = coverPage.date;
+				}
+				if (coverPage.templateId !== undefined) {
+					updates.coverTemplateId = coverPage.templateId;
+				}
+			}
+
+			const updatedProject = await prisma.project.update({
+				where: { id },
+				data: updates,
+				include: { theme: true },
+			});
+
+			// Save content to file
+			const projectData = {
+				id: updatedProject.id,
+				name: updatedProject.name,
+				content,
+				createdAt: updatedProject.createdAt.toISOString(),
+				updatedAt: updatedProject.updatedAt.toISOString(),
+			};
+
+			await fileSystem.writeFile(
+				updatedProject.filePath,
+				JSON.stringify(projectData, null, 2),
+			);
+
+			return {
+				project: {
+					id: updatedProject.id,
+					name: updatedProject.name,
+					filePath: updatedProject.filePath,
+					themeId: updatedProject.themeId,
+					themeName: updatedProject.theme?.name ?? null,
+					coverTitle: updatedProject.coverTitle,
+					coverSubtitle: updatedProject.coverSubtitle,
+					coverAuthor: updatedProject.coverAuthor,
+					coverDate: updatedProject.coverDate,
+					coverTemplateId: updatedProject.coverTemplateId,
+					createdAt: updatedProject.createdAt.toISOString(),
+					updatedAt: updatedProject.updatedAt.toISOString(),
+				},
+			};
+		}),
+	);
+
+	/**
+	 * Delete project
+	 */
+	ipcMain.handle(
+		"projects:delete",
+		wrapIPCHandler(async (args) => {
+			const { id, deleteFile } = deleteProjectSchema.parse(args);
+
+			// Get project
+			const project = await prisma.project.findUnique({ where: { id } });
+			if (!project) {
+				throw new Error(`Project not found: ${id}`);
+			}
+
+			// Delete project file if requested
+			if (deleteFile && (await fileSystem.fileExists(project.filePath))) {
+				await fileSystem.deleteFile(project.filePath);
+			}
+
+			// Delete from recent projects
+			await prisma.recentProject.deleteMany({
+				where: { projectId: id },
+			});
+
+			// Delete project from database
+			await prisma.project.delete({ where: { id } });
+
+			return { success: true };
+		}),
+	);
+
+	/**
+	 * List recent projects
+	 */
+	ipcMain.handle(
+		"projects:list-recent",
+		wrapIPCHandler(async (args) => {
+			const { limit = 20 } = listRecentProjectsSchema.parse(args);
+
+			// Get recent project IDs
+			const recentProjectIds = await prisma.recentProject.findMany({
+				take: limit,
+				orderBy: { position: "asc" },
+				select: { projectId: true, accessedAt: true },
+			});
+
+			// Fetch full project details
+			const projects = await prisma.project.findMany({
+				where: {
+					id: { in: recentProjectIds.map((rp) => rp.projectId) },
+				},
+				include: {
+					theme: true,
+				},
+			});
+
+			// Map to keep order and add accessedAt
+			const projectsMap = new Map(projects.map((p) => [p.id, p]));
+
+			return {
+				projects: recentProjectIds.map((rp) => {
+					const project = projectsMap.get(rp.projectId);
+					if (!project) {
+						throw new Error(`Project not found: ${rp.projectId}`);
+					}
+					return {
+						id: project.id,
+						title: project.coverTitle ?? project.name,
+						subtitle: project.coverSubtitle,
+						author: project.coverAuthor,
+						filePath: project.filePath,
+						lastOpenedAt: rp.accessedAt.toISOString(),
+						themeName: project.theme?.name ?? null,
+					};
+				}),
+				total: await prisma.recentProject.count(),
+			};
+		}),
+	);
+
+	// ==================== Themes Channel ====================
+
+	/**
+	 * List all themes
+	 */
+	ipcMain.handle(
+		"themes:list",
+		wrapIPCHandler(async (args) => {
+			listThemesSchema.parse(args);
+
+			const themes = await prisma.theme.findMany({
+				orderBy: [{ isBuiltIn: "desc" }, { name: "asc" }],
+			});
+
+			return {
+				themes: themes.map((theme) => ({
+					id: theme.id,
+					name: theme.name,
+					isBuiltIn: theme.isBuiltIn,
+					headingFont: theme.headingFont,
+					bodyFont: theme.bodyFont,
+					backgroundColor: theme.backgroundColor,
+					textColor: theme.textColor,
+				})),
+			};
+		}),
+	);
+
+	/**
+	 * Get theme by ID
+	 */
+	ipcMain.handle(
+		"themes:get",
+		wrapIPCHandler(async (args) => {
+			const { id } = getThemeSchema.parse(args);
+
+			const theme = await prisma.theme.findUnique({
+				where: { id },
+			});
+
+			if (!theme) {
+				throw new Error(`Theme not found: ${id}`);
+			}
+
+			return { theme };
+		}),
+	);
+
+	// ==================== File Channel ====================
+
+	/**
+	 * Show open file dialog
+	 */
+	ipcMain.handle(
+		"file:select-file",
+		wrapIPCHandler(async (args) => {
+			const { title, filters, defaultPath } =
+				require("@shared/validation/schemas.js").selectFileSchema.parse(args);
+
+			const filePaths = await fileSystem.showOpenDialog({
+				title,
+				filters,
+				defaultPath,
+				properties: ["openFile"],
+			});
+
+			return {
+				filePath: filePaths[0] ?? null,
+				canceled: filePaths.length === 0,
+			};
+		}),
+	);
+
+	/**
+	 * Show save file dialog
+	 */
+	ipcMain.handle(
+		"file:save-dialog",
+		wrapIPCHandler(async (args) => {
+			const { title, defaultPath, filters } =
+				require("@shared/validation/schemas.js").saveFileDialogSchema.parse(
+					args,
+				);
+
+			const filePath = await fileSystem.showSaveDialog({
+				title,
+				defaultPath,
+				filters,
+			});
+
+			return {
+				filePath,
+				canceled: filePath === null,
+			};
+		}),
+	);
+
+	/**
+	 * Read file
+	 */
+	ipcMain.handle(
+		"file:read",
+		wrapIPCHandler(async (args) => {
+			const { filePath } =
+				require("@shared/validation/schemas.js").readFileSchema.parse(args);
+
+			const content = await fileSystem.readFile(filePath);
+
+			return { content };
+		}),
+	);
+
+	/**
+	 * Write file
+	 */
+	ipcMain.handle(
+		"file:write",
+		wrapIPCHandler(async (args) => {
+			const { filePath, content } =
+				require("@shared/validation/schemas.js").writeFileSchema.parse(args);
+
+			await fileSystem.writeFile(filePath, content);
+
+			return { success: true };
+		}),
+	);
+
+	/**
+	 * Delete file
+	 */
+	ipcMain.handle(
+		"file:delete",
+		wrapIPCHandler(async (args) => {
+			const { filePath } =
+				require("@shared/validation/schemas.js").deleteFileSchema.parse(args);
+
+			await fileSystem.deleteFile(filePath);
+
+			return { success: true };
+		}),
+	);
+
+	/**
+	 * Check if file exists
+	 */
+	ipcMain.handle(
+		"file:exists",
+		wrapIPCHandler(async (args) => {
+			const { filePath } =
+				require("@shared/validation/schemas.js").fileExistsSchema.parse(args);
+
+			const exists = await fileSystem.fileExists(filePath);
+
+			return { exists };
+		}),
+	);
+
+	// ==================== PDF Channel ====================
+
+	/**
+	 * Export PDF
+	 */
+	ipcMain.handle(
+		"pdf:export",
+		wrapIPCHandler(async (args) => {
+			const { exportPDFSchema } = require("@shared/validation/schemas.js");
+			const { projectId, outputPath, openAfterExport } =
+				exportPDFSchema.parse(args);
+
+			const { generatePDF, exportPDF } = require("../services/pdf-service.js");
+			const { shell } = require("electron");
+
+			// Get project with theme
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+				include: { theme: true },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			// Get theme (use project theme or default to first built-in theme)
+			let theme = project.theme;
+			if (!theme) {
+				theme = await prisma.theme.findFirst({
+					where: { isBuiltIn: true },
+				});
+				if (!theme) {
+					throw new Error("No theme available");
+				}
+			}
+
+			// Read project content
+			const fileContent = await fileSystem.readFile(project.filePath);
+			const projectData = JSON.parse(fileContent);
+
+			// Generate PDF
+			const buffer = await generatePDF(projectData.content || "", theme);
+
+			// Export to file
+			await exportPDF(buffer, outputPath);
+
+			// Open file after export if requested
+			if (openAfterExport) {
+				await shell.openPath(outputPath);
+			}
+
+			return { success: true, filePath: outputPath };
+		}),
+	);
+
+	/**
+	 * Preview PDF
+	 */
+	ipcMain.handle(
+		"pdf:preview",
+		wrapIPCHandler(async (args) => {
+			const { previewPDFSchema } = require("@shared/validation/schemas.js");
+			const { projectId } = previewPDFSchema.parse(args);
+
+			const { previewPDF } = require("../services/pdf-service.js");
+
+			// Get project with theme
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+				include: { theme: true },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			// Get theme (use project theme or default to first built-in theme)
+			let theme = project.theme;
+			if (!theme) {
+				theme = await prisma.theme.findFirst({
+					where: { isBuiltIn: true },
+				});
+				if (!theme) {
+					throw new Error("No theme available");
+				}
+			}
+
+			// Read project content
+			const fileContent = await fileSystem.readFile(project.filePath);
+			const projectData = JSON.parse(fileContent);
+
+			// Generate preview
+			const dataUrl = await previewPDF(projectData.content || "", theme);
+
+			return { dataUrl };
+		}),
+	);
+
+	/**
+	 * Calculate page breaks
+	 */
+	ipcMain.handle(
+		"pdf:calculate-page-breaks",
+		wrapIPCHandler(async (args) => {
+			// This handler receives just projectId similar to preview
+			const input = args as unknown as { projectId: string };
+			const { projectId } = input;
+
+			const { calculatePageBreaks } = require("../services/pdf-service.js");
+
+			// Get project with theme
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+				include: { theme: true },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			// Get theme
+			let theme = project.theme;
+			if (!theme) {
+				theme = await prisma.theme.findFirst({
+					where: { isBuiltIn: true },
+				});
+				if (!theme) {
+					throw new Error("No theme available");
+				}
+			}
+
+			// Read project content
+			const fileContent = await fileSystem.readFile(project.filePath);
+			const projectData = JSON.parse(fileContent);
+
+			// Calculate page breaks
+			const pageBreaks = calculatePageBreaks(projectData.content || "", theme);
+
+			return { pageBreaks };
+		}),
+	);
+
+	// ==================== Theme Preference Channel ====================
+
+	/**
+	 * Get current theme preference
+	 */
+	ipcMain.handle(
+		"theme:get",
+		wrapIPCHandler(async () => {
+			const { themeService } = await import("../services/theme-service.js");
+			return themeService.getTheme();
+		}),
+	);
+
+	/**
+	 * Set theme preference
+	 */
+	ipcMain.handle(
+		"theme:set",
+		wrapIPCHandler(async (args) => {
+			const { themeService } = await import("../services/theme-service.js");
+			const theme = args as unknown;
+
+			if (theme !== "light" && theme !== "dark") {
+				throw new Error(
+					`Invalid theme: ${theme}. Must be "light" or "dark".`,
+				);
+			}
+
+			themeService.setTheme(theme);
+			return undefined;
+		}),
+	);
+
+	// ==================== App Channel ====================
+
+	/**
+	 * Get app version
+	 */
+	ipcMain.handle(
+		"app:version",
+		wrapIPCHandler(async (args) => {
+			getAppVersionSchema.parse(args);
+			return {
+				version: appData.getAppVersion(),
+				name: appData.getAppName(),
+			};
+		}),
+	);
+
+	/**
+	 * Get app paths
+	 */
+	ipcMain.handle(
+		"app:paths",
+		wrapIPCHandler(async (args) => {
+			getAppPathSchema.parse(args);
+			return {
+				appData: appData.getAppDataPath(),
+				projects: appData.getProjectsPath(),
+				themes: appData.getThemesPath(),
+				fonts: appData.getFontsPath(),
+				...appData.getSystemPaths(),
+			};
+		}),
+	);
+}

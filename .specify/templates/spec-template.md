@@ -68,12 +68,14 @@
 ### Edge Cases
 
 <!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
+  ACTION REQUIRED: Fill with actual edge cases for this feature.
+  For desktop apps, consider: offline scenarios, file system errors,
+  large documents, concurrent windows, system sleep/wake, permissions.
 -->
 
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
+- What happens when [boundary condition, e.g., file already exists, disk full]?
+- How does system handle [error scenario, e.g., IPC failure, corrupted data]?
+- What occurs when [desktop-specific case, e.g., app quit during save, multiple instances]?
 
 ## Requirements *(mandatory)*
 
