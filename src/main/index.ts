@@ -101,18 +101,17 @@ function createWindow() {
 app.whenReady().then(async () => {
 	console.log("🚀 App is ready, starting initialization...");
 
-	// Create window FIRST so user can see something
-	createWindow();
-
-	// Initialize app data directories
+	// Initialize app data directories FIRST (required for IPC handlers)
 	try {
 		await appData.initialize();
 		console.log("✅ App data directories initialized");
 	} catch (error) {
 		console.error("❌ App data initialization failed:", error);
+		app.quit();
+		return;
 	}
 
-	// Initialize database
+	// Initialize database SECOND (required for IPC handlers)
 	try {
 		const { applyMigrations } = await import("./database/migrate.js");
 		await applyMigrations();
@@ -128,16 +127,23 @@ app.whenReady().then(async () => {
 		console.log(`📊 Projects in database: ${projectCount}`);
 	} catch (error) {
 		console.error("❌ Database initialization failed:", error);
+		app.quit();
+		return;
 	}
 
-	// Register IPC handlers
+	// Register IPC handlers THIRD (requires appData and database to be ready)
 	try {
 		const { registerIPCHandlers } = await import("./ipc/handlers.js");
 		registerIPCHandlers();
 		console.log("✅ IPC handlers registered");
 	} catch (error) {
 		console.error("❌ IPC handlers registration failed:", error);
+		app.quit();
+		return;
 	}
+
+	// Create window LAST (after all initialization is complete)
+	createWindow();
 
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) {

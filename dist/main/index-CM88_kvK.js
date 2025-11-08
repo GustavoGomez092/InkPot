@@ -110,15 +110,27 @@ async function initialize() {
   ]);
 }
 function getAppDataPath() {
+  if (!appDataPath) {
+    throw new Error("App data not initialized. Call initialize() first.");
+  }
   return appDataPath;
 }
 function getProjectsPath() {
+  if (!projectsPath) {
+    throw new Error("App data not initialized. Call initialize() first.");
+  }
   return projectsPath;
 }
 function getThemesPath() {
+  if (!themesPath) {
+    throw new Error("App data not initialized. Call initialize() first.");
+  }
   return themesPath;
 }
 function getFontsPath() {
+  if (!fontsPath) {
+    throw new Error("App data not initialized. Call initialize() first.");
+  }
   return fontsPath;
 }
 function isPathInProjects(filePath) {
@@ -208,12 +220,13 @@ function createWindow() {
 }
 app.whenReady().then(async () => {
   console.log("🚀 App is ready, starting initialization...");
-  createWindow();
   try {
     await initialize();
     console.log("✅ App data directories initialized");
   } catch (error) {
     console.error("❌ App data initialization failed:", error);
+    app.quit();
+    return;
   }
   try {
     const { applyMigrations } = await import("./migrate-H6M7GUsl.js");
@@ -226,14 +239,19 @@ app.whenReady().then(async () => {
     console.log(`📊 Projects in database: ${projectCount}`);
   } catch (error) {
     console.error("❌ Database initialization failed:", error);
+    app.quit();
+    return;
   }
   try {
-    const { registerIPCHandlers } = await import("./handlers-AGFw3zMX.js");
+    const { registerIPCHandlers } = await import("./handlers-DCRlWloK.js");
     registerIPCHandlers();
     console.log("✅ IPC handlers registered");
   } catch (error) {
     console.error("❌ IPC handlers registration failed:", error);
+    app.quit();
+    return;
   }
+  createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();

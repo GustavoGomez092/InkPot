@@ -35,6 +35,9 @@ export async function initialize(): Promise<void> {
  * Get the main app data directory path
  */
 export function getAppDataPath(): string {
+	if (!appDataPath) {
+		throw new Error("App data not initialized. Call initialize() first.");
+	}
 	return appDataPath;
 }
 
@@ -42,6 +45,9 @@ export function getAppDataPath(): string {
  * Get the projects directory path
  */
 export function getProjectsPath(): string {
+	if (!projectsPath) {
+		throw new Error("App data not initialized. Call initialize() first.");
+	}
 	return projectsPath;
 }
 
@@ -49,6 +55,9 @@ export function getProjectsPath(): string {
  * Get the themes directory path
  */
 export function getThemesPath(): string {
+	if (!themesPath) {
+		throw new Error("App data not initialized. Call initialize() first.");
+	}
 	return themesPath;
 }
 
@@ -56,6 +65,9 @@ export function getThemesPath(): string {
  * Get the fonts directory path
  */
 export function getFontsPath(): string {
+	if (!fontsPath) {
+		throw new Error("App data not initialized. Call initialize() first.");
+	}
 	return fontsPath;
 }
 
