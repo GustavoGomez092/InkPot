@@ -1,1 +1,111 @@
-node_modules
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+out/
+build/
+.vite/
+*.tsbuildinfo
+
+# Electron Forge outputs
+.webpack/
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.loadpath
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Prisma
+# Keep migrations but ignore generated client
+src/main/database/generated/
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Production database (keep dev database tracked for testing)
+*.db-journal
+*.db-wal
+
+# User data (application data directory contents)
+# This is where user projects are stored at runtime
+# Path is typically ~/Library/Application Support/InkForge on macOS
+# We want to ignore this to not track user data during development
+
+# Debug and profiling
+.trace
+chrome-profiler-events*.json
+*.cpuprofile
+
+# Package manager lock files (choose one)
+# Uncomment the one you DON'T use
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
