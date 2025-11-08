@@ -8,6 +8,7 @@ import assert from "node:assert";
 import os from "node:os";
 import "node:events";
 import "node:stream";
+import { r as requireFastDeepEqual, g as getDefaultExportFromCjs } from "./handlers-BUqzNS6Z.js";
 const isObject = (value) => {
   const type2 = typeof value;
   return value !== null && (type2 === "object" || type2 === "function");
@@ -490,7 +491,7 @@ if (!IS_WINDOWS) {
 if (IS_LINUX) {
   Signals.push("SIGIO", "SIGPOLL", "SIGPWR", "SIGSTKFLT");
 }
-let Interceptor$1 = class Interceptor {
+class Interceptor {
   /* CONSTRUCTOR */
   constructor() {
     this.callbacks = /* @__PURE__ */ new Set();
@@ -527,9 +528,9 @@ let Interceptor$1 = class Interceptor {
     };
     this.hook();
   }
-};
-const Interceptor2 = new Interceptor$1();
-const whenExit = Interceptor2.register;
+}
+const Interceptor$1 = new Interceptor();
+const whenExit = Interceptor$1.register;
 const Temp = {
   /* VARIABLES */
   store: {},
@@ -655,9 +656,6 @@ function writeFileSync(filePath, data, options = DEFAULT_WRITE_OPTIONS) {
     if (tempPath)
       Temp.purge(tempPath);
   }
-}
-function getDefaultExportFromCjs(x) {
-  return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
 }
 var _2020 = { exports: {} };
 var core$1 = {};
@@ -2678,41 +2676,6 @@ function requireSubschema() {
   return subschema;
 }
 var resolve = {};
-var fastDeepEqual;
-var hasRequiredFastDeepEqual;
-function requireFastDeepEqual() {
-  if (hasRequiredFastDeepEqual) return fastDeepEqual;
-  hasRequiredFastDeepEqual = 1;
-  fastDeepEqual = function equal2(a, b) {
-    if (a === b) return true;
-    if (a && b && typeof a == "object" && typeof b == "object") {
-      if (a.constructor !== b.constructor) return false;
-      var length, i, keys;
-      if (Array.isArray(a)) {
-        length = a.length;
-        if (length != b.length) return false;
-        for (i = length; i-- !== 0; )
-          if (!equal2(a[i], b[i])) return false;
-        return true;
-      }
-      if (a.constructor === RegExp) return a.source === b.source && a.flags === b.flags;
-      if (a.valueOf !== Object.prototype.valueOf) return a.valueOf() === b.valueOf();
-      if (a.toString !== Object.prototype.toString) return a.toString() === b.toString();
-      keys = Object.keys(a);
-      length = keys.length;
-      if (length !== Object.keys(b).length) return false;
-      for (i = length; i-- !== 0; )
-        if (!Object.prototype.hasOwnProperty.call(b, keys[i])) return false;
-      for (i = length; i-- !== 0; ) {
-        var key = keys[i];
-        if (!equal2(a[key], b[key])) return false;
-      }
-      return true;
-    }
-    return a !== a && b !== b;
-  };
-  return fastDeepEqual;
-}
 var jsonSchemaTraverse = { exports: {} };
 var hasRequiredJsonSchemaTraverse;
 function requireJsonSchemaTraverse() {

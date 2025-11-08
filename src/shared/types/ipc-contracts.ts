@@ -278,6 +278,7 @@ export interface PreviewPDFResponse {
 export interface ExportPDFRequest {
 	projectId: string;
 	outputPath: string;
+	openAfterExport?: boolean;
 }
 
 export interface ExportPDFResponse {

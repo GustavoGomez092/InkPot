@@ -7,21 +7,30 @@
 import {
 	createProjectSchema,
 	deleteProjectSchema,
+	deleteFileSchema,
+	exportPDFSchema,
+	fileExistsSchema,
 	getAppPathSchema,
 	getAppVersionSchema,
 	getThemeSchema,
 	listRecentProjectsSchema,
 	listThemesSchema,
 	loadProjectSchema,
+	previewPDFSchema,
+	readFileSchema,
+	saveFileDialogSchema,
 	saveProjectSchema,
+	selectFileSchema,
+	writeFileSchema,
 } from "@shared/validation/schemas.js";
-import { ipcMain } from "electron";
+import { ipcMain, shell } from "electron";
 // Import database client
 import { prisma } from "../database/client.js";
 
 // Import services
 import * as appData from "../services/app-data.js";
 import * as fileSystem from "../services/file-system.js";
+import { calculatePageBreaks, exportPDF, generatePDF, previewPDF } from "../services/pdf-service.js";
 import { wrapIPCHandler } from "./error-handler.js";
 
 /**
@@ -431,8 +440,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"file:select-file",
 		wrapIPCHandler(async (args) => {
-			const { title, filters, defaultPath } =
-				require("@shared/validation/schemas.js").selectFileSchema.parse(args);
+			const { title, filters, defaultPath } = selectFileSchema.parse(args);
 
 			const filePaths = await fileSystem.showOpenDialog({
 				title,
@@ -454,10 +462,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"file:save-dialog",
 		wrapIPCHandler(async (args) => {
-			const { title, defaultPath, filters } =
-				require("@shared/validation/schemas.js").saveFileDialogSchema.parse(
-					args,
-				);
+			const { title, defaultPath, filters } = saveFileDialogSchema.parse(args);
 
 			const filePath = await fileSystem.showSaveDialog({
 				title,
@@ -478,8 +483,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"file:read",
 		wrapIPCHandler(async (args) => {
-			const { filePath } =
-				require("@shared/validation/schemas.js").readFileSchema.parse(args);
+			const { filePath } = readFileSchema.parse(args);
 
 			const content = await fileSystem.readFile(filePath);
 
@@ -493,8 +497,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"file:write",
 		wrapIPCHandler(async (args) => {
-			const { filePath, content } =
-				require("@shared/validation/schemas.js").writeFileSchema.parse(args);
+			const { filePath, content } = writeFileSchema.parse(args);
 
 			await fileSystem.writeFile(filePath, content);
 
@@ -508,8 +511,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"file:delete",
 		wrapIPCHandler(async (args) => {
-			const { filePath } =
-				require("@shared/validation/schemas.js").deleteFileSchema.parse(args);
+			const { filePath } = deleteFileSchema.parse(args);
 
 			await fileSystem.deleteFile(filePath);
 
@@ -523,8 +525,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"file:exists",
 		wrapIPCHandler(async (args) => {
-			const { filePath } =
-				require("@shared/validation/schemas.js").fileExistsSchema.parse(args);
+			const { filePath } = fileExistsSchema.parse(args);
 
 			const exists = await fileSystem.fileExists(filePath);
 
@@ -540,12 +541,8 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"pdf:export",
 		wrapIPCHandler(async (args) => {
-			const { exportPDFSchema } = require("@shared/validation/schemas.js");
 			const { projectId, outputPath, openAfterExport } =
 				exportPDFSchema.parse(args);
-
-			const { generatePDF, exportPDF } = require("../services/pdf-service.js");
-			const { shell } = require("electron");
 
 			// Get project with theme
 			const project = await prisma.project.findUnique({
@@ -593,10 +590,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"pdf:preview",
 		wrapIPCHandler(async (args) => {
-			const { previewPDFSchema } = require("@shared/validation/schemas.js");
 			const { projectId } = previewPDFSchema.parse(args);
-
-			const { previewPDF } = require("../services/pdf-service.js");
 
 			// Get project with theme
 			const project = await prisma.project.findUnique({
@@ -639,8 +633,6 @@ export function registerIPCHandlers(): void {
 			// This handler receives just projectId similar to preview
 			const input = args as unknown as { projectId: string };
 			const { projectId } = input;
-
-			const { calculatePageBreaks } = require("../services/pdf-service.js");
 
 			// Get project with theme
 			const project = await prisma.project.findUnique({
