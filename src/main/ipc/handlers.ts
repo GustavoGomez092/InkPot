@@ -617,14 +617,18 @@ export function registerIPCHandlers(): void {
 			const fileContent = await fileSystem.readFile(project.filePath);
 			const projectData = JSON.parse(fileContent);
 
-			// Generate preview
-			const dataUrl = await previewPDF(projectData.content || "", theme);
+		// Generate preview
+		const pdfDataUrl = await previewPDF(projectData.content || "", theme);
 
-			return { dataUrl };
-		}),
-	);
-
-	/**
+		// For now, we don't have pageCount and fileSize from previewPDF
+		// These would require parsing the PDF or tracking during generation
+		return { 
+			pdfDataUrl,
+			pageCount: 1, // Placeholder - would need PDF parsing to get actual count
+			fileSize: Buffer.from(pdfDataUrl.split(',')[1], 'base64').length
+		};
+	}),
+);	/**
 	 * Calculate page breaks
 	 */
 	ipcMain.handle(

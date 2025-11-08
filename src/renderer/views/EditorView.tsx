@@ -278,7 +278,9 @@ function EditorView() {
             </Button>
             <h1 className="text-xl font-semibold text-foreground">{projectName}</h1>
             {isSaving && <span className="text-sm text-muted-foreground">Saving...</span>}
-            {isGeneratingPreview && <span className="text-sm text-muted-foreground">Updating preview...</span>}
+            {isGeneratingPreview && (
+              <span className="text-sm text-muted-foreground">Updating preview...</span>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground">Last saved: {formatLastSaved()}</span>
@@ -302,9 +304,7 @@ function EditorView() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Markdown Editor</h2>
               <div className="flex gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {content.length} characters
-                </span>
+                <span className="text-sm text-muted-foreground">{content.length} characters</span>
                 <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Save'}
                 </Button>
@@ -326,19 +326,13 @@ function EditorView() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">PDF Preview</h2>
               {isGeneratingPreview && (
-                <span className="text-sm text-muted-foreground animate-pulse">
-                  Generating...
-                </span>
+                <span className="text-sm text-muted-foreground animate-pulse">Generating...</span>
               )}
             </div>
           </div>
           <div className="flex-1 overflow-hidden bg-zinc-700 flex items-center justify-center">
             {pdfDataUrl ? (
-              <iframe
-                src={pdfDataUrl}
-                className="w-full h-full border-0"
-                title="PDF Preview"
-              />
+              <iframe src={pdfDataUrl} className="w-full h-full border-0" title="PDF Preview" />
             ) : (
               <div className="text-center text-muted-foreground">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
