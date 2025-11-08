@@ -35,10 +35,11 @@ function createWindow() {
 			preload: preloadPath,
 			contextIsolation: true,
 			nodeIntegration: false,
-			sandbox: false, // Temporarily disable sandbox for testing
+			sandbox: false,
 		},
 		title: "InkForge",
-		show: true, // Show immediately to debug
+		show: false, // Don't show until ready-to-show event
+		backgroundColor: '#ffffff', // Prevent flash of unstyled content
 	});
 
 	// Register with window manager
@@ -58,29 +59,17 @@ function createWindow() {
 
 	mainWindow.webContents.on("render-process-gone", (_event, details) => {
 		console.error("❌ Render process gone:", details);
+		console.error("Reason:", details.reason);
+		console.error("Exit code:", details.exitCode);
 	});
 
 	mainWindow.webContents.on("console-message", (_event, level, message) => {
 		console.log(`[Renderer ${level}]:`, message);
 	});
 
-	if (isDev) {
-		// Development mode - load from Vite dev server
-		// Try multiple ports as Vite may use a different port if 5173 is taken
-		const devServerUrl =
-			process.env.VITE_DEV_SERVER_URL || "http://localhost:5173";
-		console.log("Loading from dev server:", devServerUrl);
-
-		mainWindow.loadURL(devServerUrl).catch((err) => {
-			console.error("❌ Failed to load dev server URL:", err);
-			// Show window anyway so user can see the error
-			mainWindow.show();
-		});
-		mainWindow.webContents.openDevTools();
-	} else {
-		// Production mode - load from built files
-		mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
-	}
+	mainWindow.on("closed", () => {
+		console.log("🔴 Window closed");
+	});
 
 	// Show window when ready
 	mainWindow.once("ready-to-show", () => {
@@ -88,13 +77,30 @@ function createWindow() {
 		mainWindow.show();
 	});
 
-	// Fallback: show window after 3 seconds if not shown yet
-	setTimeout(() => {
-		if (!mainWindow.isVisible()) {
-			console.log("⚠️ Window not shown after 3s, forcing show");
-			mainWindow.show();
-		}
-	}, 3000);
+	if (isDev) {
+		// Development mode - load from Vite dev server
+		const devServerUrl =
+			process.env.VITE_DEV_SERVER_URL || "http://localhost:5173";
+		console.log("Loading from dev server:", devServerUrl);
+
+		// Wait a bit for Vite to be ready, then load
+		setTimeout(async () => {
+			try {
+				await mainWindow.loadURL(devServerUrl);
+				console.log("✅ Dev server loaded successfully");
+				mainWindow.webContents.openDevTools();
+			} catch (err) {
+				console.error("❌ Failed to load dev server URL:", err);
+				mainWindow.show(); // Show window with error
+			}
+		}, 1000); // Give Vite 1 second to start
+	} else {
+		// Production mode - load from built files
+		mainWindow.loadFile(path.join(__dirname, "../renderer/index.html")).catch((err) => {
+			console.error("❌ Failed to load index.html:", err);
+			mainWindow.show(); // Show window with error
+		});
+	}
 }
 
 // App lifecycle

@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { prisma } from "./client-CzweRmzs.js";
-import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-CM88_kvK.js";
+import { i as isPathInProjects, e as ensureExtension, f as fileExists, w as writeFile, r as readFile, d as deleteFile, s as showOpenDialog, a as showSaveDialog, g as getAppName, b as getAppVersion, c as getSystemPaths, h as getFontsPath, j as getThemesPath, k as getProjectsPath, l as getAppDataPath } from "./index-Ce-DyvlX.js";
 function $constructor(name, initializer2, params) {
   function init(inst, def) {
     var _a;

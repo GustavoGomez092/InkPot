@@ -174,11 +174,12 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
-      // Temporarily disable sandbox for testing
     },
     title: "InkForge",
-    show: true
-    // Show immediately to debug
+    show: false,
+    // Don't show until ready-to-show event
+    backgroundColor: "#ffffff"
+    // Prevent flash of unstyled content
   });
   setMainWindow(mainWindow2);
   mainWindow2.webContents.on(
@@ -192,31 +193,38 @@ function createWindow() {
   });
   mainWindow2.webContents.on("render-process-gone", (_event, details) => {
     console.error("❌ Render process gone:", details);
+    console.error("Reason:", details.reason);
+    console.error("Exit code:", details.exitCode);
   });
   mainWindow2.webContents.on("console-message", (_event, level, message) => {
     console.log(`[Renderer ${level}]:`, message);
   });
-  if (isDev) {
-    const devServerUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:5173";
-    console.log("Loading from dev server:", devServerUrl);
-    mainWindow2.loadURL(devServerUrl).catch((err) => {
-      console.error("❌ Failed to load dev server URL:", err);
-      mainWindow2.show();
-    });
-    mainWindow2.webContents.openDevTools();
-  } else {
-    mainWindow2.loadFile(path$1.join(__dirname$1, "../renderer/index.html"));
-  }
+  mainWindow2.on("closed", () => {
+    console.log("🔴 Window closed");
+  });
   mainWindow2.once("ready-to-show", () => {
     console.log("✅ Window ready to show");
     mainWindow2.show();
   });
-  setTimeout(() => {
-    if (!mainWindow2.isVisible()) {
-      console.log("⚠️ Window not shown after 3s, forcing show");
+  if (isDev) {
+    const devServerUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:5173";
+    console.log("Loading from dev server:", devServerUrl);
+    setTimeout(async () => {
+      try {
+        await mainWindow2.loadURL(devServerUrl);
+        console.log("✅ Dev server loaded successfully");
+        mainWindow2.webContents.openDevTools();
+      } catch (err) {
+        console.error("❌ Failed to load dev server URL:", err);
+        mainWindow2.show();
+      }
+    }, 1e3);
+  } else {
+    mainWindow2.loadFile(path$1.join(__dirname$1, "../renderer/index.html")).catch((err) => {
+      console.error("❌ Failed to load index.html:", err);
       mainWindow2.show();
-    }
-  }, 3e3);
+    });
+  }
 }
 app.whenReady().then(async () => {
   console.log("🚀 App is ready, starting initialization...");
@@ -243,7 +251,7 @@ app.whenReady().then(async () => {
     return;
   }
   try {
-    const { registerIPCHandlers } = await import("./handlers-DCRlWloK.js");
+    const { registerIPCHandlers } = await import("./handlers-D5jCMJMQ.js");
     registerIPCHandlers();
     console.log("✅ IPC handlers registered");
   } catch (error) {
