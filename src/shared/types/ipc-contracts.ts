@@ -480,6 +480,10 @@ export interface ElectronAPI {
 		version: () => Promise<IPCResponse<AppVersionResponse>>;
 		paths: (req: GetAppPathRequest) => Promise<IPCResponse<AppPathsResponse>>;
 	};
+	theme: {
+		get: () => Promise<IPCResponse<{ theme: "light" | "dark" }>>;
+		set: (req: { theme: "light" | "dark" }) => Promise<IPCResponse<{ success: true }>>;
+	};
 }
 
 declare global {

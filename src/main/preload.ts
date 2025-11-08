@@ -45,6 +45,11 @@ const electronAPI: ElectronAPI = {
 		version: () => ipcRenderer.invoke("app:version", {}),
 		paths: (req) => ipcRenderer.invoke("app:paths", req),
 	},
+	theme: {
+		get: () => ipcRenderer.invoke("theme:get", {}),
+		set: (req: { theme: "light" | "dark" }) =>
+			ipcRenderer.invoke("theme:set", req),
+	},
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

@@ -23,8 +23,14 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
   // Load themes
   useEffect(() => {
     const loadThemes = async () => {
+      // Check if Electron API is available
+      if (typeof window === 'undefined' || !('electronAPI' in window)) {
+        console.warn('Electron API not available');
+        return;
+      }
+
       try {
-        const result = await window.electronAPI.themes.list({});
+        const result = await (window as any).electronAPI.themes.list({});
         if (result.success) {
           setThemes(result.data);
           if (result.data.length > 0) {
@@ -47,12 +53,18 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
       return;
     }
 
+    // Check if Electron API is available
+    if (typeof window === 'undefined' || !('electronAPI' in window)) {
+      setError('Electron API not available. Please restart the app.');
+      return;
+    }
+
     setIsCreating(true);
     setError('');
 
     try {
       // Get projects path
-      const pathsResult = await window.electronAPI.app.paths({});
+      const pathsResult = await (window as any).electronAPI.app.paths({});
       if (!pathsResult.success) {
         throw new Error('Failed to get app paths');
       }
@@ -67,7 +79,7 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
       const filePath = `${projectsPath}/${safeFileName}.inkforge`;
 
       // Create project
-      const result = await window.electronAPI.projects.create({
+      const result = await (window as any).electronAPI.projects.create({
         name: projectName,
         filePath,
         themeId: selectedTheme || undefined,

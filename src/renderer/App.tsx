@@ -33,7 +33,7 @@ function AppContent() {
     const api = (window as any).electronAPI;
 
     // Fetch app version
-    api.app.getVersion().then((result: any) => {
+    api.app.version().then((result: any) => {
       if (result.success) {
         setAppInfo(result);
       }
@@ -97,16 +97,16 @@ function AppContent() {
           <Card.Body>
             <div className="space-y-2">
               <div className="flex items-center">
-                <span className={`mr-2 ${hasElectronAPI ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                <span
+                  className={`mr-2 ${hasElectronAPI ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}
+                >
                   {hasElectronAPI ? '✓' : '✗'}
                 </span>
                 <span>Preload Script: {hasElectronAPI ? 'Connected' : 'Not Connected'}</span>
               </div>
               {hasElectronAPI && (
                 <div className="mt-4 p-4 bg-accent/50 text-accent-foreground rounded">
-                  <p>
-                    Database operational • IPC ready • {themes.length} themes available
-                  </p>
+                  <p>Database operational • IPC ready • {themes.length} themes available</p>
                 </div>
               )}
             </div>
@@ -128,7 +128,9 @@ function AppContent() {
                   <Card key={themeItem.id} hover>
                     <Card.Body className="py-3">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-medium text-card-foreground">{themeItem.name}</h3>
+                        <h3 className="text-lg font-medium text-card-foreground">
+                          {themeItem.name}
+                        </h3>
                         {themeItem.isBuiltIn && (
                           <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
                             Built-in

@@ -153,8 +153,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      // Temporarily disable preload to see if window shows
-      // preload: preloadPath,
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -225,7 +224,7 @@ app.whenReady().then(async () => {
     console.error("❌ Database initialization failed:", error);
   }
   try {
-    const { registerIPCHandlers } = await import("./handlers-YzmNBd88.js");
+    const { registerIPCHandlers } = await import("./handlers-Bvpq_YWa.js");
     registerIPCHandlers();
     console.log("✅ IPC handlers registered");
   } catch (error) {

@@ -24,8 +24,7 @@ function createWindow() {
 		minWidth: 800,
 		minHeight: 600,
 		webPreferences: {
-			// Temporarily disable preload to see if window shows
-			// preload: preloadPath,
+			preload: preloadPath,
 			contextIsolation: true,
 			nodeIntegration: false,
 			sandbox: false, // Temporarily disable sandbox for testing
