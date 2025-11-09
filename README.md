@@ -99,7 +99,7 @@ InkPot is built with modern web technologies for desktop, following a comprehens
 ### **Project Structure**
 
 ```
-InkForge/
+InkPot/
 ├── src/
 │   ├── main/                    # Electron main process
 │   │   ├── index.ts             # Main entry point
@@ -211,8 +211,8 @@ InkPot development follows five core principles defined in the [project constitu
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/InkForge.git
-   cd InkForge
+   git clone https://github.com/yourusername/InkPot.git
+   cd InkPot
    ```
 
 2. **Install dependencies**
@@ -540,9 +540,9 @@ Built with these amazing open-source projects:
 
 ## 📧 Contact
 
-**InkPot Team** - [Your Contact Information]
+**InkPot Team** - gustavogomez092@gmail.com
 
-Project Link: [https://github.com/yourusername/InkForge](https://github.com/yourusername/InkForge)
+Project Link: [https://github.com/GustavoGomez092/InkPot](https://github.com/GustavoGomez092/InkPot)
 
 ---
 
