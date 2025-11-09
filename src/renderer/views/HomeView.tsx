@@ -69,27 +69,6 @@ function HomeView() {
     });
   };
 
-  const handleOpenFile = async () => {
-    if (!hasElectronAPI) return;
-
-    const api = window.electronAPI;
-    const result = await api.file.selectFile({
-      title: 'Open InkForge Project',
-      filters: [{ name: 'InkForge Projects', extensions: ['inkforge'] }],
-    });
-
-    if (result.success && result.data.filePath) {
-      // Load the project and navigate to editor
-      const loadResult = await api.projects.load({ filePath: result.data.filePath });
-      if (loadResult.success) {
-        navigate({
-          to: '/editor/$projectId',
-          params: { projectId: loadResult.data.project.id },
-        });
-      }
-    }
-  };
-
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar */}
@@ -97,30 +76,20 @@ function HomeView() {
         {/* App Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-primary-foreground"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
+            <img 
+              src="/Assets/PNG/App-logo.png" 
+              alt="InkForge Logo" 
+              className="w-10 h-10 rounded-lg"
+            />
             <div>
-              <h1 className="text-sm font-semibold text-foreground">Markdown PDF</h1>
-              <p className="text-xs text-muted-foreground">Converter App</p>
+              <h1 className="text-sm font-semibold text-foreground">InkForge</h1>
+              <p className="text-xs text-muted-foreground">Markdown to PDF</p>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="p-4 space-y-2">
+        <div className="p-4">
           <Button
             variant="primary"
             className="w-full justify-start font-semibold"
@@ -128,18 +97,11 @@ function HomeView() {
           >
             New Document
           </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-primary hover:text-primary hover:bg-primary/10"
-            onClick={handleOpenFile}
-          >
-            Open File...
-          </Button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-2 py-4 space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md bg-accent text-accent-foreground">
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md bg-accent text-accent-foreground cursor-pointer hover:opacity-90 transition-all">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -150,7 +112,10 @@ function HomeView() {
             </svg>
             Recent Projects
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+          <button
+            onClick={() => navigate({ to: '/settings' })}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all cursor-pointer hover:opacity-90"
+          >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -167,7 +132,7 @@ function HomeView() {
             </svg>
             Settings
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all cursor-pointer hover:opacity-90">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"

@@ -3,11 +3,18 @@
  * Main React-PDF document that renders markdown content with theme styling
  */
 
-import { Document, Page, Text, View } from '@react-pdf/renderer';
+import { Document, Font, Page, Text, View } from '@react-pdf/renderer';
 import type { ThemeData } from '@shared/types/ipc-contracts.js';
 import React from 'react';
 import { MarkdownElements } from './components/MarkdownElements.js';
 import { parseMarkdown } from './markdown-parser.js';
+
+// Register emoji support for PDFs using React-PDF's built-in emoji source
+// This uses Apple emoji images from a CDN for consistent emoji rendering across all platforms
+Font.registerEmojiSource({
+  format: 'png',
+  url: 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/',
+});
 
 // Register font fallbacks for PDF generation
 // React-PDF has built-in support for these standard font families
@@ -38,9 +45,9 @@ function getSafeFontFamily(fontFamily: string): string {
 /**
  * Generate PDF document element from markdown content with theme styling
  */
-export function createPDFDocument(content: string, theme: ThemeData) {
+export function createPDFDocument(content: string, theme: ThemeData, projectDir?: string) {
   // Parse markdown to structured elements
-  const elements = parseMarkdown(content);
+  const elements = parseMarkdown(content, projectDir);
 
   // Split elements by page breaks
   const pages: (typeof elements)[] = [];

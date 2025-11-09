@@ -1,7 +1,18 @@
 import path from "path";
 import { defineConfig } from "vite";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 
 export default defineConfig({
+	plugins: [
+		viteStaticCopy({
+			targets: [
+				{
+					src: "src/main/assets/fonts/*",
+					dest: "assets/fonts",
+				},
+			],
+		}),
+	],
 	build: {
 		lib: {
 			entry: path.resolve(__dirname, "src/main/index.ts"),

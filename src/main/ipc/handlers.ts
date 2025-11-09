@@ -3,11 +3,14 @@
  * This file registers all IPC handlers for communication between renderer and main process
  */
 
+import path from "node:path";
 // Import validation schemas
 import {
 	createProjectSchema,
-	deleteProjectSchema,
+	createThemeSchema,
 	deleteFileSchema,
+	deleteProjectSchema,
+	deleteThemeSchema,
 	exportPDFSchema,
 	fileExistsSchema,
 	getAppPathSchema,
@@ -21,16 +24,23 @@ import {
 	saveFileDialogSchema,
 	saveProjectSchema,
 	selectFileSchema,
+	updateThemeSchema,
 	writeFileSchema,
 } from "@shared/validation/schemas.js";
 import { ipcMain, shell } from "electron";
+import { z } from "zod";
 // Import database client
 import { prisma } from "../database/client.js";
 
 // Import services
 import * as appData from "../services/app-data.js";
 import * as fileSystem from "../services/file-system.js";
-import { calculatePageBreaks, exportPDF, generatePDF, previewPDF } from "../services/pdf-service.js";
+import {
+	calculatePageBreaks,
+	exportPDF,
+	generatePDF,
+	previewPDF,
+} from "../services/pdf-service.js";
 import { wrapIPCHandler } from "./error-handler.js";
 
 /**
@@ -305,6 +315,53 @@ export function registerIPCHandlers(): void {
 	);
 
 	/**
+	 * Rename project
+	 */
+	ipcMain.handle(
+		"projects:rename",
+		wrapIPCHandler(async (args) => {
+			const { id, name } = z
+				.object({
+					id: z.string().uuid(),
+					name: z.string().min(1),
+				})
+				.parse(args);
+
+			// Get project
+			const project = await prisma.project.findUnique({ where: { id } });
+			if (!project) {
+				throw new Error(`Project not found: ${id}`);
+			}
+
+			// Update project name in database
+			const updatedProject = await prisma.project.update({
+				where: { id },
+				data: { name },
+			});
+
+			// Update name in the file content
+			const fileContent = await fileSystem.readFile(project.filePath);
+			const projectData = JSON.parse(fileContent);
+			projectData.name = name;
+			projectData.updatedAt = updatedProject.updatedAt.toISOString();
+
+			await fileSystem.writeFile(
+				project.filePath,
+				JSON.stringify(projectData, null, 2),
+			);
+
+			return {
+				project: {
+					id: updatedProject.id,
+					name: updatedProject.name,
+					filePath: updatedProject.filePath,
+					updatedAt: updatedProject.updatedAt.toISOString(),
+				},
+			};
+		}),
+	);
+
+	/**
 	 * Delete project
 	 */
 	ipcMain.handle(
@@ -398,17 +455,13 @@ export function registerIPCHandlers(): void {
 				orderBy: [{ isBuiltIn: "desc" }, { name: "asc" }],
 			});
 
-			return {
-				themes: themes.map((theme) => ({
-					id: theme.id,
-					name: theme.name,
-					isBuiltIn: theme.isBuiltIn,
-					headingFont: theme.headingFont,
-					bodyFont: theme.bodyFont,
-					backgroundColor: theme.backgroundColor,
-					textColor: theme.textColor,
-				})),
-			};
+			return themes.map((theme) => ({
+				id: theme.id,
+				name: theme.name,
+				isBuiltIn: theme.isBuiltIn,
+				headingFont: theme.headingFont,
+				bodyFont: theme.bodyFont,
+			}));
 		}),
 	);
 
@@ -428,7 +481,89 @@ export function registerIPCHandlers(): void {
 				throw new Error(`Theme not found: ${id}`);
 			}
 
+			return theme;
+		}),
+	);
+
+	/**
+	 * Create a new theme
+	 */
+	ipcMain.handle(
+		"themes:create",
+		wrapIPCHandler(async (args) => {
+			const data = createThemeSchema.parse(args);
+
+			const theme = await prisma.theme.create({
+				data: {
+					...data,
+					isBuiltIn: false,
+				},
+			});
+
+			return {
+				id: theme.id,
+				name: theme.name,
+				createdAt: theme.createdAt.toISOString(),
+			};
+		}),
+	);
+
+	/**
+	 * Update an existing theme
+	 */
+	ipcMain.handle(
+		"themes:update",
+		wrapIPCHandler(async (args) => {
+			const { id, updates } = updateThemeSchema.parse(args);
+
+			// Check if theme exists and is not built-in
+			const existingTheme = await prisma.theme.findUnique({
+				where: { id },
+			});
+
+			if (!existingTheme) {
+				throw new Error(`Theme not found: ${id}`);
+			}
+
+			if (existingTheme.isBuiltIn) {
+				throw new Error("Cannot update built-in themes");
+			}
+
+			const theme = await prisma.theme.update({
+				where: { id },
+				data: updates,
+			});
+
 			return { theme };
+		}),
+	);
+
+	/**
+	 * Delete a theme
+	 */
+	ipcMain.handle(
+		"themes:delete",
+		wrapIPCHandler(async (args) => {
+			const { id } = deleteThemeSchema.parse(args);
+
+			// Check if theme exists and is not built-in
+			const existingTheme = await prisma.theme.findUnique({
+				where: { id },
+			});
+
+			if (!existingTheme) {
+				throw new Error(`Theme not found: ${id}`);
+			}
+
+			if (existingTheme.isBuiltIn) {
+				throw new Error("Cannot delete built-in themes");
+			}
+
+			await prisma.theme.delete({
+				where: { id },
+			});
+
+			return { success: true };
 		}),
 	);
 
@@ -533,7 +668,154 @@ export function registerIPCHandlers(): void {
 		}),
 	);
 
-	// ==================== PDF Channel ====================
+	/**
+	 * Save image from data URL to project assets folder
+	 */
+	ipcMain.handle(
+		"file:save-image",
+		wrapIPCHandler(async (args) => {
+			const { projectId, imageDataUrl, fileName } = z
+				.object({
+					projectId: z.string().uuid(),
+					imageDataUrl: z.string(),
+					fileName: z.string().optional(),
+				})
+				.parse(args);
+
+			// Get project
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			// Create assets directory for project
+			const projectDir = path.dirname(project.filePath);
+			const assetsDir = path.join(projectDir, "assets");
+			await fileSystem.createDirectory(assetsDir);
+
+			// Extract file extension from data URL
+			const matches = imageDataUrl.match(/^data:image\/([^;]+);base64,/);
+			const extension = matches ? `.${matches[1]}` : ".png";
+
+			// Generate unique filename
+			const baseName = fileName
+				? path.parse(fileName).name
+				: `image-${Date.now()}`;
+			const safeFileName = fileSystem.getSafeFilename(
+				fileSystem.generateUniqueFilename(baseName, extension),
+			);
+			const absolutePath = path.join(assetsDir, safeFileName);
+
+			// Write file
+			await fileSystem.writeFileFromDataURL(absolutePath, imageDataUrl);
+
+			// Get file size
+			const stats = await fileSystem.getFileStats(absolutePath);
+
+			// Return relative path (assets/filename.ext)
+			const relativePath = `assets/${safeFileName}`;
+
+			return {
+				relativePath,
+				absolutePath,
+				fileName: safeFileName,
+				fileSize: stats.size,
+			};
+		}),
+	);
+
+	/**
+	 * Get project assets path
+	 */
+	ipcMain.handle(
+		"file:get-project-assets-path",
+		wrapIPCHandler(async (args) => {
+			const { projectId } = z
+				.object({
+					projectId: z.string().uuid(),
+				})
+				.parse(args);
+
+			// Get project
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			const projectPath = path.dirname(project.filePath);
+			const assetsPath = path.join(projectPath, "assets");
+
+			// Ensure assets directory exists
+			await fileSystem.createDirectory(assetsPath);
+
+			return {
+				assetsPath,
+				projectPath,
+			};
+		}),
+	);
+
+	/**
+	 * Get absolute path for image (converts relative path to file:// URL)
+	 */
+	/**
+	 * Get image absolute path from relative path
+	 */
+	ipcMain.handle(
+		"file:get-image-path",
+		wrapIPCHandler(async (args) => {
+			const { projectId, relativePath } = z
+				.object({
+					projectId: z.string().uuid(),
+					relativePath: z.string(),
+				})
+				.parse(args);
+
+			// Get project
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			const projectPath = path.dirname(project.filePath);
+			const absolutePath = path.join(projectPath, relativePath);
+
+			// Check if file exists
+			if (!(await fileSystem.fileExists(absolutePath))) {
+				throw new Error(`Image file not found: ${absolutePath}`);
+			}
+
+			// Read image and convert to base64 data URL
+			const fs = await import("node:fs/promises");
+			const imageBuffer = await fs.readFile(absolutePath);
+			const extension = path.extname(absolutePath).toLowerCase();
+			const mimeTypes: { [key: string]: string } = {
+				".png": "image/png",
+				".jpg": "image/jpeg",
+				".jpeg": "image/jpeg",
+				".gif": "image/gif",
+				".webp": "image/webp",
+				".svg": "image/svg+xml",
+			};
+			const mimeType = mimeTypes[extension] || "image/png";
+			const base64 = imageBuffer.toString("base64");
+			const dataUrl = `data:${mimeType};base64,${base64}`;
+
+			return {
+				absolutePath,
+				dataUrl,
+			};
+		}),
+	); // ==================== PDF Channel ====================
 
 	/**
 	 * Export PDF
@@ -569,8 +851,15 @@ export function registerIPCHandlers(): void {
 			const fileContent = await fileSystem.readFile(project.filePath);
 			const projectData = JSON.parse(fileContent);
 
+			// Get project directory for resolving image paths
+			const projectDir = path.dirname(project.filePath);
+
 			// Generate PDF
-			const buffer = await generatePDF(projectData.content || "", theme);
+			const buffer = await generatePDF(
+				projectData.content || "",
+				theme,
+				projectDir,
+			);
 
 			// Export to file
 			await exportPDF(buffer, outputPath);
@@ -590,7 +879,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"pdf:preview",
 		wrapIPCHandler(async (args) => {
-			const { projectId } = previewPDFSchema.parse(args);
+			const { projectId, content: liveContent } = previewPDFSchema.parse(args);
 
 			// Get project with theme
 			const project = await prisma.project.findUnique({
@@ -613,22 +902,31 @@ export function registerIPCHandlers(): void {
 				}
 			}
 
-			// Read project content
-			const fileContent = await fileSystem.readFile(project.filePath);
-			const projectData = JSON.parse(fileContent);
+			// Use live content if provided, otherwise read from file
+			let content: string;
+			if (liveContent !== undefined) {
+				content = liveContent;
+			} else {
+				const fileContent = await fileSystem.readFile(project.filePath);
+				const projectData = JSON.parse(fileContent);
+				content = projectData.content || "";
+			}
 
-		// Generate preview
-		const pdfDataUrl = await previewPDF(projectData.content || "", theme);
+			// Get project directory for resolving image paths
+			const projectDir = path.dirname(project.filePath);
 
-		// For now, we don't have pageCount and fileSize from previewPDF
-		// These would require parsing the PDF or tracking during generation
-		return { 
-			pdfDataUrl,
-			pageCount: 1, // Placeholder - would need PDF parsing to get actual count
-			fileSize: Buffer.from(pdfDataUrl.split(',')[1], 'base64').length
-		};
-	}),
-);	/**
+			// Generate preview
+			const pdfDataUrl = await previewPDF(content, theme, projectDir);
+
+			// For now, we don't have pageCount and fileSize from previewPDF
+			// These would require parsing the PDF or tracking during generation
+			return {
+				pdfDataUrl,
+				pageCount: 1, // Placeholder - would need PDF parsing to get actual count
+				fileSize: Buffer.from(pdfDataUrl.split(",")[1], "base64").length,
+			};
+		}),
+	); /**
 	 * Calculate page breaks
 	 */
 	ipcMain.handle(
@@ -693,9 +991,7 @@ export function registerIPCHandlers(): void {
 			const theme = args as unknown;
 
 			if (theme !== "light" && theme !== "dark") {
-				throw new Error(
-					`Invalid theme: ${theme}. Must be "light" or "dark".`,
-				);
+				throw new Error(`Invalid theme: ${theme}. Must be "light" or "dark".`);
 			}
 
 			themeService.setTheme(theme);
@@ -733,6 +1029,150 @@ export function registerIPCHandlers(): void {
 				fonts: appData.getFontsPath(),
 				...appData.getSystemPaths(),
 			};
+		}),
+	);
+
+	// ============================================================================
+	// FONTS CHANNEL
+	// ============================================================================
+
+	/**
+	 * Download a font from Google Fonts
+	 */
+	ipcMain.handle(
+		"fonts:download",
+		wrapIPCHandler(async (args) => {
+			const { family } = args as { family: string; variants?: string[] };
+
+			console.log(`📥 Downloading font: ${family}`);
+
+			try {
+				// For now, just return success if the font is one we already have
+				// In a real implementation, you would download from Google Fonts API
+				const supportedFonts = [
+					"Inter",
+					"Source Serif 4",
+					"JetBrains Mono",
+					"Roboto",
+					"Open Sans",
+					"Lato",
+					"Montserrat",
+					"Poppins",
+					"Merriweather",
+					"Playfair Display",
+					"Lora",
+					"PT Serif",
+				];
+
+				if (supportedFonts.includes(family)) {
+					console.log(`✅ Font ${family} is available`);
+					return { success: true, family };
+				}
+
+				console.log(`⚠️ Font ${family} not yet supported`);
+				return {
+					success: true,
+					family,
+					message: "Font will be mapped to closest match",
+				};
+			} catch (error) {
+				console.error(`❌ Failed to download font ${family}:`, error);
+				throw new Error(`Failed to download font: ${family}`);
+			}
+		}),
+	);
+
+	/**
+	 * Search for fonts
+	 */
+	ipcMain.handle(
+		"fonts:search",
+		wrapIPCHandler(async (args) => {
+			const { query, limit = 50 } = args as { query: string; limit?: number };
+
+			console.log(`🔍 Searching fonts: ${query}`);
+
+			// For now, return a curated list of Google Fonts
+			const fonts = [
+				{
+					family: "Inter",
+					category: "sans-serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Roboto",
+					category: "sans-serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Open Sans",
+					category: "sans-serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Lato",
+					category: "sans-serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Montserrat",
+					category: "sans-serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Source Serif 4",
+					category: "serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Merriweather",
+					category: "serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Playfair Display",
+					category: "serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Lora",
+					category: "serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "PT Serif",
+					category: "serif" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "JetBrains Mono",
+					category: "monospace" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+				{
+					family: "Source Code Pro",
+					category: "monospace" as const,
+					variants: ["regular", "italic", "600", "600italic"],
+					subsets: ["latin"],
+				},
+			];
+
+			const filtered = fonts
+				.filter((f) => f.family.toLowerCase().includes(query.toLowerCase()))
+				.slice(0, limit);
+
+			return { fonts: filtered };
 		}),
 	);
 }

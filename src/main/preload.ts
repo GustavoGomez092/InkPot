@@ -9,6 +9,7 @@ const electronAPI: ElectronAPI = {
 		create: (req) => ipcRenderer.invoke("projects:create", req),
 		load: (req) => ipcRenderer.invoke("projects:load", req),
 		save: (req) => ipcRenderer.invoke("projects:save", req),
+		rename: (req) => ipcRenderer.invoke("projects:rename", req),
 		delete: (req) => ipcRenderer.invoke("projects:delete", req),
 	},
 	themes: {
@@ -40,6 +41,10 @@ const electronAPI: ElectronAPI = {
 		write: (req) => ipcRenderer.invoke("file:write", req),
 		delete: (req) => ipcRenderer.invoke("file:delete", req),
 		exists: (req) => ipcRenderer.invoke("file:exists", req),
+		saveImage: (req) => ipcRenderer.invoke("file:save-image", req),
+		getProjectAssetsPath: (req) =>
+			ipcRenderer.invoke("file:get-project-assets-path", req),
+		getImagePath: (req) => ipcRenderer.invoke("file:get-image-path", req),
 	},
 	app: {
 		version: () => ipcRenderer.invoke("app:version", {}),

@@ -51,10 +51,7 @@ const adapter = new PrismaLibSQL({
 // Create Prisma client with libsql adapter
 const prisma = new PrismaClient({
 	adapter,
-	log:
-		process.env.NODE_ENV === "development"
-			? ["query", "error", "warn"]
-			: ["error"],
+	log: ["error"],
 });
 
 // Graceful shutdown

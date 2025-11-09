@@ -9,9 +9,11 @@ interface CardProps {
 
 function Card({ children, className = '', onClick, hover = false }: CardProps) {
   const hoverStyles = hover
-    ? 'hover:shadow-lg hover:border-border/50 cursor-pointer transition-all'
+    ? 'hover:shadow-lg hover:border-border/50 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:opacity-95'
     : '';
-  const clickableStyles = onClick ? 'cursor-pointer' : '';
+  const clickableStyles = onClick
+    ? 'cursor-pointer hover:opacity-95 transition-all duration-200'
+    : '';
 
   return (
     <div

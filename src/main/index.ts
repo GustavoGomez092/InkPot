@@ -13,7 +13,7 @@ function createWindow() {
 	// Preload script path - Electron Forge Vite plugin builds to .vite/build directory
 	// In development, check both .vite/build and dist/main locations
 	const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
-	
+
 	let preloadPath: string;
 	if (isDev) {
 		// Development: Forge Vite plugin builds to .vite/build/
@@ -26,8 +26,13 @@ function createWindow() {
 	console.log("Using preload path:", preloadPath);
 	console.log("Preload file exists:", existsSync(preloadPath));
 
+	// Set icon path based on platform
+	const iconPath = isDev
+		? path.join(process.cwd(), "Assets", "PNG", "App-logo.png")
+		: path.join(process.resourcesPath, "Assets", "PNG", "App-logo.png");
+
 	const mainWindow = new BrowserWindow({
-		width: 1200,
+		width: 1280,
 		height: 800,
 		minWidth: 800,
 		minHeight: 600,
@@ -38,8 +43,9 @@ function createWindow() {
 			sandbox: false,
 		},
 		title: "InkForge",
+		icon: iconPath,
 		show: false, // Don't show until ready-to-show event
-		backgroundColor: '#ffffff', // Prevent flash of unstyled content
+		backgroundColor: "#ffffff", // Prevent flash of unstyled content
 	});
 
 	// Register with window manager
@@ -96,10 +102,12 @@ function createWindow() {
 		}, 1000); // Give Vite 1 second to start
 	} else {
 		// Production mode - load from built files
-		mainWindow.loadFile(path.join(__dirname, "../renderer/index.html")).catch((err) => {
-			console.error("❌ Failed to load index.html:", err);
-			mainWindow.show(); // Show window with error
-		});
+		mainWindow
+			.loadFile(path.join(__dirname, "../renderer/index.html"))
+			.catch((err) => {
+				console.error("❌ Failed to load index.html:", err);
+				mainWindow.show(); // Show window with error
+			});
 	}
 }
 

@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
 import EditorView from './views/EditorView';
 import HomeView from './views/HomeView';
+import SettingsView from './views/SettingsView';
 
 // Root route - renders layout with outlet for child routes
 const rootRoute = createRootRoute({
@@ -25,8 +26,15 @@ const editorRoute = createRoute({
   component: EditorView,
 });
 
+// Settings route - font and theme configuration
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: SettingsView,
+});
+
 // Create route tree
-const routeTree = rootRoute.addChildren([indexRoute, editorRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, editorRoute, settingsRoute]);
 
 // Create router instance
 export const router = createRouter({ routeTree });

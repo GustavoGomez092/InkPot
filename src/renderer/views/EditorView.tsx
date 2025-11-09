@@ -15,8 +15,14 @@ function EditorView() {
   const [projectName, setProjectName] = useState('Loading...');
   const [pdfDataUrl, setPdfDataUrl] = useState<string>('');
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [charCount, setCharCount] = useState(0);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [rightWidth, setRightWidth] = useState(499); // Fixed width in pixels for preview
+  const [isDraggingResize, setIsDraggingResize] = useState(false);
   const contentRef = useRef(content);
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const charCountUpdateRef = useRef<NodeJS.Timeout | null>(null);
+  const isDragging = useRef(false);
 
   // Keep ref in sync with content
   useEffect(() => {
@@ -41,6 +47,9 @@ function EditorView() {
       try {
         const api = window.electronAPI;
 
+        // Reset preview state when loading a project
+        setPdfDataUrl('');
+
         // Get project file path from database first
         const projects = await api.projects.listRecent({ limit: 100 });
         if (!projects.success) {
@@ -55,10 +64,28 @@ function EditorView() {
         // Load full project data
         const result = await api.projects.load({ filePath: project.filePath });
         if (result.success) {
-          setContent(result.data.project.content || '');
+          const loadedContent = result.data.project.content || '';
+          console.log(
+            '📋 Project loaded from DB (first 500 chars):',
+            loadedContent.substring(0, 500)
+          );
+          setContent(loadedContent);
+          setCharCount(loadedContent.length);
           setProjectName(result.data.project.name);
           setLastSaved(new Date(result.data.project.updatedAt));
           setLoadError(null);
+
+          // Apply active theme on load to ensure preview uses current theme
+          const activeThemeId = localStorage.getItem('activeThemeId');
+          if (activeThemeId && activeThemeId !== result.data.project.themeId) {
+            console.log('📋 Applying active theme on load:', activeThemeId);
+            // Save with the active theme to update the database
+            await api.projects.save({
+              id: projectId,
+              content: loadedContent,
+              themeId: activeThemeId,
+            });
+          }
         } else {
           throw new Error('Failed to load project data');
         }
@@ -88,14 +115,21 @@ function EditorView() {
     setIsSaving(true);
     try {
       const api = window.electronAPI;
+
+      // Get the active theme from localStorage to apply it to this project
+      const activeThemeId = localStorage.getItem('activeThemeId');
+
       const result = await api.projects.save({
         id: projectId,
         content: contentRef.current,
+        themeId: activeThemeId || undefined, // Apply active theme if set
       });
 
       if (result.success) {
         setLastSaved(new Date());
         console.log('Project saved successfully');
+        // Refresh preview after save to show saved content
+        void generatePreview();
       } else {
         throw new Error('Save failed');
       }
@@ -107,9 +141,81 @@ function EditorView() {
     }
   }, [isSaving, projectId]);
 
-  // Generate PDF preview
-  const generatePreview = useCallback(async () => {
-    if (!content || isGeneratingPreview) return;
+  // Handle title rename
+  const handleTitleSave = useCallback(async () => {
+    if (!editedTitle.trim() || editedTitle === projectName) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    if (typeof window === 'undefined' || !('electronAPI' in window)) {
+      console.error('Electron API not available');
+      return;
+    }
+
+    try {
+      const api = window.electronAPI;
+      const result = await api.projects.rename({
+        id: projectId,
+        name: editedTitle.trim(),
+      });
+
+      if (result.success) {
+        setProjectName(editedTitle.trim());
+        setIsEditingTitle(false);
+      }
+    } catch (error) {
+      console.error('Failed to rename project:', error);
+      alert('Failed to rename project');
+    }
+  }, [editedTitle, projectName, projectId]);
+
+  // Handle resize drag
+  const handleMouseDown = useCallback(() => {
+    isDragging.current = true;
+    setIsDraggingResize(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging.current) return;
+
+    e.preventDefault();
+    const windowWidth = window.innerWidth;
+    const newRightWidth = windowWidth - e.clientX;
+
+    // Constrain between 300px and 80% of window
+    const minWidth = 300;
+    const maxWidth = windowWidth * 0.8;
+
+    if (newRightWidth >= minWidth && newRightWidth <= maxWidth) {
+      setRightWidth(newRightWidth);
+    }
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false;
+    setIsDraggingResize(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  // Add/remove mouse event listeners for resize
+  useEffect(() => {
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
+
+  // Generate PDF preview - NOT a useCallback to avoid dependency issues
+  const generatePreview = async () => {
+    const currentContent = contentRef.current;
+    if (!currentContent || isGeneratingPreview) return;
 
     if (typeof window === 'undefined' || !('electronAPI' in window)) {
       console.error('Electron API not available');
@@ -119,53 +225,52 @@ function EditorView() {
     setIsGeneratingPreview(true);
     try {
       const api = window.electronAPI;
-      const result = await api.pdf.preview({ projectId });
+      // Pass live content for real-time preview
+      const result = await api.pdf.preview({
+        projectId,
+        content: currentContent,
+      });
 
       if (result.success && result.data.pdfDataUrl) {
-        setPdfDataUrl(result.data.pdfDataUrl);
+        // Force iframe reload by appending a timestamp to the URL
+        const urlWithTimestamp = `${result.data.pdfDataUrl}#${Date.now()}`;
+        setPdfDataUrl(urlWithTimestamp);
         console.log('✅ PDF preview updated successfully');
       } else {
         console.error('Failed to generate PDF preview:', result);
+        if (!result.success && 'error' in result) {
+          console.error('Error details:', result.error);
+        }
       }
     } catch (error) {
       console.error('Failed to preview PDF:', error);
     } finally {
       setIsGeneratingPreview(false);
     }
-  }, [content, isGeneratingPreview, projectId]);
+  };
 
-  // Generate initial preview on load
+  // Generate initial preview on load - regenerate whenever projectId changes
   useEffect(() => {
-    if (content && !isLoading && !pdfDataUrl) {
+    if (content && !isLoading) {
+      console.log('📋 Project loaded - generating preview');
       void generatePreview();
     }
-  }, [isLoading, content, pdfDataUrl, generatePreview]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, isLoading, content]);
 
-  // Debounced preview update - regenerate preview after content changes
+  // Cleanup on unmount
   useEffect(() => {
-    // Don't run on initial load (when pdfDataUrl is empty)
-    if (!content || !pdfDataUrl) return;
-
-    // Clear existing timeout
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-    }
-
-    // Set new timeout to generate preview after 1.5 seconds of no typing
-    previewTimeoutRef.current = setTimeout(() => {
-      void generatePreview();
-    }, 1500);
-
     return () => {
-      if (previewTimeoutRef.current) {
-        clearTimeout(previewTimeoutRef.current);
+      // Clear timeouts
+      if (charCountUpdateRef.current) {
+        clearTimeout(charCountUpdateRef.current);
       }
     };
-  }, [content]); // Only depend on content, not generatePreview
+  }, []);
 
   // PDF Export function
   const handleExport = async () => {
-    if (isExporting || !content) return;
+    if (isExporting || !contentRef.current) return;
 
     if (typeof window === 'undefined' || !('electronAPI' in window)) {
       alert('Electron API not available');
@@ -208,16 +313,16 @@ function EditorView() {
     }
   };
 
-  // Auto-save every 30 seconds
+  // Auto-save every 10 minutes
   useEffect(() => {
     const interval = setInterval(() => {
-      if (content) {
+      if (contentRef.current) {
         void handleSave();
       }
-    }, 30000);
+    }, 600000); // 10 minutes = 600000ms
 
     return () => clearInterval(interval);
-  }, [content, handleSave]);
+  }, [handleSave]);
 
   const formatLastSaved = () => {
     if (!lastSaved) return 'Never';
@@ -269,7 +374,7 @@ function EditorView() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-card border-b border-border px-6 py-4 shrink-0">
         <div className="flex items-center justify-between">
@@ -277,7 +382,34 @@ function EditorView() {
             <Button size="sm" variant="ghost" onClick={() => navigate({ to: '/' })}>
               ← Back
             </Button>
-            <h1 className="text-xl font-semibold text-foreground">{projectName}</h1>
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleTitleSave();
+                  } else if (e.key === 'Escape') {
+                    setIsEditingTitle(false);
+                  }
+                }}
+                autoFocus
+                className="text-xl font-semibold bg-transparent border-b-2 border-primary focus:outline-none px-2 py-1"
+              />
+            ) : (
+              <h1
+                className="text-xl font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+                onClick={() => {
+                  setEditedTitle(projectName);
+                  setIsEditingTitle(true);
+                }}
+                title="Click to edit project name"
+              >
+                {projectName}
+              </h1>
+            )}
             {isSaving && <span className="text-sm text-muted-foreground">Saving...</span>}
             {isGeneratingPreview && (
               <span className="text-sm text-muted-foreground">Updating preview...</span>
@@ -298,31 +430,64 @@ function EditorView() {
       </div>
 
       {/* Split Screen: Editor + Preview */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Left: Editor */}
-        <div className="w-1/2 flex flex-col border-r border-border overflow-hidden">
+        <div
+          className="flex flex-col border-r border-border overflow-hidden"
+          style={{ width: `calc(100% - ${rightWidth}px)` }}
+        >
           <div className="p-4 border-b border-border bg-card shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Markdown Editor</h2>
               <div className="flex gap-2">
-                <span className="text-sm text-muted-foreground">{content.length} characters</span>
+                <span className="text-sm text-muted-foreground">{charCount} characters</span>
                 <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? 'Saving...' : 'Save and Update Preview'}
                 </Button>
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-4 bg-card">
+          <div className="flex-1 overflow-hidden p-4 bg-card">
             <TiptapEditor
               content={content}
-              onUpdate={(newContent) => setContent(newContent)}
+              projectId={projectId}
+              onUpdate={(newContent) => {
+                // Update the ref immediately for saving without causing re-render
+                contentRef.current = newContent;
+
+                // Debounce character count update to avoid frequent re-renders
+                if (charCountUpdateRef.current) {
+                  clearTimeout(charCountUpdateRef.current);
+                }
+                charCountUpdateRef.current = setTimeout(() => {
+                  setCharCount(newContent.length);
+                }, 300);
+
+                // Preview will only update on save
+              }}
               placeholder="Start writing your document in markdown..."
             />
           </div>
         </div>
 
+        {/* Resize Handle */}
+        <div
+          className="w-1 bg-border hover:bg-primary cursor-col-resize active:bg-primary transition-colors relative z-10"
+          onMouseDown={handleMouseDown}
+          style={{ cursor: 'col-resize' }}
+        >
+          <div className="absolute inset-y-0 -left-2 -right-2" />
+        </div>
+
         {/* Right: PDF Preview */}
-        <div className="w-1/2 flex flex-col overflow-hidden bg-muted">
+        <div
+          className="flex flex-col overflow-hidden bg-muted relative"
+          style={{ width: `${rightWidth}px` }}
+        >
+          {/* Overlay to block pointer events during resize */}
+          {isDraggingResize && (
+            <div className="absolute inset-0 z-50" style={{ cursor: 'col-resize' }} />
+          )}
           <div className="p-4 border-b border-border bg-card shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">PDF Preview</h2>

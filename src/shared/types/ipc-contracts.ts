@@ -267,6 +267,7 @@ export interface IsFontCachedResponse {
 
 export interface PreviewPDFRequest {
 	projectId: string;
+	content?: string; // Optional live content for real-time preview
 }
 
 export interface PreviewPDFResponse {
@@ -395,6 +396,38 @@ export interface FileExistsResponse {
 	exists: boolean;
 }
 
+export interface SaveImageRequest {
+	projectId: string;
+	imageDataUrl: string;
+	fileName?: string;
+}
+
+export interface SaveImageResponse {
+	relativePath: string;
+	absolutePath: string;
+	fileName: string;
+	fileSize: number;
+}
+
+export interface GetProjectAssetsPathRequest {
+	projectId: string;
+}
+
+export interface GetProjectAssetsPathResponse {
+	assetsPath: string;
+	projectPath: string;
+}
+
+export interface GetImagePathRequest {
+	projectId: string;
+	relativePath: string;
+}
+
+export interface GetImagePathResponse {
+	absolutePath: string;
+	dataUrl: string; // base64 data URL for loading in browser
+}
+
 // ============================================================================
 // APP CHANNEL
 // ============================================================================
@@ -437,6 +470,16 @@ export interface ElectronAPI {
 		save: (
 			req: SaveProjectRequest,
 		) => Promise<IPCResponse<SaveProjectResponse>>;
+		rename: (req: { id: string; name: string }) => Promise<
+			IPCResponse<{
+				project: {
+					id: string;
+					name: string;
+					filePath: string;
+					updatedAt: string;
+				};
+			}>
+		>;
 		delete: (
 			req: DeleteProjectRequest,
 		) => Promise<IPCResponse<{ success: true }>>;
@@ -491,6 +534,15 @@ export interface ElectronAPI {
 		exists: (
 			req: FileExistsRequest,
 		) => Promise<IPCResponse<FileExistsResponse>>;
+		saveImage: (
+			req: SaveImageRequest,
+		) => Promise<IPCResponse<SaveImageResponse>>;
+		getProjectAssetsPath: (
+			req: GetProjectAssetsPathRequest,
+		) => Promise<IPCResponse<GetProjectAssetsPathResponse>>;
+		getImagePath: (
+			req: GetImagePathRequest,
+		) => Promise<IPCResponse<GetImagePathResponse>>;
 	};
 	app: {
 		version: () => Promise<IPCResponse<AppVersionResponse>>;
@@ -498,7 +550,9 @@ export interface ElectronAPI {
 	};
 	theme: {
 		get: () => Promise<IPCResponse<{ theme: "light" | "dark" }>>;
-		set: (req: { theme: "light" | "dark" }) => Promise<IPCResponse<{ success: true }>>;
+		set: (req: {
+			theme: "light" | "dark";
+		}) => Promise<IPCResponse<{ success: true }>>;
 	};
 }
 

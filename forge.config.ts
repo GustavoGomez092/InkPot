@@ -9,7 +9,7 @@ const config: ForgeConfig = {
 	packagerConfig: {
 		name: "InkForge",
 		executableName: "inkforge",
-		icon: "./assets/icon",
+		icon: "./Assets/PNG/App-logo",
 		asar: true,
 	},
 	rebuildConfig: {},

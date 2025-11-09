@@ -3,10 +3,11 @@
  * Renders different markdown element types (headings, paragraphs, lists, code blocks, etc.)
  */
 
-import { Text, View } from '@react-pdf/renderer';
+import { Image, Text, View } from '@react-pdf/renderer';
 import type { ThemeData } from '@shared/types/ipc-contracts.js';
 import type React from 'react';
 import type { MarkdownElement } from '../markdown-parser.js';
+import { parseInlineFormatting } from '../markdown-parser.js';
 import { InlineText } from './InlineText.js';
 
 // biome-ignore lint/suspicious/noExplicitAny: React-PDF Style type
@@ -36,6 +37,9 @@ export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, th
           case 'list':
             return <ListElement key={key} element={element} theme={theme} />;
 
+          case 'checklist':
+            return <ChecklistElement key={key} element={element} theme={theme} />;
+
           case 'codeBlock':
             return <CodeBlockElement key={key} element={element} theme={theme} />;
 
@@ -44,6 +48,12 @@ export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, th
 
           case 'horizontalRule':
             return <HorizontalRuleElement key={key} theme={theme} />;
+
+          case 'image':
+            return <ImageElement key={key} element={element} theme={theme} />;
+
+          case 'table':
+            return <TableElement key={key} element={element} theme={theme} />;
 
           case 'pageBreak':
             // Page breaks are handled by PDF page generation
@@ -56,6 +66,16 @@ export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, th
     </>
   );
 };
+
+/**
+ * Get the bold variant of a font family for headings
+ */
+function getBoldFont(fontFamily: string): string {
+  if (fontFamily === 'Helvetica') return 'Helvetica-Bold';
+  if (fontFamily === 'Times-Roman') return 'Times-Bold';
+  if (fontFamily === 'Courier') return 'Courier-Bold';
+  return fontFamily;
+}
 
 // Heading component
 const HeadingElement: React.FC<{
@@ -84,9 +104,8 @@ const HeadingElement: React.FC<{
 
   const style: PDFStyle = {
     fontSize: sizes[level as keyof typeof sizes],
-    fontFamily: theme.headingFont,
+    fontFamily: getBoldFont(theme.headingFont),
     color: theme.headingColor,
-    fontWeight: 'bold',
     marginTop: marginTop[level as keyof typeof marginTop],
     marginBottom: 8,
     letterSpacing: theme.kerning,
@@ -138,20 +157,69 @@ const ListElement: React.FC<{
     fontSize: theme.bodySize,
     fontFamily: theme.bodyFont,
     color: theme.textColor,
-    marginBottom: 4,
-    marginLeft: 20,
     letterSpacing: theme.kerning,
-    lineHeight: theme.leading,
+    lineHeight: 1.4,
+    marginBottom: 4,
   };
 
   return (
-    <View style={{ marginBottom: 12 }}>
-      {element.items?.map((item, idx) => (
-        <Text key={`item-${idx}-${item.slice(0, 10)}`} style={itemStyle}>
-          {element.ordered ? `${idx + 1}. ` : '• '}
-          {item}
-        </Text>
-      ))}
+    <View style={{ marginBottom: 16 }}>
+      {element.items?.map((item, idx) => {
+        // Parse inline formatting for each list item
+        const inlineElements = parseInlineFormatting(item);
+        const prefix = element.ordered ? String(idx + 1) + '. ' : '• ';
+
+        // Get indent level for this item (default to 0 if not provided)
+        const indentLevel = element.indentLevels?.[idx] || 0;
+        // Apply progressive left padding (20px per level)
+        const itemMarginLeft = indentLevel * 20;
+
+        return (
+          <Text
+            key={`item-${idx}-${item.slice(0, 10)}`}
+            style={{
+              ...itemStyle,
+              marginLeft: itemMarginLeft,
+            }}
+          >
+            <Text style={itemStyle}>{prefix}</Text>
+            <InlineText elements={inlineElements} theme={theme} style={itemStyle} />
+          </Text>
+        );
+      })}
+    </View>
+  );
+};
+
+// Checklist component
+const ChecklistElement: React.FC<{
+  element: MarkdownElement;
+  theme: ThemeData;
+}> = ({ element, theme }) => {
+  const itemStyle: PDFStyle = {
+    fontSize: theme.bodySize,
+    fontFamily: theme.bodyFont,
+    color: theme.textColor,
+    letterSpacing: theme.kerning,
+    lineHeight: 1.4,
+    marginBottom: 4,
+  };
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      {element.items?.map((item, idx) => {
+        const inlineElements = parseInlineFormatting(item);
+        const isChecked = element.checked?.[idx] || false;
+        // Use emojis for better PDF rendering
+        const checkbox = isChecked ? '✅ ' : '⬜ ';
+
+        return (
+          <Text key={`checklist-${idx}-${item.slice(0, 10)}`} style={itemStyle}>
+            <Text style={itemStyle}>{checkbox}</Text>
+            <InlineText elements={inlineElements} theme={theme} style={itemStyle} />
+          </Text>
+        );
+      })}
     </View>
   );
 };
@@ -161,18 +229,39 @@ const CodeBlockElement: React.FC<{
   element: MarkdownElement;
   theme: ThemeData;
 }> = ({ element, theme }) => {
-  const style: PDFStyle = {
-    fontSize: theme.bodySize - 1,
-    fontFamily: 'Courier',
-    color: theme.textColor,
+  const containerStyle: PDFStyle = {
     backgroundColor: theme.codeBackground,
     padding: 12,
     marginBottom: 12,
+    marginTop: 12,
     borderRadius: 4,
-    lineHeight: 1.4,
   };
 
-  return <Text style={style}>{element.content}</Text>;
+  const textStyle: PDFStyle = {
+    fontSize: theme.bodySize - 1,
+    fontFamily: 'Courier',
+    color: theme.textColor,
+    lineHeight: 1.5,
+  };
+
+  // Log the content to verify indentation is present
+  console.log('📄 Code block content length:', element.content.length);
+  console.log('📄 Code block first 200 chars:', element.content.substring(0, 200));
+
+  // React-PDF requires explicit line-by-line rendering to preserve spaces
+  // Split by newlines and render each line separately
+  const lines = element.content.split('\n');
+
+  return (
+    <View style={containerStyle}>
+      {lines.map((line, idx) => (
+        <Text key={idx} style={textStyle}>
+          {/* Replace leading spaces with non-breaking spaces to preserve indentation */}
+          {line.replace(/^ +/, (spaces) => '\u00A0'.repeat(spaces.length))}
+        </Text>
+      ))}
+    </View>
+  );
 };
 
 // Blockquote component
@@ -216,4 +305,154 @@ const HorizontalRuleElement: React.FC<{ theme: ThemeData }> = ({ theme }) => {
   };
 
   return <View style={style} />;
+};
+
+// Image component
+const ImageElement: React.FC<{
+  element: MarkdownElement;
+  theme: ThemeData;
+}> = ({ element, theme }) => {
+  if (!element.src) {
+    console.warn('⚠️ Image element has no src');
+    return null;
+  }
+
+  console.log('📸 Rendering image in PDF:', element.src);
+
+  // For React-PDF, we need to provide the image source correctly
+  // File paths with spaces can cause issues, so we need to use proper file:// URLs
+  let imageSrc = element.src;
+
+  // If it's a file system path (not a URL), convert to proper file:// URL
+  if (
+    !imageSrc.startsWith('http://') &&
+    !imageSrc.startsWith('https://') &&
+    !imageSrc.startsWith('data:')
+  ) {
+    // Ensure it's an absolute path
+    if (!imageSrc.startsWith('/')) {
+      console.warn('⚠️ Image path is not absolute:', imageSrc);
+    } else {
+      // Convert to file:// URL - React-PDF handles file:// URLs better
+      imageSrc = `file://${imageSrc}`;
+      console.log('📸 Converted to file URL:', imageSrc);
+    }
+  }
+
+  const containerStyle: PDFStyle = {
+    marginTop: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+  };
+
+  const imageStyle: PDFStyle = {
+    maxWidth: '100%',
+    maxHeight: 400,
+    objectFit: 'contain',
+  };
+
+  try {
+    return (
+      <View style={containerStyle}>
+        <Image src={imageSrc} style={imageStyle} />
+        {element.alt && (
+          <Text
+            style={{
+              fontSize: theme.bodySize - 2,
+              color: theme.textColor,
+              marginTop: 4,
+              fontStyle: 'italic',
+              opacity: 0.7,
+            }}
+          >
+            {element.alt}
+          </Text>
+        )}
+      </View>
+    );
+  } catch (error) {
+    console.error('❌ Failed to render image:', element.src, error);
+    return (
+      <Text style={{ color: '#ff0000', fontSize: theme.bodySize }}>
+        [Image failed to load: {element.alt || 'untitled'}]
+      </Text>
+    );
+  }
+};
+
+// Table component
+const TableElement: React.FC<{
+  element: MarkdownElement;
+  theme: ThemeData;
+}> = ({ element, theme }) => {
+  const { headers = [], rows = [] } = element;
+
+  const tableStyle: PDFStyle = {
+    marginTop: 12,
+    marginBottom: 12,
+    border: `1pt solid ${theme.textColor}`,
+  };
+
+  const headerRowStyle: PDFStyle = {
+    flexDirection: 'row',
+    backgroundColor: theme.codeBackground || '#f5f5f5',
+    borderBottom: `1pt solid ${theme.textColor}`,
+  };
+
+  const dataRowStyle: PDFStyle = {
+    flexDirection: 'row',
+    borderBottom: `0.5pt solid ${theme.textColor}`,
+  };
+
+  const cellStyle: PDFStyle = {
+    flex: 1,
+    padding: 6,
+    fontSize: theme.bodySize,
+    fontFamily: theme.bodyFont,
+    color: theme.textColor,
+    borderRight: `0.5pt solid ${theme.textColor}`,
+  };
+
+  const headerCellStyle: PDFStyle = {
+    ...cellStyle,
+    fontFamily: getBoldFont(theme.bodyFont),
+  };
+
+  const lastCellStyle: PDFStyle = {
+    ...cellStyle,
+    borderRight: 'none',
+  };
+
+  return (
+    <View style={tableStyle}>
+      {/* Header Row */}
+      {headers.length > 0 && (
+        <View style={headerRowStyle}>
+          {headers.map((header, idx) => (
+            <Text
+              key={idx}
+              style={
+                idx === headers.length - 1
+                  ? { ...headerCellStyle, borderRight: 'none' }
+                  : headerCellStyle
+              }
+            >
+              {header}
+            </Text>
+          ))}
+        </View>
+      )}
+
+      {/* Data Rows */}
+      {rows.map((row, rowIdx) => (
+        <View key={rowIdx} style={dataRowStyle}>
+          {row.map((cell, cellIdx) => (
+            <Text key={cellIdx} style={cellIdx === row.length - 1 ? lastCellStyle : cellStyle}>
+              {cell}
+            </Text>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
 };

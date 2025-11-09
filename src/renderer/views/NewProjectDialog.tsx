@@ -34,7 +34,13 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
         if (result.success) {
           setThemes(result.data);
           if (result.data.length > 0) {
-            setSelectedTheme(result.data[0].id);
+            // Try to use the active theme from localStorage, otherwise use first theme
+            const activeThemeId = localStorage.getItem('activeThemeId');
+            if (activeThemeId && result.data.find((t: Theme) => t.id === activeThemeId)) {
+              setSelectedTheme(activeThemeId);
+            } else {
+              setSelectedTheme(result.data[0].id);
+            }
           }
         }
       } catch (err) {

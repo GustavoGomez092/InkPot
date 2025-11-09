@@ -127,6 +127,7 @@ export const exportPDFSchema = z.object({
 
 export const previewPDFSchema = z.object({
 	projectId: uuidSchema,
+	content: z.string().optional(), // Optional live content for real-time preview
 });
 
 // ============================================================================
@@ -222,6 +223,16 @@ export const fileExistsSchema = z.object({
 	filePath: filePathSchema,
 });
 
+export const saveImageSchema = z.object({
+	projectId: uuidSchema,
+	imageDataUrl: z.string().min(1), // base64 data URL
+	fileName: z.string().optional(),
+});
+
+export const getProjectAssetsPathSchema = z.object({
+	projectId: uuidSchema,
+});
+
 // ============================================================================
 // APP CHANNEL SCHEMAS
 // ============================================================================
@@ -284,6 +295,10 @@ export type ReadFileInput = z.infer<typeof readFileSchema>;
 export type WriteFileInput = z.infer<typeof writeFileSchema>;
 export type DeleteFileInput = z.infer<typeof deleteFileSchema>;
 export type FileExistsInput = z.infer<typeof fileExistsSchema>;
+export type SaveImageInput = z.infer<typeof saveImageSchema>;
+export type GetProjectAssetsPathInput = z.infer<
+	typeof getProjectAssetsPathSchema
+>;
 
 export type GetAppVersionInput = z.infer<typeof getAppVersionSchema>;
 export type GetAppPathInput = z.infer<typeof getAppPathSchema>;

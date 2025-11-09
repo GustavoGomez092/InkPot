@@ -243,3 +243,46 @@ export function ensureExtension(filePath: string, extension: string): string {
 	}
 	return filePath;
 }
+
+/**
+ * Write a file from a base64 data URL
+ */
+export async function writeFileFromDataURL(
+	filePath: string,
+	dataUrl: string,
+): Promise<void> {
+	try {
+		// Extract the base64 data from the data URL
+		const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+		if (!matches) {
+			throw new Error("Invalid data URL format");
+		}
+
+		const base64Data = matches[2];
+		const buffer = Buffer.from(base64Data, "base64");
+
+		// Ensure directory exists
+		const dir = path.dirname(filePath);
+		await fs.mkdir(dir, { recursive: true });
+
+		// Write file
+		await fs.writeFile(filePath, buffer);
+	} catch (error) {
+		throw new Error(`Failed to write file from data URL: ${filePath}`, {
+			cause: error,
+		});
+	}
+}
+
+/**
+ * Generate a unique filename to avoid collisions
+ */
+export function generateUniqueFilename(
+	baseName: string,
+	extension: string,
+): string {
+	const timestamp = Date.now();
+	const random = Math.random().toString(36).substring(2, 8);
+	const ext = extension.startsWith(".") ? extension : `.${extension}`;
+	return `${baseName}-${timestamp}-${random}${ext}`;
+}

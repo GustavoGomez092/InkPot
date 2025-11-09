@@ -14,12 +14,17 @@ import { createPDFDocument } from "../pdf/Document.js";
 export async function generatePDF(
 	content: string,
 	theme: ThemeData,
+	projectDir?: string,
 ): Promise<Buffer> {
 	try {
 		console.log("📄 Generating PDF with theme:", theme.name);
+		console.log(
+			"📝 Content received (first 500 chars):",
+			content.substring(0, 500),
+		);
 
 		// Create PDF document element
-		const document = createPDFDocument(content, theme);
+		const document = createPDFDocument(content, theme, projectDir);
 
 		// Render to buffer
 		const buffer = await renderToBuffer(document);
@@ -62,12 +67,13 @@ export async function exportPDF(
 export async function previewPDF(
 	content: string,
 	theme: ThemeData,
+	projectDir?: string,
 ): Promise<string> {
 	try {
 		console.log("👁️  Generating PDF preview with theme:", theme.name);
 
 		// Generate PDF buffer
-		const buffer = await generatePDF(content, theme);
+		const buffer = await generatePDF(content, theme, projectDir);
 
 		// Convert to base64 data URL
 		const base64 = buffer.toString("base64");
