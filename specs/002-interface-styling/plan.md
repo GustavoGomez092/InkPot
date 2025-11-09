@@ -7,7 +7,7 @@
 
 ## Summary
 
-Implement a comprehensive design system for InkForge using OKLCH color space, custom typography (Inter, Source Serif 4, JetBrains Mono), shadow system, and Tailwind CSS v4 integration. The system provides light/dark theme support with semantic design tokens, ensuring visual consistency across all UI components while maintaining WCAG AA accessibility standards. Theme preference persists across application restarts with sub-300ms switching performance.
+Implement a comprehensive design system for InkPot using OKLCH color space, custom typography (Inter, Source Serif 4, JetBrains Mono), shadow system, and Tailwind CSS v4 integration. The system provides light/dark theme support with semantic design tokens, ensuring visual consistency across all UI components while maintaining WCAG AA accessibility standards. Theme preference persists across application restarts with sub-300ms switching performance.
 
 ## Technical Context
 

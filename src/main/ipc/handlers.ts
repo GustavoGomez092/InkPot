@@ -55,15 +55,17 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"projects:create",
 		wrapIPCHandler(async (args) => {
-			const { name, filePath, themeId } = createProjectSchema.parse(args);
+			const { name, filePath, themeId, subtitle } = createProjectSchema.parse(args);
+
+			console.log('📝 Creating project with subtitle:', subtitle);
 
 			// Validate file path is in app data directory
 			if (!appData.isPathInProjects(filePath)) {
 				throw new Error("Project file must be in the projects directory");
 			}
 
-			// Ensure file has .inkforge extension
-			const validFilePath = fileSystem.ensureExtension(filePath, ".inkforge");
+			// Ensure file has .inkpot extension
+			const validFilePath = fileSystem.ensureExtension(filePath, ".inkpot");
 
 			// Check if file already exists
 			if (await fileSystem.fileExists(validFilePath)) {
@@ -84,9 +86,12 @@ export function registerIPCHandlers(): void {
 					name,
 					filePath: validFilePath,
 					themeId,
+					coverSubtitle: subtitle,
 				},
 				include: { theme: true },
 			});
+
+			console.log('✅ Project created with coverSubtitle:', project.coverSubtitle);
 
 			// Create empty project file
 			const projectData = {

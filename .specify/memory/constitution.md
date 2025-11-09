@@ -28,7 +28,7 @@ Follow-up TODOs:
 - None (initial constitution, all templates synchronized)
 -->
 
-# InkForge Constitution
+# InkPot Constitution
 
 ## Core Principles
 

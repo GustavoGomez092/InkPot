@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Button, Card, Input } from '../components/ui';
 import NewProjectDialog from './NewProjectDialog';
+import AppLogo from '/Assets/SVG/App-logo-wide.svg';
 
 interface RecentProject {
   id: string;
@@ -18,6 +19,7 @@ function HomeView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const hasElectronAPI = typeof window !== 'undefined' && 'electronAPI' in window;
@@ -69,6 +71,50 @@ function HomeView() {
     });
   };
 
+  const handleDeleteProject = async (
+    projectId: string,
+    projectName: string,
+    event: React.MouseEvent
+  ) => {
+    // Prevent card click event
+    event.stopPropagation();
+
+    if (!hasElectronAPI) {
+      alert('Electron API not available');
+      return;
+    }
+
+    // Confirm deletion
+    const confirmed = confirm(
+      `Are you sure you want to delete "${projectName}"?\n\nThis will remove the project from the database and delete the project file. This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingProjectId(projectId);
+
+    try {
+      const result = await window.electronAPI.projects.delete({
+        id: projectId,
+        deleteFile: true, // Delete both database entry and file
+      });
+
+      if (result.success) {
+        // Remove from local state
+        setRecentProjects((prev) => prev.filter((p) => p.id !== projectId));
+      } else {
+        alert('Failed to delete project');
+      }
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      alert(
+        `Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setDeletingProjectId(null);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar */}
@@ -76,15 +122,7 @@ function HomeView() {
         {/* App Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3 mb-1">
-            <img 
-              src="/Assets/PNG/App-logo.png" 
-              alt="InkForge Logo" 
-              className="w-10 h-10 rounded-lg"
-            />
-            <div>
-              <h1 className="text-sm font-semibold text-foreground">InkForge</h1>
-              <p className="text-xs text-muted-foreground">Markdown to PDF</p>
-            </div>
+            <img src={AppLogo} alt="InkPot Logo" className="w-auto h-full" />
           </div>
         </div>
 
@@ -210,13 +248,54 @@ function HomeView() {
                 <Card
                   key={project.id}
                   hover
-                  className="cursor-pointer transition-all"
+                  className="cursor-pointer transition-all group relative"
                   onClick={() => handleOpenProject(project.id)}
                 >
                   <Card.Body className="p-4">
-                    <h3 className="text-base font-semibold text-foreground mb-1 line-clamp-1">
-                      {project.title}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="text-base font-semibold text-foreground line-clamp-1 flex-1">
+                        {project.title}
+                      </h3>
+                      <button
+                        onClick={(e) => handleDeleteProject(project.id, project.title, e)}
+                        disabled={deletingProjectId === project.id}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded text-destructive hover:text-destructive shrink-0"
+                        title="Delete project"
+                        aria-label="Delete project"
+                      >
+                        {deletingProjectId === project.id ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                     <p className="text-sm text-muted-foreground mb-3 line-clamp-2 min-h-10">
                       {project.subtitle || 'No description'}
                     </p>

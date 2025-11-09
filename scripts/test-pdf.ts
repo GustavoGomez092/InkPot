@@ -43,7 +43,7 @@ async function testPDFGeneration() {
 		console.log(`📄 Using theme: ${theme.name}`);
 
 		// Test markdown content
-		const testContent = `# Welcome to InkForge
+		const testContent = `# Welcome to InkPot
 
 This is a test document to verify PDF generation.
 
@@ -111,7 +111,7 @@ The end of our test document.
 		console.log(`✅ PDF generated successfully (${buffer.length} bytes)\n`);
 
 		// Export to desktop
-		const outputPath = join(homedir(), "Desktop", "inkforge-test.pdf");
+		const outputPath = join(homedir(), "Desktop", "inkpot-test.pdf");
 		await exportPDF(buffer, outputPath);
 
 		console.log(`✅ PDF exported to: ${outputPath}\n`);

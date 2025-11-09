@@ -197,7 +197,7 @@ A user saves their current work including all content, theme selection, cover pa
 - Users have an internet connection only for initial Google Fonts download; fonts are cached locally for offline use afterward
 - All project files, themes, settings, and assets are stored locally on the user's file system
 - Recent projects list stores file paths, not project content, to maintain local-only architecture
-- Application metadata (recent projects, settings, custom themes) stored in platform-specific directories: `~/.config/inkforge` (Linux), `~/Library/Application Support/InkForge` (macOS), `%APPDATA%/InkForge` (Windows)
+- Application metadata (recent projects, settings, custom themes) stored in platform-specific directories: `~/.config/InkPot` (Linux), `~/Library/Application Support/InkPot` (macOS), `%APPDATA%/InkPot` (Windows)
 - PDF page size defaults to US Letter (8.5" x 11") but can be configured in theme settings
 - Auto-save occurs every 60 seconds when content or settings change, saving to local file system
 - Project files use a structured format (JSON or similar) for easy versioning and migration

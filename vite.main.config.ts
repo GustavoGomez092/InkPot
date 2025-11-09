@@ -14,21 +14,23 @@ export default defineConfig({
 		}),
 	],
 	build: {
-		lib: {
-			entry: path.resolve(__dirname, "src/main/index.ts"),
-			formats: ["es"],
-			fileName: () => "index.js",
-		},
-		outDir: "dist/main",
-		emptyOutDir: true,
 		rollupOptions: {
 			external: [
 				"electron",
 				"@prisma/client",
 				"@libsql/client",
 				"@prisma/adapter-libsql",
+				".prisma/client/index-browser",
 			],
+			output: {
+				format: "cjs",
+				entryFileNames: "[name].cjs",
+			},
 		},
+		// Target Node.js environment for Electron main process
+		target: "node18",
+		// Don't minify to make debugging easier
+		minify: false,
 	},
 	resolve: {
 		alias: {
@@ -39,5 +41,7 @@ export default defineConfig({
 				"./src/main/database/generated/client",
 			),
 		},
+		// Ensure Vite can resolve .js imports from .ts files
+		extensions: [".ts", ".js", ".json"],
 	},
 });

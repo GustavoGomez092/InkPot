@@ -20,8 +20,8 @@ export function ImageNodeView(props: NodeViewProps) {
       console.log('🖼️ ImageNodeView: Resolving image path:', src);
 
       // Get projectId from the editor's parent context
-      const projectId = (window as unknown as { __inkforge_current_project_id__?: string })
-        .__inkforge_current_project_id__;
+      const projectId = (window as unknown as { __inkpot_current_project_id__?: string })
+        .__inkpot_current_project_id__;
 
       if (projectId) {
         window.electronAPI.file

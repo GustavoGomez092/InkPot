@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document defines the data model for InkForge's local-first architecture using SQLite with Prisma ORM. The database stores structured metadata while project content is stored as files on the local file system.
+This document defines the data model for InkPot's local-first architecture using SQLite with Prisma ORM. The database stores structured metadata while project content is stored as files on the local file system.
 
 ---
 
@@ -24,7 +24,7 @@ This document defines the data model for InkForge's local-first architecture usi
 
 ### Location
 
-Database file: `~/.config/inkforge/inkforge.db` (Linux), `~/Library/Application Support/InkForge/inkforge.db` (macOS), `%APPDATA%/InkForge/inkforge.db` (Windows)
+Database file: `~/.config/InkPot/InkPot.db` (Linux), `~/Library/Application Support/InkPot/InkPot.db` (macOS), `%APPDATA%/InkPot/InkPot.db` (Windows)
 
 ### Prisma Schema
 
@@ -37,7 +37,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./inkforge.db"
+  url      = "file:./InkPot.db"
 }
 
 // ============================================================================
@@ -47,7 +47,7 @@ datasource db {
 model Project {
   id          String   @id @default(uuid())
   name        String
-  filePath    String   @unique  // Absolute path to .inkforge project file
+  filePath    String   @unique  // Absolute path to .InkPot project file
   themeId     String?
   
   // Cover page configuration
@@ -227,14 +227,14 @@ model CachedFont {
 Represents a user's document project with all associated settings.
 
 **Key Fields**:
-- `filePath`: Absolute path to `.inkforge` project file containing markdown content
+- `filePath`: Absolute path to `.InkPot` project file containing markdown content
 - `themeId`: Reference to selected theme (null = default theme)
 - `hasCoverPage`: Boolean flag indicating cover page inclusion
 - `lastOpenedAt`: Used for sorting recent projects list
 
 **Storage**:
 - Metadata in database
-- Content in `.inkforge` file (JSON structure with markdown text, settings)
+- Content in `.InkPot` file (JSON structure with markdown text, settings)
 - Cover assets as separate image files referenced by `ProjectCoverAsset`
 
 ### Theme
@@ -324,15 +324,15 @@ Tracks downloaded Google Fonts for offline usage.
 ### Project Files
 
 ```
-~/Documents/InkForge Projects/
-├── MyReport.inkforge          # Project file (JSON)
+~/Documents/InkPot Projects/
+├── MyReport.InkPot          # Project file (JSON)
 ├── MyReport_assets/           # Project assets directory
 │   ├── cover_logo.png
 │   └── cover_background.jpg
-└── OtherProject.inkforge
+└── OtherProject.InkPot
 ```
 
-**Project File Format** (`.inkforge`):
+**Project File Format** (`.InkPot`):
 ```json
 {
   "version": "1.0",
@@ -362,8 +362,8 @@ Tracks downloaded Google Fonts for offline usage.
 
 ```
 # macOS
-~/Library/Application Support/InkForge/
-├── inkforge.db              # SQLite database
+~/Library/Application Support/InkPot/
+├── InkPot.db              # SQLite database
 ├── fonts/                   # Cached Google Fonts
 │   ├── Roboto.woff2
 │   ├── OpenSans.woff2
@@ -386,7 +386,7 @@ Creates all tables with seed data:
 ### Future Migrations
 
 - Use Prisma Migrate for schema changes
-- Version `.inkforge` project file format
+- Version `.InkPot` project file format
 - Implement migration logic for project file format changes
 
 ---

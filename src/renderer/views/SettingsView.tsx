@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Button, Card } from '../components/ui';
+import AppLogo from '/Assets/SVG/App-logo-wide.svg';
 
 interface FontOption {
   value: string;
@@ -53,7 +54,7 @@ function SettingsView() {
   const [themes, setThemes] = useState<ThemeSummary[]>([]);
   const [selectedThemeId, setSelectedThemeId] = useState<string>('');
   const [themeName, setThemeName] = useState<string>('');
-  
+
   // Typography
   const [headingFont, setHeadingFont] = useState<string>('Inter');
   const [bodyFont, setBodyFont] = useState<string>('Source Serif 4');
@@ -64,11 +65,11 @@ function SettingsView() {
   const [h5Size, setH5Size] = useState<number>(14);
   const [h6Size, setH6Size] = useState<number>(12);
   const [bodySize, setBodySize] = useState<number>(11);
-  
+
   // Spacing
   const [kerning, setKerning] = useState<number>(0);
   const [leading, setLeading] = useState<number>(1.5);
-  
+
   // Layout
   const [pageWidth, setPageWidth] = useState<number>(8.5);
   const [pageHeight, setPageHeight] = useState<number>(11);
@@ -76,14 +77,14 @@ function SettingsView() {
   const [marginBottom, setMarginBottom] = useState<number>(1);
   const [marginLeft, setMarginLeft] = useState<number>(1);
   const [marginRight, setMarginRight] = useState<number>(1);
-  
+
   // Colors
   const [backgroundColor, setBackgroundColor] = useState<string>('#FFFFFF');
   const [textColor, setTextColor] = useState<string>('#000000');
   const [headingColor, setHeadingColor] = useState<string>('#000000');
   const [linkColor, setLinkColor] = useState<string>('#0066CC');
   const [codeBackground, setCodeBackground] = useState<string>('#F5F5F5');
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -158,13 +159,13 @@ function SettingsView() {
 
   const handleThemeChange = async (themeId: string) => {
     if (!hasElectronAPI) return;
-    
+
     const api = window.electronAPI;
-    
+
     try {
       // Fetch full theme data
       const result = await api.themes.get({ id: themeId });
-      
+
       if (result.success && result.data) {
         const theme = result.data;
         setSelectedThemeId(themeId);
@@ -431,13 +432,9 @@ function SettingsView() {
         {/* App Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3 mb-1">
-            <img 
-              src="/Assets/PNG/App-logo.png" 
-              alt="InkForge Logo" 
-              className="w-10 h-10 rounded-lg"
-            />
+            <img src={AppLogo} alt="InkPot Logo" className="w-auto h-full" />
             <div>
-              <h1 className="text-sm font-semibold text-foreground">InkForge</h1>
+              <h1 className="text-sm font-semibold text-foreground">InkPot</h1>
               <p className="text-xs text-muted-foreground">Markdown to PDF</p>
             </div>
           </div>
@@ -531,519 +528,535 @@ function SettingsView() {
               {/* Left Side - Theme Settings */}
               <div className="w-3/5 border-r border-border overflow-y-auto px-8 py-6">
                 <div className="max-w-2xl space-y-6">
-              {/* Theme Selection */}
-              <Card>
-                <Card.Body className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Theme</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Select Theme
-                      </label>
-                      <select
-                        value={selectedThemeId}
-                        onChange={(e) => handleThemeChange(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input cursor-pointer hover:border-ring transition-all"
-                      >
-                        {themes?.map((theme) => (
-                          <option key={theme.id} value={theme.id}>
-                            {theme.name} {theme.isBuiltIn ? '(Built-in)' : '(Custom)'}
-                          </option>
-                        )) || []}
-                      </select>
-                    </div>
+                  {/* Theme Selection */}
+                  <Card>
+                    <Card.Body className="p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Theme</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Select Theme
+                          </label>
+                          <select
+                            value={selectedThemeId}
+                            onChange={(e) => handleThemeChange(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input cursor-pointer hover:border-ring transition-all"
+                          >
+                            {themes?.map((theme) => (
+                              <option key={theme.id} value={theme.id}>
+                                {theme.name} {theme.isBuiltIn ? '(Built-in)' : '(Custom)'}
+                              </option>
+                            )) || []}
+                          </select>
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Theme Name
-                      </label>
-                      <input
-                        type="text"
-                        value={themeName}
-                        onChange={(e) => setThemeName(e.target.value)}
-                        placeholder="Enter theme name"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {themes.find((t) => t.id === selectedThemeId)?.isBuiltIn
-                          ? 'Creating a new theme will save it with this name'
-                          : 'Name is set when creating the theme'}
-                      </p>
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Theme Name
+                          </label>
+                          <input
+                            type="text"
+                            value={themeName}
+                            onChange={(e) => setThemeName(e.target.value)}
+                            placeholder="Enter theme name"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {themes.find((t) => t.id === selectedThemeId)?.isBuiltIn
+                              ? 'Creating a new theme will save it with this name'
+                              : 'Name is set when creating the theme'}
+                          </p>
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
 
-              {/* Font Settings */}
-              <Card>
-                <Card.Body className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Font Settings</h3>
-                  <div className="space-y-6">
-                    {/* Heading Font */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Heading Font
-                      </label>
-                      <div className="flex gap-2">
-                        <select
-                          value={headingFont}
-                          onChange={(e) => handleDownloadAndApplyFont(e.target.value, 'heading')}
-                          className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed cursor-pointer hover:border-ring transition-all"
-                          disabled={downloadingFont !== null}
-                        >
-                          {Object.entries(groupedFonts).map(([category, fonts]) => (
-                            <optgroup key={category} label={category}>
-                              {fonts.map((font) => (
-                                <option key={font.value} value={font.value}>
-                                  {font.label}
-                                </option>
+                  {/* Font Settings */}
+                  <Card>
+                    <Card.Body className="p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Font Settings</h3>
+                      <div className="space-y-6">
+                        {/* Heading Font */}
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Heading Font
+                          </label>
+                          <div className="flex gap-2">
+                            <select
+                              value={headingFont}
+                              onChange={(e) =>
+                                handleDownloadAndApplyFont(e.target.value, 'heading')
+                              }
+                              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed cursor-pointer hover:border-ring transition-all"
+                              disabled={downloadingFont !== null}
+                            >
+                              {Object.entries(groupedFonts).map(([category, fonts]) => (
+                                <optgroup key={category} label={category}>
+                                  {fonts.map((font) => (
+                                    <option key={font.value} value={font.value}>
+                                      {font.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
                               ))}
-                            </optgroup>
-                          ))}
-                        </select>
-                      </div>
-                      <p className="mt-2 text-sm font-medium" style={{ fontFamily: headingFont }}>
-                        The Quick Brown Fox Jumps Over The Lazy Dog
-                      </p>
-                      {downloadingFont === headingFont && (
-                        <p className="mt-1 text-xs text-primary">Downloading font...</p>
-                      )}
-                    </div>
+                            </select>
+                          </div>
+                          <p
+                            className="mt-2 text-sm font-medium"
+                            style={{ fontFamily: headingFont }}
+                          >
+                            The Quick Brown Fox Jumps Over The Lazy Dog
+                          </p>
+                          {downloadingFont === headingFont && (
+                            <p className="mt-1 text-xs text-primary">Downloading font...</p>
+                          )}
+                        </div>
 
-                    {/* Body Font */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Body Font
-                      </label>
-                      <div className="flex gap-2">
-                        <select
-                          value={bodyFont}
-                          onChange={(e) => handleDownloadAndApplyFont(e.target.value, 'body')}
-                          className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed cursor-pointer hover:border-ring transition-all"
-                          disabled={downloadingFont !== null}
-                        >
-                          {Object.entries(groupedFonts).map(([category, fonts]) => (
-                            <optgroup key={category} label={category}>
-                              {fonts.map((font) => (
-                                <option key={font.value} value={font.value}>
-                                  {font.label}
-                                </option>
+                        {/* Body Font */}
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Body Font
+                          </label>
+                          <div className="flex gap-2">
+                            <select
+                              value={bodyFont}
+                              onChange={(e) => handleDownloadAndApplyFont(e.target.value, 'body')}
+                              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed cursor-pointer hover:border-ring transition-all"
+                              disabled={downloadingFont !== null}
+                            >
+                              {Object.entries(groupedFonts).map(([category, fonts]) => (
+                                <optgroup key={category} label={category}>
+                                  {fonts.map((font) => (
+                                    <option key={font.value} value={font.value}>
+                                      {font.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
                               ))}
-                            </optgroup>
-                          ))}
-                        </select>
+                            </select>
+                          </div>
+                          <p className="mt-2 text-sm" style={{ fontFamily: bodyFont }}>
+                            The Quick Brown Fox Jumps Over The Lazy Dog
+                          </p>
+                          {downloadingFont === bodyFont && (
+                            <p className="mt-1 text-xs text-primary">Downloading font...</p>
+                          )}
+                        </div>
                       </div>
-                      <p className="mt-2 text-sm" style={{ fontFamily: bodyFont }}>
-                        The Quick Brown Fox Jumps Over The Lazy Dog
-                      </p>
-                      {downloadingFont === bodyFont && (
-                        <p className="mt-1 text-xs text-primary">Downloading font...</p>
-                      )}
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
+                    </Card.Body>
+                  </Card>
 
-              {/* Typography Sizes */}
-              <Card>
-                <Card.Body className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Typography Sizes</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        H1 Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={h1Size}
-                        onChange={(e) => setH1Size(Number(e.target.value))}
-                        min="8"
-                        max="72"
-                        step="1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        H2 Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={h2Size}
-                        onChange={(e) => setH2Size(Number(e.target.value))}
-                        min="8"
-                        max="72"
-                        step="1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        H3 Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={h3Size}
-                        onChange={(e) => setH3Size(Number(e.target.value))}
-                        min="8"
-                        max="72"
-                        step="1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        H4 Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={h4Size}
-                        onChange={(e) => setH4Size(Number(e.target.value))}
-                        min="8"
-                        max="72"
-                        step="1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        H5 Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={h5Size}
-                        onChange={(e) => setH5Size(Number(e.target.value))}
-                        min="8"
-                        max="72"
-                        step="1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        H6 Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={h6Size}
-                        onChange={(e) => setH6Size(Number(e.target.value))}
-                        min="8"
-                        max="72"
-                        step="1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Body Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={bodySize}
-                        onChange={(e) => setBodySize(Number(e.target.value))}
-                        min="8"
-                        max="24"
-                        step="0.5"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
+                  {/* Typography Sizes */}
+                  <Card>
+                    <Card.Body className="p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">
+                        Typography Sizes
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            H1 Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            value={h1Size}
+                            onChange={(e) => setH1Size(Number(e.target.value))}
+                            min="8"
+                            max="72"
+                            step="1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            H2 Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            value={h2Size}
+                            onChange={(e) => setH2Size(Number(e.target.value))}
+                            min="8"
+                            max="72"
+                            step="1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            H3 Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            value={h3Size}
+                            onChange={(e) => setH3Size(Number(e.target.value))}
+                            min="8"
+                            max="72"
+                            step="1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            H4 Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            value={h4Size}
+                            onChange={(e) => setH4Size(Number(e.target.value))}
+                            min="8"
+                            max="72"
+                            step="1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            H5 Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            value={h5Size}
+                            onChange={(e) => setH5Size(Number(e.target.value))}
+                            min="8"
+                            max="72"
+                            step="1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            H6 Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            value={h6Size}
+                            onChange={(e) => setH6Size(Number(e.target.value))}
+                            min="8"
+                            max="72"
+                            step="1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Body Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            value={bodySize}
+                            onChange={(e) => setBodySize(Number(e.target.value))}
+                            min="8"
+                            max="24"
+                            step="0.5"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
 
-              {/* Spacing */}
-              <Card>
-                <Card.Body className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Spacing</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Letter Spacing (em)
-                      </label>
-                      <input
-                        type="number"
-                        value={kerning}
-                        onChange={(e) => setKerning(Number(e.target.value))}
-                        min="-0.1"
-                        max="0.5"
-                        step="0.01"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">Tracking/kerning adjustment</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Line Height (multiplier)
-                      </label>
-                      <input
-                        type="number"
-                        value={leading}
-                        onChange={(e) => setLeading(Number(e.target.value))}
-                        min="1"
-                        max="3"
-                        step="0.1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">Leading/line-height multiplier</p>
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
+                  {/* Spacing */}
+                  <Card>
+                    <Card.Body className="p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Spacing</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Letter Spacing (em)
+                          </label>
+                          <input
+                            type="number"
+                            value={kerning}
+                            onChange={(e) => setKerning(Number(e.target.value))}
+                            min="-0.1"
+                            max="0.5"
+                            step="0.01"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Tracking/kerning adjustment
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Line Height (multiplier)
+                          </label>
+                          <input
+                            type="number"
+                            value={leading}
+                            onChange={(e) => setLeading(Number(e.target.value))}
+                            min="1"
+                            max="3"
+                            step="0.1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Leading/line-height multiplier
+                          </p>
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
 
-              {/* Page Layout */}
-              <Card>
-                <Card.Body className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Page Layout</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Page Width (inches)
-                      </label>
-                      <input
-                        type="number"
-                        value={pageWidth}
-                        onChange={(e) => setPageWidth(Number(e.target.value))}
-                        min="3"
-                        max="17"
-                        step="0.1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Page Height (inches)
-                      </label>
-                      <input
-                        type="number"
-                        value={pageHeight}
-                        onChange={(e) => setPageHeight(Number(e.target.value))}
-                        min="3"
-                        max="17"
-                        step="0.1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Top Margin (inches)
-                      </label>
-                      <input
-                        type="number"
-                        value={marginTop}
-                        onChange={(e) => setMarginTop(Number(e.target.value))}
-                        min="0"
-                        max="3"
-                        step="0.1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Bottom Margin (inches)
-                      </label>
-                      <input
-                        type="number"
-                        value={marginBottom}
-                        onChange={(e) => setMarginBottom(Number(e.target.value))}
-                        min="0"
-                        max="3"
-                        step="0.1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Left Margin (inches)
-                      </label>
-                      <input
-                        type="number"
-                        value={marginLeft}
-                        onChange={(e) => setMarginLeft(Number(e.target.value))}
-                        min="0"
-                        max="3"
-                        step="0.1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Right Margin (inches)
-                      </label>
-                      <input
-                        type="number"
-                        value={marginRight}
-                        onChange={(e) => setMarginRight(Number(e.target.value))}
-                        min="0"
-                        max="3"
-                        step="0.1"
-                        className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                      />
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
+                  {/* Page Layout */}
+                  <Card>
+                    <Card.Body className="p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Page Layout</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Page Width (inches)
+                          </label>
+                          <input
+                            type="number"
+                            value={pageWidth}
+                            onChange={(e) => setPageWidth(Number(e.target.value))}
+                            min="3"
+                            max="17"
+                            step="0.1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Page Height (inches)
+                          </label>
+                          <input
+                            type="number"
+                            value={pageHeight}
+                            onChange={(e) => setPageHeight(Number(e.target.value))}
+                            min="3"
+                            max="17"
+                            step="0.1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Top Margin (inches)
+                          </label>
+                          <input
+                            type="number"
+                            value={marginTop}
+                            onChange={(e) => setMarginTop(Number(e.target.value))}
+                            min="0"
+                            max="3"
+                            step="0.1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Bottom Margin (inches)
+                          </label>
+                          <input
+                            type="number"
+                            value={marginBottom}
+                            onChange={(e) => setMarginBottom(Number(e.target.value))}
+                            min="0"
+                            max="3"
+                            step="0.1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Left Margin (inches)
+                          </label>
+                          <input
+                            type="number"
+                            value={marginLeft}
+                            onChange={(e) => setMarginLeft(Number(e.target.value))}
+                            min="0"
+                            max="3"
+                            step="0.1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Right Margin (inches)
+                          </label>
+                          <input
+                            type="number"
+                            value={marginRight}
+                            onChange={(e) => setMarginRight(Number(e.target.value))}
+                            min="0"
+                            max="3"
+                            step="0.1"
+                            className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                          />
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
 
-              {/* Colors */}
-              <Card>
-                <Card.Body className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Colors</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Background Color
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={backgroundColor}
-                          onChange={(e) => setBackgroundColor(e.target.value)}
-                          className="h-10 w-16 border rounded-lg cursor-pointer border-input"
-                        />
-                        <input
-                          type="text"
-                          value={backgroundColor}
-                          onChange={(e) => setBackgroundColor(e.target.value)}
-                          placeholder="#FFFFFF"
-                          className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                        />
+                  {/* Colors */}
+                  <Card>
+                    <Card.Body className="p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Colors</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Background Color
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={backgroundColor}
+                              onChange={(e) => setBackgroundColor(e.target.value)}
+                              className="h-10 w-16 border rounded-lg cursor-pointer border-input"
+                            />
+                            <input
+                              type="text"
+                              value={backgroundColor}
+                              onChange={(e) => setBackgroundColor(e.target.value)}
+                              placeholder="#FFFFFF"
+                              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Text Color
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={textColor}
+                              onChange={(e) => setTextColor(e.target.value)}
+                              className="h-10 w-16 border rounded-lg cursor-pointer border-input"
+                            />
+                            <input
+                              type="text"
+                              value={textColor}
+                              onChange={(e) => setTextColor(e.target.value)}
+                              placeholder="#000000"
+                              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Heading Color
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={headingColor}
+                              onChange={(e) => setHeadingColor(e.target.value)}
+                              className="h-10 w-16 border rounded-lg cursor-pointer border-input"
+                            />
+                            <input
+                              type="text"
+                              value={headingColor}
+                              onChange={(e) => setHeadingColor(e.target.value)}
+                              placeholder="#000000"
+                              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Link Color
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={linkColor}
+                              onChange={(e) => setLinkColor(e.target.value)}
+                              className="h-10 w-16 border rounded-lg cursor-pointer border-input"
+                            />
+                            <input
+                              type="text"
+                              value={linkColor}
+                              onChange={(e) => setLinkColor(e.target.value)}
+                              placeholder="#0066CC"
+                              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Code Background Color
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={codeBackground}
+                              onChange={(e) => setCodeBackground(e.target.value)}
+                              className="h-10 w-16 border rounded-lg cursor-pointer border-input"
+                            />
+                            <input
+                              type="text"
+                              value={codeBackground}
+                              onChange={(e) => setCodeBackground(e.target.value)}
+                              placeholder="#F5F5F5"
+                              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Text Color
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={textColor}
-                          onChange={(e) => setTextColor(e.target.value)}
-                          className="h-10 w-16 border rounded-lg cursor-pointer border-input"
-                        />
-                        <input
-                          type="text"
-                          value={textColor}
-                          onChange={(e) => setTextColor(e.target.value)}
-                          placeholder="#000000"
-                          className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Heading Color
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={headingColor}
-                          onChange={(e) => setHeadingColor(e.target.value)}
-                          className="h-10 w-16 border rounded-lg cursor-pointer border-input"
-                        />
-                        <input
-                          type="text"
-                          value={headingColor}
-                          onChange={(e) => setHeadingColor(e.target.value)}
-                          placeholder="#000000"
-                          className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Link Color
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={linkColor}
-                          onChange={(e) => setLinkColor(e.target.value)}
-                          className="h-10 w-16 border rounded-lg cursor-pointer border-input"
-                        />
-                        <input
-                          type="text"
-                          value={linkColor}
-                          onChange={(e) => setLinkColor(e.target.value)}
-                          placeholder="#0066CC"
-                          className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Code Background Color
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={codeBackground}
-                          onChange={(e) => setCodeBackground(e.target.value)}
-                          className="h-10 w-16 border rounded-lg cursor-pointer border-input"
-                        />
-                        <input
-                          type="text"
-                          value={codeBackground}
-                          onChange={(e) => setCodeBackground(e.target.value)}
-                          placeholder="#F5F5F5"
-                          className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
+                    </Card.Body>
+                  </Card>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center gap-4">
-              {/* Left side - Set Active Theme */}
-              <Button
-                variant="secondary"
-                onClick={handleSetAsActiveTheme}
-                disabled={settingActive || saving || deleting}
-              >
-                {settingActive ? 'Setting...' : 'Set as Active Theme'}
-              </Button>                {/* Right side - Save/Delete Buttons */}
-                <div className="flex gap-3">
-                  {!themes.find((t) => t.id === selectedThemeId)?.isBuiltIn && (
+                  {/* Action Buttons */}
+                  <div className="flex justify-between items-center gap-4">
+                    {/* Left side - Set Active Theme */}
                     <Button
-                      variant="outline"
-                      onClick={handleDeleteTheme}
-                      disabled={deleting || saving || settingActive}
+                      variant="secondary"
+                      onClick={handleSetAsActiveTheme}
+                      disabled={settingActive || saving || deleting}
                     >
-                      {deleting ? 'Deleting...' : 'Delete Theme'}
-                    </Button>
-                  )}
-                  <Button
-                    variant="primary"
-                    onClick={handleSaveTheme}
-                    disabled={saving || downloadingFont !== null || settingActive}
-                  >
-                    {saving
-                      ? 'Saving...'
-                      : themes.find((t) => t.id === selectedThemeId)?.isBuiltIn
-                        ? 'Save as New Theme'
-                        : 'Update Theme'}
-                  </Button>
+                      {settingActive ? 'Setting...' : 'Set as Active Theme'}
+                    </Button>{' '}
+                    {/* Right side - Save/Delete Buttons */}
+                    <div className="flex gap-3">
+                      {!themes.find((t) => t.id === selectedThemeId)?.isBuiltIn && (
+                        <Button
+                          variant="outline"
+                          onClick={handleDeleteTheme}
+                          disabled={deleting || saving || settingActive}
+                        >
+                          {deleting ? 'Deleting...' : 'Delete Theme'}
+                        </Button>
+                      )}
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveTheme}
+                        disabled={saving || downloadingFont !== null || settingActive}
+                      >
+                        {saving
+                          ? 'Saving...'
+                          : themes.find((t) => t.id === selectedThemeId)?.isBuiltIn
+                            ? 'Save as New Theme'
+                            : 'Update Theme'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-              </div>
-              
+
               {/* Right Side - Live Preview (60% width) */}
               <div className="w-2/5 overflow-y-auto p-8 bg-muted/20">
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{themeName} Theme Preview</h3>
-                  <p className="text-sm text-muted-foreground">Live preview of your theme settings</p>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    {themeName} Theme Preview
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Live preview of your theme settings
+                  </p>
                 </div>
-                
+
                 {/* Preview Document Container with scaling */}
                 <div className="flex justify-center">
-                  <div 
+                  <div
                     style={{
                       transform: 'scale(0.7)',
                       transformOrigin: 'top center',
                     }}
                   >
-                    <div 
+                    <div
                       className="bg-white shadow-lg rounded-lg overflow-hidden"
                       style={{
                         width: `${pageWidth * 96}px`, // 96 DPI
@@ -1057,10 +1070,10 @@ function SettingsView() {
                         letterSpacing: `${kerning}em`,
                       }}
                     >
-                      <h1 
-                        style={{ 
-                          fontFamily: headingFont, 
-                          fontSize: `${h1Size}pt`, 
+                      <h1
+                        style={{
+                          fontFamily: headingFont,
+                          fontSize: `${h1Size}pt`,
                           color: headingColor,
                           marginBottom: '0.5em',
                           fontWeight: 600,
@@ -1068,18 +1081,18 @@ function SettingsView() {
                       >
                         Heading 1 Sample
                       </h1>
-                      
+
                       <p style={{ marginBottom: '1em' }}>
-                        This is a sample paragraph demonstrating the body text styling. 
-                        The quick brown fox jumps over the lazy dog. Typography settings 
-                        including font family, size, line height, and letter spacing are 
-                        all reflected in real-time.
+                        This is a sample paragraph demonstrating the body text styling. The quick
+                        brown fox jumps over the lazy dog. Typography settings including font
+                        family, size, line height, and letter spacing are all reflected in
+                        real-time.
                       </p>
-                      
-                      <h2 
-                        style={{ 
-                          fontFamily: headingFont, 
-                          fontSize: `${h2Size}pt`, 
+
+                      <h2
+                        style={{
+                          fontFamily: headingFont,
+                          fontSize: `${h2Size}pt`,
                           color: headingColor,
                           marginTop: '1em',
                           marginBottom: '0.5em',
@@ -1088,17 +1101,20 @@ function SettingsView() {
                       >
                         Heading 2 Sample
                       </h2>
-                      
+
                       <p style={{ marginBottom: '1em' }}>
-                        Another paragraph with <a href="#" style={{ color: linkColor, textDecoration: 'underline' }}>a hyperlink example</a> to show 
-                        link colors. This helps you visualize how links will appear in your 
+                        Another paragraph with{' '}
+                        <a href="#" style={{ color: linkColor, textDecoration: 'underline' }}>
+                          a hyperlink example
+                        </a>{' '}
+                        to show link colors. This helps you visualize how links will appear in your
                         final PDF documents.
                       </p>
-                      
-                      <h3 
-                        style={{ 
-                          fontFamily: headingFont, 
-                          fontSize: `${h3Size}pt`, 
+
+                      <h3
+                        style={{
+                          fontFamily: headingFont,
+                          fontSize: `${h3Size}pt`,
                           color: headingColor,
                           marginTop: '1em',
                           marginBottom: '0.5em',
@@ -1107,9 +1123,9 @@ function SettingsView() {
                       >
                         Heading 3 Sample
                       </h3>
-                      
-                      <pre 
-                        style={{ 
+
+                      <pre
+                        style={{
                           backgroundColor: codeBackground,
                           padding: '1em',
                           borderRadius: '4px',
@@ -1124,11 +1140,11 @@ function SettingsView() {
   return true;
 }`}</code>
                       </pre>
-                      
-                      <h4 
-                        style={{ 
-                          fontFamily: headingFont, 
-                          fontSize: `${h4Size}pt`, 
+
+                      <h4
+                        style={{
+                          fontFamily: headingFont,
+                          fontSize: `${h4Size}pt`,
                           color: headingColor,
                           marginTop: '1em',
                           marginBottom: '0.5em',
@@ -1137,17 +1153,17 @@ function SettingsView() {
                       >
                         Heading 4 Sample
                       </h4>
-                      
+
                       <ul style={{ marginBottom: '1em', paddingLeft: '2em' }}>
                         <li>First list item</li>
                         <li>Second list item</li>
                         <li>Third list item with more text to show wrapping behavior</li>
                       </ul>
-                      
-                      <h5 
-                        style={{ 
-                          fontFamily: headingFont, 
-                          fontSize: `${h5Size}pt`, 
+
+                      <h5
+                        style={{
+                          fontFamily: headingFont,
+                          fontSize: `${h5Size}pt`,
                           color: headingColor,
                           marginTop: '1em',
                           marginBottom: '0.5em',
@@ -1156,16 +1172,16 @@ function SettingsView() {
                       >
                         Heading 5 Sample
                       </h5>
-                      
+
                       <p style={{ marginBottom: '1em' }}>
-                        More body text to demonstrate the overall look and feel of your theme.
-                        Pay attention to spacing, colors, and typography hierarchy.
+                        More body text to demonstrate the overall look and feel of your theme. Pay
+                        attention to spacing, colors, and typography hierarchy.
                       </p>
-                      
-                      <h6 
-                        style={{ 
-                          fontFamily: headingFont, 
-                          fontSize: `${h6Size}pt`, 
+
+                      <h6
+                        style={{
+                          fontFamily: headingFont,
+                          fontSize: `${h6Size}pt`,
                           color: headingColor,
                           marginTop: '1em',
                           marginBottom: '0.5em',
@@ -1174,9 +1190,9 @@ function SettingsView() {
                       >
                         Heading 6 Sample
                       </h6>
-                      
+
                       <p>
-                        Final paragraph demonstrating the smallest heading and body text 
+                        Final paragraph demonstrating the smallest heading and body text
                         combination. All theme settings update in real-time as you adjust them.
                       </p>
                     </div>

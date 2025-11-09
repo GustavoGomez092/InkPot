@@ -85,10 +85,10 @@ export function createPDFDocument(content: string, theme: ThemeData, projectDir?
   return React.createElement(
     Document,
     {
-      title: 'InkForge Export',
-      author: 'InkForge',
+      title: 'InkPot Export',
+      author: 'InkPot',
       subject: 'Markdown to PDF',
-      creator: 'InkForge',
+      creator: 'InkPot',
     },
     pages.map((pageElements, idx) => {
       const pageKey = `page-${idx}-${pageElements.length}`;

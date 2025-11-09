@@ -53,7 +53,7 @@ function AppContent() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-4xl font-bold text-foreground">InkForge</h1>
+            <h1 className="text-4xl font-bold text-foreground">InkPot</h1>
             {appInfo && <span className="text-sm text-muted-foreground">v{appInfo.version}</span>}
           </div>
           <button

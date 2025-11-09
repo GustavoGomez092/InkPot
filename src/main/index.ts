@@ -6,6 +6,10 @@ import { fileURLToPath } from "url";
 import * as appData from "./services/app-data.js";
 import { setMainWindow } from "./services/window-manager.js";
 
+// Vite environment variables set by Electron Forge
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
+declare const MAIN_WINDOW_VITE_NAME: string;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -26,10 +30,9 @@ function createWindow() {
 	console.log("Using preload path:", preloadPath);
 	console.log("Preload file exists:", existsSync(preloadPath));
 
-	// Set icon path based on platform
-	const iconPath = isDev
-		? path.join(process.cwd(), "Assets", "PNG", "App-logo.png")
-		: path.join(process.resourcesPath, "Assets", "PNG", "App-logo.png");
+	// Set icon path - use PNG for BrowserWindow (works cross-platform in dev mode)
+	// The packagerConfig.icon in forge.config.ts handles packaged apps automatically
+	const iconPath = path.join(process.cwd(), "Assets", "PNG", "App-logo-1024.png");
 
 	const mainWindow = new BrowserWindow({
 		width: 1280,
@@ -42,7 +45,7 @@ function createWindow() {
 			nodeIntegration: false,
 			sandbox: false,
 		},
-		title: "InkForge",
+		title: "InkPot",
 		icon: iconPath,
 		show: false, // Don't show until ready-to-show event
 		backgroundColor: "#ffffff", // Prevent flash of unstyled content
@@ -83,30 +86,41 @@ function createWindow() {
 		mainWindow.show();
 	});
 
-	if (isDev) {
+	// Load renderer
+	// Electron Forge sets MAIN_WINDOW_VITE_DEV_SERVER_URL in dev mode
+	// and MAIN_WINDOW_VITE_NAME in production mode
+	if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
 		// Development mode - load from Vite dev server
-		const devServerUrl =
-			process.env.VITE_DEV_SERVER_URL || "http://localhost:5173";
-		console.log("Loading from dev server:", devServerUrl);
-
-		// Wait a bit for Vite to be ready, then load
-		setTimeout(async () => {
-			try {
-				await mainWindow.loadURL(devServerUrl);
+		console.log("Loading from dev server:", MAIN_WINDOW_VITE_DEV_SERVER_URL);
+		mainWindow
+			.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
+			.then(() => {
 				console.log("✅ Dev server loaded successfully");
 				mainWindow.webContents.openDevTools();
-			} catch (err) {
-				console.error("❌ Failed to load dev server URL:", err);
-				mainWindow.show(); // Show window with error
-			}
-		}, 1000); // Give Vite 1 second to start
-	} else {
-		// Production mode - load from built files
-		mainWindow
-			.loadFile(path.join(__dirname, "../renderer/index.html"))
+			})
 			.catch((err) => {
-				console.error("❌ Failed to load index.html:", err);
-				mainWindow.show(); // Show window with error
+				console.error("❌ Failed to load dev server:", err);
+			});
+	} else {
+		// Production mode - load from built renderer files
+		// With asar disabled, files are in app/.vite/renderer/{MAIN_WINDOW_VITE_NAME}/
+		const rendererPath = path.join(
+			process.resourcesPath,
+			"app",
+			".vite",
+			"renderer",
+			MAIN_WINDOW_VITE_NAME,
+			"index.html",
+		);
+		console.log("Loading renderer from:", rendererPath);
+		mainWindow
+			.loadFile(rendererPath)
+			.then(() => {
+				console.log("✅ Production renderer loaded");
+			})
+			.catch((err) => {
+				console.error("❌ Failed to load renderer:", err);
+				console.error("Tried path:", rendererPath);
 			});
 	}
 }

@@ -1,4 +1,10 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  createHashHistory,
+  Outlet,
+} from '@tanstack/react-router';
 import EditorView from './views/EditorView';
 import HomeView from './views/HomeView';
 import SettingsView from './views/SettingsView';
@@ -36,8 +42,14 @@ const settingsRoute = createRoute({
 // Create route tree
 const routeTree = rootRoute.addChildren([indexRoute, editorRoute, settingsRoute]);
 
-// Create router instance
-export const router = createRouter({ routeTree });
+// Create hash history for Electron file:// protocol compatibility
+const hashHistory = createHashHistory();
+
+// Create router instance with hash routing for Electron
+export const router = createRouter({
+  routeTree,
+  history: hashHistory,
+});
 
 // Register router types for TypeScript
 declare module '@tanstack/react-router' {

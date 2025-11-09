@@ -260,13 +260,13 @@ function TiptapEditor({
   useEffect(() => {
     if (projectId) {
       (
-        window as unknown as { __inkforge_current_project_id__?: string }
-      ).__inkforge_current_project_id__ = projectId;
+        window as unknown as { __inkpot_current_project_id__?: string }
+      ).__inkpot_current_project_id__ = projectId;
     }
     return () => {
       (
-        window as unknown as { __inkforge_current_project_id__?: string }
-      ).__inkforge_current_project_id__ = undefined;
+        window as unknown as { __inkpot_current_project_id__?: string }
+      ).__inkpot_current_project_id__ = undefined;
     };
   }, [projectId]);
 

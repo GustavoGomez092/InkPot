@@ -7,6 +7,6 @@ export default defineConfig({
 	},
 	engine: "classic",
 	datasource: {
-		url: "file:./inkforge.db",
+		url: "file:./inkpot.db",
 	},
 });

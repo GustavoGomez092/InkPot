@@ -15,16 +15,16 @@ function getAppDataPath(): string {
 
 	switch (platform) {
 		case "darwin":
-			return path.join(home, "Library", "Application Support", "InkForge");
+			return path.join(home, "Library", "Application Support", "InkPot");
 		case "win32":
 			return path.join(
 				process.env.APPDATA || path.join(home, "AppData", "Roaming"),
-				"InkForge",
+				"InkPot",
 			);
 		default: // linux
 			return path.join(
 				process.env.XDG_CONFIG_HOME || path.join(home, ".config"),
-				"inkforge",
+				"inkpot",
 			);
 	}
 }
@@ -36,7 +36,7 @@ if (!fs.existsSync(appDataPath)) {
 }
 
 // Database file location
-const dbPath = path.join(appDataPath, "inkforge.db");
+const dbPath = path.join(appDataPath, "inkpot.db");
 
 // Create libsql client
 const libsql = createClient({

@@ -9,7 +9,7 @@
 
 ## 📋 Overview
 
-Successfully implemented a comprehensive design system for InkForge using OKLCH color space, custom typography (@fontsource packages), and Tailwind CSS v4 with semantic tokens. All UI components migrated to use design tokens, enabling seamless light/dark theme switching with persistence.
+Successfully implemented a comprehensive design system for InkPot using OKLCH color space, custom typography (@fontsource packages), and Tailwind CSS v4 with semantic tokens. All UI components migrated to use design tokens, enabling seamless light/dark theme switching with persistence.
 
 ---
 

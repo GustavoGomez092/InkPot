@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document consolidates research findings for implementing a comprehensive design system in InkForge using OKLCH colors, custom typography, and Tailwind CSS v4 integration. Research focused on font sourcing strategies, OKLCH browser support, theme persistence patterns, and Tailwind v4 best practices.
+This document consolidates research findings for implementing a comprehensive design system in InkPot using OKLCH colors, custom typography, and Tailwind CSS v4 integration. Research focused on font sourcing strategies, OKLCH browser support, theme persistence patterns, and Tailwind v4 best practices.
 
 ---
 
@@ -59,7 +59,7 @@ Import in `src/renderer/styles/global.css`:
 ### Decision: Use OKLCH with automatic sRGB fallback via CSS cascade
 
 ### Rationale:
-1. **Chromium 111+ Support**: Electron bundles Chromium, and all versions ≥111 support OKLCH natively. InkForge uses Electron 39.x which includes Chromium 128+.
+1. **Chromium 111+ Support**: Electron bundles Chromium, and all versions ≥111 support OKLCH natively. InkPot uses Electron 39.x which includes Chromium 128+.
 2. **Perceptual Uniformity**: OKLCH maintains consistent perceived brightness across hues, critical for dark mode where sRGB often produces uneven lightness.
 3. **Better Interpolation**: Color transitions (hover states, theme switching) interpolate through perceptually uniform space, avoiding muddy intermediate colors.
 4. **Future-Proof**: Industry moving toward wide-gamut color spaces (Display P3, Rec.2020). OKLCH enables smooth path to HDR displays.
@@ -338,7 +338,7 @@ Same contrast requirements apply. Common pitfall: dark backgrounds reduce percei
 ### Decision: Gradual migration with codemods for find-replace + manual review
 
 ### Rationale:
-InkForge has 5 core UI components already implemented. Rather than rewrite from scratch, migrate existing Tailwind classes to semantic tokens. Codemods automate repetitive replacements, manual review ensures correctness.
+InkPot has 5 core UI components already implemented. Rather than rewrite from scratch, migrate existing Tailwind classes to semantic tokens. Codemods automate repetitive replacements, manual review ensures correctness.
 
 ### Migration Approach:
 

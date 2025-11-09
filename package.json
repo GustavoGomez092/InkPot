@@ -1,8 +1,8 @@
 {
-	"name": "inkforge",
+	"name": "inkpot",
 	"version": "1.0.0",
-	"description": "InkForge - Markdown to PDF Desktop Application",
-	"main": "dist/main/index.js",
+	"description": "InkPot - Markdown to PDF Desktop Application",
+	"main": ".vite/build/index.cjs",
 	"scripts": {
 		"dev": "electron-forge start",
 		"build": "tsc && vite build",
@@ -22,7 +22,7 @@
 		"pdf",
 		"desktop"
 	],
-	"author": "InkForge Team",
+	"author": "InkPot Team",
 	"license": "MIT",
 	"type": "module",
 	"devDependencies": {
@@ -39,6 +39,7 @@
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.0",
 		"@types/better-sqlite3": "^7.6.13",
+		"@types/fs-extra": "^11.0.4",
 		"@types/node": "^24.10.0",
 		"@types/react": "^19.2.2",
 		"@types/react-dom": "^19.2.2",
@@ -51,6 +52,7 @@
 		"electron": "^39.1.1",
 		"electron-builder": "^26.0.12",
 		"eslint": "^9.39.1",
+		"fs-extra": "^11.3.2",
 		"google-fonts-helper": "^3.7.3",
 		"postcss": "^8.5.6",
 		"prettier": "^3.6.2",

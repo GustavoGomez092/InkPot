@@ -496,7 +496,7 @@ function Header() {
   - Check contrast against backgrounds
 
 - [ ] **SC-006**: System preference respected
-  - Clear Electron Store: `rm ~/Library/Application\ Support/InkForge/config.json`
+  - Clear Electron Store: `rm ~/Library/Application\ Support/InkPot/config.json`
   - Enable system dark mode
   - Launch app → verify opens in dark mode
 
@@ -558,7 +558,7 @@ npm test
 **Symptoms**: Theme resets to light on app restart
 
 **Solution**:
-- Check Electron Store path: `~/Library/Application Support/InkForge/config.json`
+- Check Electron Store path: `~/Library/Application Support/InkPot/config.json`
 - Verify IPC handlers registered: `console.log` in `theme:set` handler
 - Check preload script loaded: Inspect `window.electron.theme` in console
 

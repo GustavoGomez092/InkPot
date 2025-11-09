@@ -3,13 +3,13 @@
 **Feature Branch**: `002-interface-styling`  
 **Created**: November 7, 2025  
 **Status**: Draft  
-**Input**: User description: "Apply design system theme to InkForge interface with OKLCH color palette, custom fonts, shadows, and Tailwind CSS v4 integration"
+**Input**: User description: "Apply design system theme to InkPot interface with OKLCH color palette, custom fonts, shadows, and Tailwind CSS v4 integration"
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Consistent Visual Experience Across App (Priority: P1)
 
-Users see a cohesive, professional design language throughout the entire InkForge application. All interface elements (buttons, cards, inputs, dialogs) follow the same color palette, typography, spacing, and shadow system. The interface feels unified and intentional, not like separate components thrown together.
+Users see a cohesive, professional design language throughout the entire InkPot application. All interface elements (buttons, cards, inputs, dialogs) follow the same color palette, typography, spacing, and shadow system. The interface feels unified and intentional, not like separate components thrown together.
 
 **Why this priority**: This is the foundation of the design system. Without consistent styling, users perceive the application as unpolished and unprofessional. This story delivers immediate visual value and establishes the design foundation for all other features.
 
@@ -144,9 +144,9 @@ All interactive elements show clear focus indicators when navigated via keyboard
 - Theme transitions beyond simple fade (e.g., animated color morphing, directional wipes)
 - High contrast mode as a separate third theme - accessibility is handled through WCAG compliance in existing themes
 - Animations or motion design tokens - focus is on static design system foundation
-- Component library documentation site - design system is for internal use within InkForge
+- Component library documentation site - design system is for internal use within InkPot
 - Alternative font selections by users - provided fonts are part of the brand identity
-- Responsive breakpoints for mobile/tablet - InkForge is desktop-only Electron application
+- Responsive breakpoints for mobile/tablet - InkPot is desktop-only Electron application
 - Print stylesheets or PDF-specific styling - PDF generation uses separate theme system
 
 ## Dependencies *(optional - remove if empty)*

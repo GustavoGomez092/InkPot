@@ -44,7 +44,7 @@ interface ThemePreference {
 - **Write**: On user theme toggle (infrequent, UI-driven)
 - **Concurrency**: Not applicable (single-user desktop app, no concurrent access)
 
-**Storage Location**: `~/Library/Application Support/InkForge/config.json` (macOS example)
+**Storage Location**: `~/Library/Application Support/InkPot/config.json` (macOS example)
 
 ---
 
@@ -215,7 +215,7 @@ const toggleTheme = async () => {
 
 ### Initial Deployment (v1.0.0)
 
-**Scenario**: User installs InkForge for first time
+**Scenario**: User installs InkPot for first time
 
 **Behavior**:
 1. Electron Store has no theme preference

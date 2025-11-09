@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document consolidates research findings and technical decisions for implementing InkForge's markdown-to-PDF export feature using Electron, React 19, Tiptap, React PDF, SQLite, and related technologies.
+This document consolidates research findings and technical decisions for implementing InkPot's markdown-to-PDF export feature using Electron, React 19, Tiptap, React PDF, SQLite, and related technologies.
 
 ---
 

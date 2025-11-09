@@ -123,13 +123,13 @@
 - [ ] T053 [P] [US1] Create RecentProjectList React component in src/renderer/components/ProjectSelector/RecentProjectList.tsx
 - [ ] T054 [P] [US1] Create NewProjectDialog React component in src/renderer/components/ProjectSelector/NewProjectDialog.tsx
 - [ ] T055 [US1] Implement projects:list-recent IPC handler in src/main/ipc/projects.ts (query RecentProject with Prisma)
-- [ ] T056 [US1] Implement projects:create IPC handler in src/main/ipc/projects.ts (create Project, create .inkforge file, insert RecentProject)
-- [ ] T057 [US1] Implement projects:load IPC handler in src/main/ipc/projects.ts (read .inkforge file, load Project with theme and cover data, update lastOpenedAt)
+- [ ] T056 [US1] Implement projects:create IPC handler in src/main/ipc/projects.ts (create Project, create .InkPot file, insert RecentProject)
+- [ ] T057 [US1] Implement projects:load IPC handler in src/main/ipc/projects.ts (read .InkPot file, load Project with theme and cover data, update lastOpenedAt)
 - [ ] T058 [US1] Add projects channel to preload contextBridge in src/main/preload.ts
 - [ ] T059 [US1] Create useRecentProjects hook in src/renderer/hooks/useRecentProjects.ts
 - [ ] T060 [US1] Create useProjectActions hook in src/renderer/hooks/useProjectActions.ts (create, load wrappers)
 - [ ] T061 [US1] Add ProjectSelector route in src/renderer/router.tsx (root path '/')
-- [ ] T062 [US1] Implement file:open-dialog IPC handler in src/main/ipc/file.ts (native file picker for .inkforge files)
+- [ ] T062 [US1] Implement file:open-dialog IPC handler in src/main/ipc/file.ts (native file picker for .InkPot files)
 - [ ] T063 [US1] Add file channel to preload contextBridge in src/main/preload.ts
 - [ ] T064 [US1] Add error handling for invalid file paths and missing projects in src/main/ipc/projects.ts
 - [ ] T065 [US1] Add validation for project name (non-empty, max 255 chars) in IPC handlers

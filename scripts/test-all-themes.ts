@@ -92,7 +92,7 @@ const classicTheme: ThemeData = {
 	codeBackground: "#F0EDE6",
 };
 
-const testContent = `# InkForge PDF Test Document
+const testContent = `# InkPot PDF Test Document
 
 This document tests PDF generation with various markdown elements.
 
@@ -132,7 +132,7 @@ function greet(name) {
   console.log(\`Hello, \${name}!\`);
 }
 
-greet("InkForge");
+greet("InkPot");
 \`\`\`
 
 Here's a Python code block:
@@ -197,7 +197,7 @@ This is the end of our comprehensive test document. It includes:
 - Horizontal rules
 - Explicit page breaks
 
-Thank you for using **InkForge**!
+Thank you for using **InkPot**!
 `;
 
 async function testAllThemes() {
@@ -213,7 +213,7 @@ async function testAllThemes() {
 			const buffer = await generatePDF(testContent, theme);
 
 			// Export to desktop
-			const filename = `inkforge-test-${theme.name.toLowerCase()}.pdf`;
+			const filename = `inkpot-test-${theme.name.toLowerCase()}.pdf`;
 			const outputPath = join(homedir(), "Desktop", filename);
 			await exportPDF(buffer, outputPath);
 
@@ -225,9 +225,9 @@ async function testAllThemes() {
 
 	console.log("🎉 All theme tests completed!");
 	console.log("\n📂 Check your Desktop for the generated PDFs:");
-	console.log("   - inkforge-test-professional.pdf");
-	console.log("   - inkforge-test-modern.pdf");
-	console.log("   - inkforge-test-classic.pdf");
+	console.log("   - inkpot-test-professional.pdf");
+	console.log("   - inkpot-test-modern.pdf");
+	console.log("   - inkpot-test-classic.pdf");
 }
 
 // Run test

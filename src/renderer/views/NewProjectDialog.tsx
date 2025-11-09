@@ -15,6 +15,7 @@ interface Theme {
 function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
   const navigate = useNavigate();
   const [projectName, setProjectName] = useState('');
+  const [description, setDescription] = useState('');
   const [themes, setThemes] = useState<Theme[]>([]);
   const [selectedTheme, setSelectedTheme] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -83,30 +84,40 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
 
-      const filePath = `${projectsPath}/${safeFileName}.inkforge`;
+      const filePath = `${projectsPath}/${safeFileName}.inkpot`;
 
-      // Create project
-      const result = await (window as any).electronAPI.projects.create({
+      const projectData = {
         name: projectName,
         filePath,
         themeId: selectedTheme || undefined,
-      });
+        subtitle: description.trim() || undefined,
+      };
+
+      console.log('📝 Creating project with data:', projectData);
+
+      // Create project
+      const result = await (window as any).electronAPI.projects.create(projectData);
 
       if (!result.success) {
         throw new Error(result.error.message);
       }
 
+      // Close dialog first
+      onClose();
+
+      // Small delay to ensure database transactions complete
+      // This ensures the project appears in listRecent before navigation
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
       // Navigate to editor
       navigate({
         to: '/editor/$projectId',
-        params: { projectId: result.data.id },
+        params: { projectId: result.data.project.id },
       });
-
-      // Close dialog
-      onClose();
 
       // Reset form
       setProjectName('');
+      setDescription('');
       setSelectedTheme(themes[0]?.id || '');
     } catch (err) {
       console.error('Failed to create project:', err);
@@ -119,6 +130,7 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
   const handleClose = () => {
     if (!isCreating) {
       setProjectName('');
+      setDescription('');
       setError('');
       onClose();
     }
@@ -159,6 +171,24 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
           disabled={isCreating}
         />
 
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            Description <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="A brief description of your project..."
+            disabled={isCreating}
+            rows={3}
+            maxLength={500}
+            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+          />
+          <p className="text-xs text-muted-foreground text-right">
+            {description.length}/500 characters
+          </p>
+        </div>
+
         {themes.length > 0 && (
           <Select
             label="Theme"
@@ -172,8 +202,8 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
           />
         )}
 
-        <p className="text-sm text-gray-600">
-          Your project will be saved in the InkForge projects folder.
+        <p className="text-sm text-muted-foreground">
+          Your project will be saved in the InkPot projects folder.
         </p>
       </div>
     </Dialog>

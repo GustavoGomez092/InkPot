@@ -12,16 +12,25 @@ export default defineConfig({
 	},
 	base: "./",
 	build: {
-		outDir: "dist/renderer",
-		emptyOutDir: true,
+		// Let Electron Forge Vite plugin handle outDir
 		rollupOptions: {
 			input: {
-				index: path.resolve(__dirname, "index.html"),
+				main_window: path.resolve(__dirname, "index.html"),
 			},
 		},
+		// Ensure assets are properly inlined or copied
+		assetsInlineLimit: 0, // Don't inline any assets, copy them all
 	},
 	server: {
 		port: 5173,
 		strictPort: true,
+	},
+	// Optimize dependencies to ensure fonts are bundled
+	optimizeDeps: {
+		include: [
+			"@fontsource/inter",
+			"@fontsource/source-serif-4",
+			"@fontsource/jetbrains-mono",
+		],
 	},
 });

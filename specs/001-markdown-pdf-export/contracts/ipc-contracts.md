@@ -151,7 +151,7 @@ Load an existing project.
 **Request**:
 ```typescript
 interface LoadProjectRequest {
-  filePath: string; // Absolute path to .inkforge file
+  filePath: string; // Absolute path to .InkPot file
 }
 ```
 
@@ -262,7 +262,7 @@ Delete a project.
 ```typescript
 interface DeleteProjectRequest {
   id: string;
-  deleteFile: boolean; // Also delete .inkforge file from disk
+  deleteFile: boolean; // Also delete .InkPot file from disk
 }
 ```
 

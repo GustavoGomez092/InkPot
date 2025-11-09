@@ -7,7 +7,7 @@
 
 ## Summary
 
-InkForge is a local-first desktop application for creating professional PDF documents from markdown content. Users launch the app to a project selector, create or open projects, edit markdown in a rich text editor with real-time formatting, apply themes for PDF styling, optionally add cover pages, preview PDFs before export, and save projects for later work. All data is stored locally with no cloud dependencies except Google Fonts downloads. The application leverages Electron for cross-platform desktop deployment, React 19 with the new compiler for optimal UI performance, Tiptap for extensible rich text editing, React PDF for document generation, and SQLite with Prisma for local data persistence.
+InkPot is a local-first desktop application for creating professional PDF documents from markdown content. Users launch the app to a project selector, create or open projects, edit markdown in a rich text editor with real-time formatting, apply themes for PDF styling, optionally add cover pages, preview PDFs before export, and save projects for later work. All data is stored locally with no cloud dependencies except Google Fonts downloads. The application leverages Electron for cross-platform desktop deployment, React 19 with the new compiler for optimal UI performance, Tiptap for extensible rich text editing, React PDF for document generation, and SQLite with Prisma for local data persistence.
 
 ## Technical Context
 

@@ -94,10 +94,9 @@ $RECYCLE.BIN/
 *.db-journal
 *.db-wal
 
-# User data (application data directory contents)
-# This is where user projects are stored at runtime
-# Path is typically ~/Library/Application Support/InkForge on macOS
-# We want to ignore this to not track user data during development
+# InkPot application data directory
+# Path is typically ~/Library/Application Support/InkPot on macOS
+# Contains: database, uploaded images, user preferences
 
 # Debug and profiling
 .trace

@@ -1,4 +1,4 @@
-// InkForge Prisma Schema
+// InkPot Prisma Schema
 // Local-first SQLite database for metadata storage
 
 generator client {
@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./inkforge.db"
+  url      = "file:./inkpot.db"
 }
 
 // ============================================================================
@@ -17,7 +17,7 @@ datasource db {
 model Project {
   id       String  @id @default(uuid())
   name     String
-  filePath String  @unique // Absolute path to .inkforge project file
+  filePath String  @unique // Absolute path to .inkpot project file
   themeId  String?
 
   // Cover page configuration
