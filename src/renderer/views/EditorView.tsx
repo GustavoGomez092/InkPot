@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CoverEditor, TiptapEditor, type CoverData } from '../components/editor';
+import { type CoverData, CoverEditor, TiptapEditor } from '../components/editor';
 import { Button, Card } from '../components/ui';
 
 function EditorView() {
@@ -25,7 +25,11 @@ function EditorView() {
   const [coverSubtitle, setCoverSubtitle] = useState<string | null>(null);
   const [coverAuthor, setCoverAuthor] = useState<string | null>(null);
   const contentRef = useRef(content);
-  const coverDataRef = useRef<CoverData>({ title: '', subtitle: '', author: '' });
+  const coverDataRef = useRef<CoverData>({
+    title: '',
+    subtitle: '',
+    author: '',
+  });
   const charCountUpdateRef = useRef<NodeJS.Timeout | null>(null);
   const isDragging = useRef(false);
 
