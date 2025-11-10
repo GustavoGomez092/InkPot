@@ -8,6 +8,15 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import type { ThemeData } from "@shared/types/ipc-contracts.js";
 import { createPDFDocument } from "../pdf/Document.js";
 
+export interface CoverData {
+	hasCoverPage: boolean;
+	title?: string | null;
+	subtitle?: string | null;
+	author?: string | null;
+	logoPath?: string | null;
+	backgroundPath?: string | null;
+}
+
 /**
  * Generate PDF buffer from markdown content
  */
@@ -15,6 +24,7 @@ export async function generatePDF(
 	content: string,
 	theme: ThemeData,
 	projectDir?: string,
+	coverData?: CoverData,
 ): Promise<Buffer> {
 	try {
 		console.log("📄 Generating PDF with theme:", theme.name);
@@ -23,8 +33,12 @@ export async function generatePDF(
 			content.substring(0, 500),
 		);
 
+		if (coverData?.hasCoverPage) {
+			console.log("📑 Cover page enabled:", coverData);
+		}
+
 		// Create PDF document element
-		const document = createPDFDocument(content, theme, projectDir);
+		const document = createPDFDocument(content, theme, projectDir, coverData);
 
 		// Render to buffer
 		const buffer = await renderToBuffer(document);
@@ -68,12 +82,13 @@ export async function previewPDF(
 	content: string,
 	theme: ThemeData,
 	projectDir?: string,
+	coverData?: CoverData,
 ): Promise<string> {
 	try {
 		console.log("👁️  Generating PDF preview with theme:", theme.name);
 
 		// Generate PDF buffer
-		const buffer = await generatePDF(content, theme, projectDir);
+		const buffer = await generatePDF(content, theme, projectDir, coverData);
 
 		// Convert to base64 data URL
 		const base64 = buffer.toString("base64");

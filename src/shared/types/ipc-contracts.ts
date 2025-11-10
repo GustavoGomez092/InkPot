@@ -331,6 +331,35 @@ export interface UploadCoverAssetResponse {
 	fileSize: number;
 }
 
+export interface DeleteCoverAssetRequest {
+	projectId: string;
+	assetType: "logo" | "background";
+}
+
+export interface GetCoverAssetsRequest {
+	projectId: string;
+}
+
+export interface GetCoverAssetsResponse {
+	assets: CoverAssetData[];
+}
+
+export interface UpdateCoverDataRequest {
+	projectId: string;
+	hasCoverPage: boolean;
+	coverTitle?: string | null;
+	coverSubtitle?: string | null;
+	coverAuthor?: string | null;
+}
+
+export interface GetCoverAssetDataUrlRequest {
+	assetId: string;
+}
+
+export interface GetCoverAssetDataUrlResponse {
+	dataUrl: string;
+}
+
 // ============================================================================
 // FILE CHANNEL
 // ============================================================================
@@ -520,6 +549,18 @@ export interface ElectronAPI {
 		uploadAsset: (
 			req: UploadCoverAssetRequest,
 		) => Promise<IPCResponse<UploadCoverAssetResponse>>;
+		deleteAsset: (
+			req: DeleteCoverAssetRequest,
+		) => Promise<IPCResponse<{ success: true }>>;
+		getAssets: (
+			req: GetCoverAssetsRequest,
+		) => Promise<IPCResponse<GetCoverAssetsResponse>>;
+		updateData: (
+			req: UpdateCoverDataRequest,
+		) => Promise<IPCResponse<{ success: true }>>;
+		getAssetDataUrl: (
+			req: GetCoverAssetDataUrlRequest,
+		) => Promise<IPCResponse<GetCoverAssetDataUrlResponse>>;
 	};
 	file: {
 		selectFile: (

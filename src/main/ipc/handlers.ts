@@ -55,9 +55,10 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"projects:create",
 		wrapIPCHandler(async (args) => {
-			const { name, filePath, themeId, subtitle } = createProjectSchema.parse(args);
+			const { name, filePath, themeId, subtitle } =
+				createProjectSchema.parse(args);
 
-			console.log('📝 Creating project with subtitle:', subtitle);
+			console.log("📝 Creating project with subtitle:", subtitle);
 
 			// Validate file path is in app data directory
 			if (!appData.isPathInProjects(filePath)) {
@@ -91,7 +92,10 @@ export function registerIPCHandlers(): void {
 				include: { theme: true },
 			});
 
-			console.log('✅ Project created with coverSubtitle:', project.coverSubtitle);
+			console.log(
+				"✅ Project created with coverSubtitle:",
+				project.coverSubtitle,
+			);
 
 			// Create empty project file
 			const projectData = {
@@ -859,11 +863,64 @@ export function registerIPCHandlers(): void {
 			// Get project directory for resolving image paths
 			const projectDir = path.dirname(project.filePath);
 
+			// Get cover assets if cover page is enabled
+			let coverData:
+				| {
+						hasCoverPage: boolean;
+						title?: string | null;
+						subtitle?: string | null;
+						author?: string | null;
+						logoPath?: string | null;
+						backgroundPath?: string | null;
+				  }
+				| undefined;
+			if (project.hasCoverPage) {
+				const coverAssets = await prisma.projectCoverAsset.findMany({
+					where: { projectId },
+				});
+
+				const logoAsset = coverAssets.find((a) => a.assetType === "logo");
+				const backgroundAsset = coverAssets.find(
+					(a) => a.assetType === "background",
+				);
+
+				// Convert images to base64 data URLs for PDF generation
+				let logoDataUrl: string | undefined;
+				let backgroundDataUrl: string | undefined;
+
+				if (logoAsset && (await fileSystem.fileExists(logoAsset.filePath))) {
+					const fs = await import("node:fs/promises");
+					const buffer = await fs.readFile(logoAsset.filePath);
+					const base64 = buffer.toString("base64");
+					logoDataUrl = `data:${logoAsset.mimeType};base64,${base64}`;
+				}
+
+				if (
+					backgroundAsset &&
+					(await fileSystem.fileExists(backgroundAsset.filePath))
+				) {
+					const fs = await import("node:fs/promises");
+					const buffer = await fs.readFile(backgroundAsset.filePath);
+					const base64 = buffer.toString("base64");
+					backgroundDataUrl = `data:${backgroundAsset.mimeType};base64,${base64}`;
+				}
+
+				coverData = {
+					hasCoverPage: true,
+					title: project.coverTitle,
+					subtitle: project.coverSubtitle,
+					author: project.coverAuthor,
+					logoPath: logoDataUrl,
+					backgroundPath: backgroundDataUrl,
+				};
+			}
+
 			// Generate PDF
 			const buffer = await generatePDF(
 				projectData.content || "",
 				theme,
 				projectDir,
+				coverData,
 			);
 
 			// Export to file
@@ -920,8 +977,65 @@ export function registerIPCHandlers(): void {
 			// Get project directory for resolving image paths
 			const projectDir = path.dirname(project.filePath);
 
+			// Get cover assets if cover page is enabled
+			let coverData:
+				| {
+						hasCoverPage: boolean;
+						title?: string | null;
+						subtitle?: string | null;
+						author?: string | null;
+						logoPath?: string | null;
+						backgroundPath?: string | null;
+				  }
+				| undefined;
+			if (project.hasCoverPage) {
+				const coverAssets = await prisma.projectCoverAsset.findMany({
+					where: { projectId },
+				});
+
+				const logoAsset = coverAssets.find((a) => a.assetType === "logo");
+				const backgroundAsset = coverAssets.find(
+					(a) => a.assetType === "background",
+				);
+
+				// Convert images to base64 data URLs for PDF generation
+				let logoDataUrl: string | undefined;
+				let backgroundDataUrl: string | undefined;
+
+				if (logoAsset && (await fileSystem.fileExists(logoAsset.filePath))) {
+					const fs = await import("node:fs/promises");
+					const buffer = await fs.readFile(logoAsset.filePath);
+					const base64 = buffer.toString("base64");
+					logoDataUrl = `data:${logoAsset.mimeType};base64,${base64}`;
+				}
+
+				if (
+					backgroundAsset &&
+					(await fileSystem.fileExists(backgroundAsset.filePath))
+				) {
+					const fs = await import("node:fs/promises");
+					const buffer = await fs.readFile(backgroundAsset.filePath);
+					const base64 = buffer.toString("base64");
+					backgroundDataUrl = `data:${backgroundAsset.mimeType};base64,${base64}`;
+				}
+
+				coverData = {
+					hasCoverPage: true,
+					title: project.coverTitle,
+					subtitle: project.coverSubtitle,
+					author: project.coverAuthor,
+					logoPath: logoDataUrl,
+					backgroundPath: backgroundDataUrl,
+				};
+			}
+
 			// Generate preview
-			const pdfDataUrl = await previewPDF(content, theme, projectDir);
+			const pdfDataUrl = await previewPDF(
+				content,
+				theme,
+				projectDir,
+				coverData,
+			);
 
 			// For now, we don't have pageCount and fileSize from previewPDF
 			// These would require parsing the PDF or tracking during generation
@@ -1034,6 +1148,276 @@ export function registerIPCHandlers(): void {
 				fonts: appData.getFontsPath(),
 				...appData.getSystemPaths(),
 			};
+		}),
+	);
+
+	// ============================================================================
+	// COVER CHANNEL
+	// ============================================================================
+
+	/**
+	 * Upload a cover asset (logo or background)
+	 */
+	ipcMain.handle(
+		"cover:upload-asset",
+		wrapIPCHandler(async (args) => {
+			const {
+				projectId,
+				assetType,
+				filePath: sourcePath,
+			} = z
+				.object({
+					projectId: z.string().uuid(),
+					assetType: z.enum(["logo", "background"]),
+					filePath: z.string(),
+				})
+				.parse(args);
+
+			// Get project
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			// Validate source file exists
+			if (!(await fileSystem.fileExists(sourcePath))) {
+				throw new Error(`File not found: ${sourcePath}`);
+			}
+
+			// Get file info
+			const stats = await fileSystem.getFileStats(sourcePath);
+			const extension = path.extname(sourcePath).toLowerCase();
+
+			// Validate file type
+			const validExtensions = [".png", ".jpg", ".jpeg", ".svg"];
+			if (!validExtensions.includes(extension)) {
+				throw new Error(
+					`Invalid file type. Allowed: ${validExtensions.join(", ")}`,
+				);
+			}
+
+			// Validate file size (max 10MB)
+			const maxSize = 10 * 1024 * 1024;
+			if (stats.size > maxSize) {
+				throw new Error(
+					`File too large. Maximum size: ${maxSize / 1024 / 1024}MB`,
+				);
+			}
+
+			// Create assets directory for project
+			const projectDir = path.dirname(project.filePath);
+			const assetsDir = path.join(projectDir, "assets", "cover");
+			await fileSystem.createDirectory(assetsDir);
+
+			// Generate unique filename
+			const originalFileName = path.basename(sourcePath);
+			const baseName = path.parse(originalFileName).name;
+			const safeFileName = fileSystem.getSafeFilename(
+				fileSystem.generateUniqueFilename(
+					`${assetType}-${baseName}`,
+					extension,
+				),
+			);
+			const destinationPath = path.join(assetsDir, safeFileName);
+
+			// Copy file
+			const fs = await import("node:fs/promises");
+			await fs.copyFile(sourcePath, destinationPath);
+
+			// Get image dimensions if it's an image
+			let width: number | null = null;
+			let height: number | null = null;
+
+			if ([".png", ".jpg", ".jpeg"].includes(extension)) {
+				try {
+					const fs = await import("node:fs/promises");
+					const buffer = await fs.readFile(destinationPath);
+					const sizeOf = (await import("image-size")).default;
+					const dimensions = sizeOf(buffer);
+					width = dimensions.width ?? null;
+					height = dimensions.height ?? null;
+				} catch (error) {
+					console.warn("Failed to get image dimensions:", error);
+				}
+			}
+
+			// Determine MIME type
+			const mimeTypes: { [key: string]: string } = {
+				".png": "image/png",
+				".jpg": "image/jpeg",
+				".jpeg": "image/jpeg",
+				".svg": "image/svg+xml",
+			};
+			const mimeType = mimeTypes[extension] || "image/png";
+
+			// Delete existing asset of this type for this project
+			await prisma.projectCoverAsset.deleteMany({
+				where: { projectId, assetType },
+			});
+
+			// Create database record
+			const asset = await prisma.projectCoverAsset.create({
+				data: {
+					projectId,
+					assetType,
+					originalFileName,
+					filePath: destinationPath,
+					fileSize: stats.size,
+					mimeType,
+					width,
+					height,
+				},
+			});
+
+			return {
+				id: asset.id,
+				assetType: asset.assetType as "logo" | "background",
+				storedPath: asset.filePath,
+				originalFileName: asset.originalFileName,
+				width: asset.width ?? 0,
+				height: asset.height ?? 0,
+				fileSize: asset.fileSize,
+			};
+		}),
+	);
+
+	/**
+	 * Delete a cover asset
+	 */
+	ipcMain.handle(
+		"cover:delete-asset",
+		wrapIPCHandler(async (args) => {
+			const { projectId, assetType } = z
+				.object({
+					projectId: z.string().uuid(),
+					assetType: z.enum(["logo", "background"]),
+				})
+				.parse(args);
+
+			// Find asset
+			const asset = await prisma.projectCoverAsset.findFirst({
+				where: { projectId, assetType },
+			});
+
+			if (!asset) {
+				return { success: true }; // Already deleted
+			}
+
+			// Delete file if it exists
+			if (await fileSystem.fileExists(asset.filePath)) {
+				await fileSystem.deleteFile(asset.filePath);
+			}
+
+			// Delete database record
+			await prisma.projectCoverAsset.delete({
+				where: { id: asset.id },
+			});
+
+			return { success: true };
+		}),
+	);
+
+	/**
+	 * Get all cover assets for a project
+	 */
+	ipcMain.handle(
+		"cover:get-assets",
+		wrapIPCHandler(async (args) => {
+			const { projectId } = z
+				.object({
+					projectId: z.string().uuid(),
+				})
+				.parse(args);
+
+			const assets = await prisma.projectCoverAsset.findMany({
+				where: { projectId },
+			});
+
+			return {
+				assets: assets.map((asset) => ({
+					id: asset.id,
+					type: asset.assetType as "logo" | "background",
+					filePath: asset.filePath,
+					width: asset.width,
+					height: asset.height,
+				})),
+			};
+		}),
+	);
+
+	/**
+	 * Update cover data (title, subtitle, author)
+	 */
+	ipcMain.handle(
+		"cover:update-data",
+		wrapIPCHandler(async (args) => {
+			const {
+				projectId,
+				hasCoverPage,
+				coverTitle,
+				coverSubtitle,
+				coverAuthor,
+			} = z
+				.object({
+					projectId: z.string().uuid(),
+					hasCoverPage: z.boolean(),
+					coverTitle: z.string().nullable().optional(),
+					coverSubtitle: z.string().nullable().optional(),
+					coverAuthor: z.string().nullable().optional(),
+				})
+				.parse(args);
+
+			// Update project
+			await prisma.project.update({
+				where: { id: projectId },
+				data: {
+					hasCoverPage,
+					coverTitle,
+					coverSubtitle,
+					coverAuthor,
+				},
+			});
+
+			return { success: true };
+		}),
+	);
+
+	/**
+	 * Get cover asset as data URL for preview
+	 */
+	ipcMain.handle(
+		"cover:get-asset-data-url",
+		wrapIPCHandler(async (args) => {
+			const { assetId } = z
+				.object({
+					assetId: z.string().uuid(),
+				})
+				.parse(args);
+
+			// Get asset from database
+			const asset = await prisma.projectCoverAsset.findUnique({
+				where: { id: assetId },
+			});
+
+			if (!asset) {
+				throw new Error(`Asset not found: ${assetId}`);
+			}
+
+			// Check if file exists
+			if (!(await fileSystem.fileExists(asset.filePath))) {
+				throw new Error(`Asset file not found: ${asset.filePath}`);
+			}
+
+			// Read file and convert to base64 data URL
+			const fs = await import("node:fs/promises");
+			const buffer = await fs.readFile(asset.filePath);
+			const base64 = buffer.toString("base64");
+			const dataUrl = `data:${asset.mimeType};base64,${base64}`;
+
+			return { dataUrl };
 		}),
 	);
 

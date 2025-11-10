@@ -6,6 +6,7 @@
 import { Document, Font, Page, Text, View } from '@react-pdf/renderer';
 import type { ThemeData } from '@shared/types/ipc-contracts.js';
 import React from 'react';
+import { CoverPage } from './components/CoverPage.js';
 import { MarkdownElements } from './components/MarkdownElements.js';
 import { parseMarkdown } from './markdown-parser.js';
 
@@ -42,10 +43,24 @@ function getSafeFontFamily(fontFamily: string): string {
   return fontFamilyMap[fontFamily] || 'Helvetica';
 }
 
+export interface CoverData {
+  hasCoverPage: boolean;
+  title?: string | null;
+  subtitle?: string | null;
+  author?: string | null;
+  logoPath?: string | null;
+  backgroundPath?: string | null;
+}
+
 /**
  * Generate PDF document element from markdown content with theme styling
  */
-export function createPDFDocument(content: string, theme: ThemeData, projectDir?: string) {
+export function createPDFDocument(
+  content: string,
+  theme: ThemeData,
+  projectDir?: string,
+  coverData?: CoverData
+) {
   // Parse markdown to structured elements
   const elements = parseMarkdown(content, projectDir);
 
@@ -82,15 +97,27 @@ export function createPDFDocument(content: string, theme: ThemeData, projectDir?
     headingFont: getSafeFontFamily(theme.headingFont),
   };
 
-  return React.createElement(
-    Document,
-    {
-      title: 'InkPot Export',
-      author: 'InkPot',
-      subject: 'Markdown to PDF',
-      creator: 'InkPot',
-    },
-    pages.map((pageElements, idx) => {
+  // Prepare pages array with cover page if enabled
+  const allPages: React.ReactElement[] = [];
+
+  // Add cover page if enabled
+  if (coverData?.hasCoverPage) {
+    allPages.push(
+      React.createElement(CoverPage, {
+        key: 'cover-page',
+        title: coverData.title,
+        subtitle: coverData.subtitle,
+        author: coverData.author,
+        logoPath: coverData.logoPath,
+        backgroundPath: coverData.backgroundPath,
+        theme: safeTheme,
+      })
+    );
+  }
+
+  // Add content pages
+  allPages.push(
+    ...pages.map((pageElements, idx) => {
       const pageKey = `page-${idx}-${pageElements.length}`;
 
       return React.createElement(
@@ -120,6 +147,17 @@ export function createPDFDocument(content: string, theme: ThemeData, projectDir?
           : React.createElement(EmptyPage)
       );
     })
+  );
+
+  return React.createElement(
+    Document,
+    {
+      title: 'InkPot Export',
+      author: 'InkPot',
+      subject: 'Markdown to PDF',
+      creator: 'InkPot',
+    },
+    allPages
   );
 }
 

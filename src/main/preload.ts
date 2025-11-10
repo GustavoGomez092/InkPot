@@ -33,6 +33,11 @@ const electronAPI: ElectronAPI = {
 	cover: {
 		listTemplates: (req) => ipcRenderer.invoke("cover:list-templates", req),
 		uploadAsset: (req) => ipcRenderer.invoke("cover:upload-asset", req),
+		deleteAsset: (req) => ipcRenderer.invoke("cover:delete-asset", req),
+		getAssets: (req) => ipcRenderer.invoke("cover:get-assets", req),
+		updateData: (req) => ipcRenderer.invoke("cover:update-data", req),
+		getAssetDataUrl: (req) =>
+			ipcRenderer.invoke("cover:get-asset-data-url", req),
 	},
 	file: {
 		selectFile: (req) => ipcRenderer.invoke("file:select-file", req),

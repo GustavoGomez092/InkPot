@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TiptapEditor } from '../components/editor';
+import { CoverEditor, TiptapEditor, type CoverData } from '../components/editor';
 import { Button, Card } from '../components/ui';
 
 function EditorView() {
@@ -20,7 +20,12 @@ function EditorView() {
   const [editedTitle, setEditedTitle] = useState('');
   const [rightWidth, setRightWidth] = useState(499); // Fixed width in pixels for preview
   const [isDraggingResize, setIsDraggingResize] = useState(false);
+  const [editorMode, setEditorMode] = useState<'content' | 'cover'>('content');
+  const [coverTitle, setCoverTitle] = useState<string | null>(null);
+  const [coverSubtitle, setCoverSubtitle] = useState<string | null>(null);
+  const [coverAuthor, setCoverAuthor] = useState<string | null>(null);
   const contentRef = useRef(content);
+  const coverDataRef = useRef<CoverData>({ title: '', subtitle: '', author: '' });
   const charCountUpdateRef = useRef<NodeJS.Timeout | null>(null);
   const isDragging = useRef(false);
 
@@ -75,6 +80,11 @@ function EditorView() {
           setLastSaved(new Date(result.data.project.updatedAt));
           setLoadError(null);
 
+          // Load cover data
+          setCoverTitle(result.data.project.coverTitle);
+          setCoverSubtitle(result.data.project.coverSubtitle);
+          setCoverAuthor(result.data.project.coverAuthor);
+
           // Apply active theme on load to ensure preview uses current theme
           const activeThemeId = localStorage.getItem('activeThemeId');
           if (activeThemeId && activeThemeId !== result.data.project.themeId) {
@@ -116,30 +126,54 @@ function EditorView() {
     try {
       const api = window.electronAPI;
 
-      // Get the active theme from localStorage to apply it to this project
-      const activeThemeId = localStorage.getItem('activeThemeId');
+      if (editorMode === 'content') {
+        // Save content editor data
+        const activeThemeId = localStorage.getItem('activeThemeId');
 
-      const result = await api.projects.save({
-        id: projectId,
-        content: contentRef.current,
-        themeId: activeThemeId || undefined, // Apply active theme if set
-      });
+        const result = await api.projects.save({
+          id: projectId,
+          content: contentRef.current,
+          themeId: activeThemeId || undefined,
+        });
 
-      if (result.success) {
-        setLastSaved(new Date());
-        console.log('Project saved successfully');
-        // Refresh preview after save to show saved content
-        void generatePreview();
+        if (result.success) {
+          setLastSaved(new Date());
+          console.log('Project saved successfully');
+        } else {
+          throw new Error('Save failed');
+        }
       } else {
-        throw new Error('Save failed');
+        // Save cover editor data
+        const coverData = coverDataRef.current;
+        const result = await api.cover.updateData({
+          projectId,
+          hasCoverPage: true,
+          coverTitle: coverData.title || null,
+          coverSubtitle: coverData.subtitle || null,
+          coverAuthor: coverData.author || null,
+        });
+
+        if (result.success) {
+          setLastSaved(new Date());
+          console.log('Cover data saved successfully');
+          // Update local state
+          setCoverTitle(coverData.title || null);
+          setCoverSubtitle(coverData.subtitle || null);
+          setCoverAuthor(coverData.author || null);
+        } else {
+          throw new Error('Failed to save cover data');
+        }
       }
+
+      // Refresh preview after save to show saved content
+      void generatePreview();
     } catch (error) {
-      console.error('Failed to save project:', error);
-      alert(`Failed to save project: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Failed to save:', error);
+      alert(`Failed to save: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, projectId]);
+  }, [isSaving, projectId, editorMode]);
 
   // Handle title rename
   const handleTitleSave = useCallback(async () => {
@@ -438,35 +472,75 @@ function EditorView() {
         >
           <div className="p-4 border-b border-border bg-card shrink-0">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Markdown Editor</h2>
               <div className="flex gap-2">
-                <span className="text-sm text-muted-foreground">{charCount} characters</span>
+                <Button
+                  size="sm"
+                  variant={editorMode === 'content' ? 'primary' : 'outline'}
+                  onClick={() => setEditorMode('content')}
+                >
+                  Content Editor
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editorMode === 'cover' ? 'primary' : 'outline'}
+                  onClick={() => setEditorMode('cover')}
+                >
+                  Cover Editor
+                </Button>
+              </div>
+              <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Save and Update Preview'}
                 </Button>
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-hidden p-4 bg-card">
-            <TiptapEditor
-              content={content}
-              projectId={projectId}
-              onUpdate={(newContent) => {
-                // Update the ref immediately for saving without causing re-render
-                contentRef.current = newContent;
+          <div className="flex-1 overflow-hidden flex flex-col bg-card">
+            {editorMode === 'content' ? (
+              <>
+                <div className="flex-1 overflow-hidden p-4">
+                  <TiptapEditor
+                    content={content}
+                    projectId={projectId}
+                    onUpdate={(newContent) => {
+                      // Update the ref immediately for saving without causing re-render
+                      contentRef.current = newContent;
 
-                // Debounce character count update to avoid frequent re-renders
-                if (charCountUpdateRef.current) {
-                  clearTimeout(charCountUpdateRef.current);
-                }
-                charCountUpdateRef.current = setTimeout(() => {
-                  setCharCount(newContent.length);
-                }, 300);
+                      // Debounce character count update to avoid frequent re-renders
+                      if (charCountUpdateRef.current) {
+                        clearTimeout(charCountUpdateRef.current);
+                      }
+                      charCountUpdateRef.current = setTimeout(() => {
+                        setCharCount(newContent.length);
+                      }, 300);
 
-                // Preview will only update on save
-              }}
-              placeholder="Start writing your document in markdown..."
-            />
+                      // Preview will only update on save
+                    }}
+                    placeholder="Start writing your document in markdown..."
+                  />
+                </div>
+                <div className="px-4 py-2 border-t border-border bg-card shrink-0">
+                  <span className="text-sm text-muted-foreground">{charCount} characters</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 overflow-hidden">
+                <CoverEditor
+                  projectId={projectId}
+                  initialTitle={coverTitle}
+                  initialSubtitle={coverSubtitle}
+                  initialAuthor={coverAuthor}
+                  onDataChange={(data) => {
+                    // Update ref for saving
+                    coverDataRef.current = data;
+                  }}
+                  onUpdate={() => {
+                    // Refresh preview when cover assets change
+                    void generatePreview();
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { Button, Card } from '../components/ui';
 import AppLogo from '/Assets/SVG/App-logo-wide.svg';
+import { Button, Card } from '../components/ui';
 
 interface FontOption {
   value: string;
@@ -433,10 +433,6 @@ function SettingsView() {
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3 mb-1">
             <img src={AppLogo} alt="InkPot Logo" className="w-auto h-full" />
-            <div>
-              <h1 className="text-sm font-semibold text-foreground">InkPot</h1>
-              <p className="text-xs text-muted-foreground">Markdown to PDF</p>
-            </div>
           </div>
         </div>
 
@@ -1104,7 +1100,13 @@ function SettingsView() {
 
                       <p style={{ marginBottom: '1em' }}>
                         Another paragraph with{' '}
-                        <a href="#" style={{ color: linkColor, textDecoration: 'underline' }}>
+                        <a
+                          href="#"
+                          style={{
+                            color: linkColor,
+                            textDecoration: 'underline',
+                          }}
+                        >
                           a hyperlink example
                         </a>{' '}
                         to show link colors. This helps you visualize how links will appear in your
