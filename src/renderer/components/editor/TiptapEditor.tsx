@@ -9,32 +9,32 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
   Bold,
-  Italic,
-  Strikethrough,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   Code,
+  FileCode,
   Heading1,
   Heading2,
   Heading3,
   Heading4,
   Heading5,
   Heading6,
-  Pilcrow,
+  ImagePlus,
+  Italic,
   List,
   ListOrdered,
   ListTodo,
-  Quote,
-  FileCode,
   Minus,
-  FileBreak,
-  Table as TableIcon,
+  Pilcrow,
+  Quote,
+  SeparatorHorizontal,
   Smile,
-  ImagePlus,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  X,
+  Strikethrough,
+  Table as TableIcon,
   Trash2,
+  X,
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useEffect, useRef, useState } from 'react';
@@ -429,7 +429,7 @@ function TiptapEditor({
         </Button>
         <Button
           size="icon"
-          variant={editor.isActive('paragraph') ? 'default' : 'ghost'}
+          variant="ghost"
           onClick={() => editor.chain().focus().setParagraph().run()}
           type="button"
           title="Paragraph"
@@ -513,7 +513,7 @@ function TiptapEditor({
           type="button"
           title="Insert page break (Cmd/Ctrl+Enter)"
         >
-          <FileBreak className="h-4 w-4" />
+          <SeparatorHorizontal className="h-4 w-4" />
         </Button>
 
         <div className="w-px h-6 bg-border mx-1" />
@@ -663,7 +663,7 @@ function TiptapEditor({
       </div>
 
       {/* Editor content - Scrollable */}
-      <div className="flex-1 overflow-auto bg-background">
+      <div className="flex-1 overflow-auto bg-background overflow-x-hidden">
         <EditorContent editor={editor} />
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
+import { Plus } from 'lucide-react';
 import AppLogo from '/Assets/SVG/App-logo-wide.svg';
 import { Button } from './ui';
 
@@ -21,8 +22,8 @@ function Sidebar({ onNewDocument, activePage = 'home' }: SidebarProps) {
       {/* Actions */}{' '}
       <div className="p-4 h-16">
         {onNewDocument && (
-          <Button className="w-full justify-start font-semibold" onClick={onNewDocument}>
-            New Document
+          <Button className="w-full flex justify-between font-semibold" onClick={onNewDocument}>
+            <span>New Document</span> <Plus className="ml-2 w-4 h-4" />
           </Button>
         )}
       </div>

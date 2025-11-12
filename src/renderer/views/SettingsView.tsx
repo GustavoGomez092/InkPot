@@ -713,13 +713,11 @@ function SettingsView() {
                             step="0.01"
                             className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
                           />
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Tracking/kerning adjustment
-                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">Tracking/kerning</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Line Height (multiplier)
+                            Line Height
                           </label>
                           <input
                             type="number"
@@ -730,9 +728,7 @@ function SettingsView() {
                             step="0.1"
                             className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-input hover:border-ring transition-all"
                           />
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Leading/line-height multiplier
-                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">Leading/line-height</p>
                         </div>
                       </div>
                     </CardContent>
@@ -745,7 +741,7 @@ function SettingsView() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Page Width (inches)
+                            Page Width (in)
                           </label>
                           <input
                             type="number"
@@ -759,7 +755,7 @@ function SettingsView() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Page Height (inches)
+                            Page Height (in)
                           </label>
                           <input
                             type="number"
@@ -773,7 +769,7 @@ function SettingsView() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Top Margin (inches)
+                            Top Margin (in)
                           </label>
                           <input
                             type="number"
@@ -787,7 +783,7 @@ function SettingsView() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Bottom Margin (inches)
+                            Bottom Margin (in)
                           </label>
                           <input
                             type="number"
@@ -801,7 +797,7 @@ function SettingsView() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Left Margin (inches)
+                            Left Margin (in)
                           </label>
                           <input
                             type="number"
@@ -815,7 +811,7 @@ function SettingsView() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Right Margin (inches)
+                            Right Margin (in)
                           </label>
                           <input
                             type="number"
@@ -835,7 +831,7 @@ function SettingsView() {
                   <Card>
                     <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-foreground mb-4">Colors</h3>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
                             Background Color
@@ -977,7 +973,7 @@ function SettingsView() {
               </div>
 
               {/* Right Side - Live Preview (60% width) */}
-              <div className="w-2/5 overflow-y-auto p-8 bg-muted/20">
+              <div className="w-2/5 min-w-[600px] overflow-y-auto p-8 bg-muted/20">
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-foreground mb-2">
                     {themeName} Theme Preview
