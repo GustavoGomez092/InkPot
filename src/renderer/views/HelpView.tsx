@@ -210,7 +210,7 @@ function HelpView() {
   ];
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-[94vh] bg-background text-foreground">
       <Sidebar activePage="help" />
 
       {/* Main Content */}
@@ -231,12 +231,7 @@ function HelpView() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-primary/10 rounded-lg text-primary shrink-0">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -265,7 +260,9 @@ function HelpView() {
             {featureSections.map((section, index) => (
               <div key={index}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-accent text-accent-foreground rounded-lg">{section.icon}</div>
+                  <div className="p-2 bg-accent text-accent-foreground rounded-lg">
+                    {section.icon}
+                  </div>
                   <h3 className="text-2xl font-bold text-foreground">{section.title}</h3>
                 </div>
 
@@ -291,12 +288,7 @@ function HelpView() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-primary/10 rounded-lg text-primary shrink-0">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -306,9 +298,7 @@ function HelpView() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-3">
-                      Getting Started
-                    </h3>
+                    <h3 className="text-xl font-semibold text-foreground mb-3">Getting Started</h3>
                     <ol className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="font-semibold text-primary shrink-0">1.</span>
@@ -325,7 +315,9 @@ function HelpView() {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="font-semibold text-primary shrink-0">3.</span>
-                        <span>Start writing in the rich text editor with full formatting support</span>
+                        <span>
+                          Start writing in the rich text editor with full formatting support
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="font-semibold text-primary shrink-0">4.</span>
@@ -341,9 +333,7 @@ function HelpView() {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="font-semibold text-primary shrink-0">6.</span>
-                        <span>
-                          Export your finished document to PDF when you're ready to share
-                        </span>
+                        <span>Export your finished document to PDF when you're ready to share</span>
                       </li>
                     </ol>
                   </div>
@@ -356,12 +346,7 @@ function HelpView() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-accent text-accent-foreground rounded-lg shrink-0">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -376,8 +361,8 @@ function HelpView() {
                       <li className="flex items-start gap-2">
                         <span className="text-primary shrink-0">•</span>
                         <span>
-                          <strong>Theme Preview:</strong> Use the live preview in Settings to see how
-                          your theme changes affect document appearance before saving
+                          <strong>Theme Preview:</strong> Use the live preview in Settings to see
+                          how your theme changes affect document appearance before saving
                         </span>
                       </li>
                       <li className="flex items-start gap-2">
@@ -397,8 +382,8 @@ function HelpView() {
                       <li className="flex items-start gap-2">
                         <span className="text-primary shrink-0">•</span>
                         <span>
-                          <strong>Custom Themes:</strong> Create multiple custom themes for different
-                          types of documents (manuscripts, articles, reports, etc.)
+                          <strong>Custom Themes:</strong> Create multiple custom themes for
+                          different types of documents (manuscripts, articles, reports, etc.)
                         </span>
                       </li>
                       <li className="flex items-start gap-2">
@@ -419,12 +404,7 @@ function HelpView() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-accent text-accent-foreground rounded-lg shrink-0">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"

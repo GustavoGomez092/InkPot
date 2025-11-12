@@ -41,6 +41,10 @@ import {
 	generatePDF,
 	previewPDF,
 } from "../services/pdf-service.js";
+import {
+	getMainWindow,
+	isMainWindowMaximized,
+} from "../services/window-manager.js";
 import { wrapIPCHandler } from "./error-handler.js";
 
 /**
@@ -1564,4 +1568,49 @@ export function registerIPCHandlers(): void {
 			return { fonts: filtered };
 		}),
 	);
+
+	// ============================================================================
+	// WINDOW CHANNEL
+	// ============================================================================
+
+	/**
+	 * Minimize window
+	 */
+	ipcMain.handle("window:minimize", () => {
+		const mainWindow = getMainWindow();
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			mainWindow.minimize();
+		}
+	});
+
+	/**
+	 * Maximize or restore window
+	 */
+	ipcMain.handle("window:maximize", () => {
+		const mainWindow = getMainWindow();
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			if (mainWindow.isMaximized()) {
+				mainWindow.unmaximize();
+			} else {
+				mainWindow.maximize();
+			}
+		}
+	});
+
+	/**
+	 * Close window
+	 */
+	ipcMain.handle("window:close", () => {
+		const mainWindow = getMainWindow();
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			mainWindow.close();
+		}
+	});
+
+	/**
+	 * Check if window is maximized
+	 */
+	ipcMain.handle("window:is-maximized", () => {
+		return isMainWindowMaximized();
+	});
 }

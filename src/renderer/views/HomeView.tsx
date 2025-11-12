@@ -116,7 +116,7 @@ function HomeView() {
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-[94vh] bg-background text-foreground">
       <Sidebar onNewDocument={() => setShowNewProjectDialog(true)} activePage="home" />
 
       {/* Main Content */}

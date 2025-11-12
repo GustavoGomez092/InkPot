@@ -424,7 +424,7 @@ function SettingsView() {
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-[94vh] bg-background text-foreground">
       <Sidebar activePage="settings" />
 
       {/* Main Content */}

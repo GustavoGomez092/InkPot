@@ -5,6 +5,7 @@ import {
   createHashHistory,
   Outlet,
 } from '@tanstack/react-router';
+import { TitleBar } from './components/TitleBar';
 import EditorView from './views/EditorView';
 import HomeView from './views/HomeView';
 import SettingsView from './views/SettingsView';
@@ -13,8 +14,11 @@ import HelpView from './views/HelpView';
 // Root route - renders layout with outlet for child routes
 const rootRoute = createRootRoute({
   component: () => (
-    <div className="min-h-screen bg-gray-100">
-      <Outlet />
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
+      <TitleBar />
+      <div className="flex-1 overflow-auto">
+        <Outlet />
+      </div>
     </div>
   ),
 });

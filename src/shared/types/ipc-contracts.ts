@@ -595,6 +595,14 @@ export interface ElectronAPI {
 			theme: "light" | "dark";
 		}) => Promise<IPCResponse<{ success: true }>>;
 	};
+	window: {
+		minimize: () => Promise<void>;
+		maximize: () => Promise<void>;
+		close: () => Promise<void>;
+		isMaximized: () => Promise<boolean>;
+		onMaximize: (callback: () => void) => () => void;
+		onUnmaximize: (callback: () => void) => () => void;
+	};
 }
 
 declare global {

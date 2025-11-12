@@ -60,6 +60,24 @@ const electronAPI: ElectronAPI = {
 		set: (req: { theme: "light" | "dark" }) =>
 			ipcRenderer.invoke("theme:set", req),
 	},
+	window: {
+		minimize: () => ipcRenderer.invoke("window:minimize"),
+		maximize: () => ipcRenderer.invoke("window:maximize"),
+		close: () => ipcRenderer.invoke("window:close"),
+		isMaximized: () => ipcRenderer.invoke("window:is-maximized"),
+		onMaximize: (callback: () => void) => {
+			ipcRenderer.on("window:maximized", callback);
+			return () => {
+				ipcRenderer.removeListener("window:maximized", callback);
+			};
+		},
+		onUnmaximize: (callback: () => void) => {
+			ipcRenderer.on("window:unmaximized", callback);
+			return () => {
+				ipcRenderer.removeListener("window:unmaximized", callback);
+			};
+		},
+	},
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

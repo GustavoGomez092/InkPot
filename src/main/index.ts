@@ -39,6 +39,9 @@ function createWindow() {
 		height: 800,
 		minWidth: 800,
 		minHeight: 600,
+		frame: false, // Frameless window - custom title bar
+		titleBarStyle: "hidden", // Hide native title bar on macOS
+		trafficLightPosition: { x: -100, y: -100 }, // Hide macOS traffic lights
 		webPreferences: {
 			preload: preloadPath,
 			contextIsolation: true,
@@ -78,6 +81,15 @@ function createWindow() {
 
 	mainWindow.on("closed", () => {
 		console.log("🔴 Window closed");
+	});
+
+	// Send maximize/unmaximize events to renderer
+	mainWindow.on("maximize", () => {
+		mainWindow.webContents.send("window:maximized");
+	});
+
+	mainWindow.on("unmaximize", () => {
+		mainWindow.webContents.send("window:unmaximized");
 	});
 
 	// Show window when ready
