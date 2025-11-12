@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Input } from '../ui';
+import { Button, Card, CardHeader, CardContent, Input } from '../ui';
 
 interface CoverAsset {
   id: string;
@@ -250,55 +250,55 @@ export function CoverEditor({
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Title Section */}
         <Card>
-          <Card.Header>
+          <CardHeader>
             <h3 className="text-lg font-semibold">Title</h3>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="The Art of Minimalist Design"
               className="w-full"
             />
-          </Card.Body>
+          </CardContent>
         </Card>
 
         {/* Subtitle Section */}
         <Card>
-          <Card.Header>
+          <CardHeader>
             <h3 className="text-lg font-semibold">Subtitle</h3>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <Input
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
               placeholder="A Comprehensive Guide"
               className="w-full"
             />
-          </Card.Body>
+          </CardContent>
         </Card>
 
         {/* Author Section */}
         <Card>
-          <Card.Header>
+          <CardHeader>
             <h3 className="text-lg font-semibold">Author</h3>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <Input
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               placeholder="By Alex Johnson"
               className="w-full"
             />
-          </Card.Body>
+          </CardContent>
         </Card>
 
         {/* Cover Assets Section */}
         <Card>
-          <Card.Header>
+          <CardHeader>
             <h3 className="text-lg font-semibold">Cover Assets</h3>
-          </Card.Header>
-          <Card.Body className="space-y-4">
+          </CardHeader>
+          <CardContent className="space-y-4">
             {/* Logo */}
             <div>
               <div className="block text-sm font-medium mb-2">Logo</div>
@@ -378,7 +378,7 @@ export function CoverEditor({
                 </button>
               )}
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
       </div>
     </div>

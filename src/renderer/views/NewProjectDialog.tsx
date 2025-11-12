@@ -1,6 +1,21 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { Button, Dialog, Input, Select } from '../components/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui';
 
 interface NewProjectDialogProps {
   open: boolean;
@@ -137,75 +152,80 @@ function NewProjectDialog({ open, onClose }: NewProjectDialogProps) {
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      title="Create New Project"
-      size="md"
-      footer={
-        <div className="flex justify-end gap-2">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Project</DialogTitle>
+          <DialogDescription>
+            Create a new document to start writing. Your project will be saved in the InkPot
+            projects folder.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="project-name">Project Name</Label>
+            <Input
+              id="project-name"
+              value={projectName}
+              onChange={(e) => {
+                setProjectName(e.target.value);
+                setError('');
+              }}
+              placeholder="My Document"
+              autoFocus
+              disabled={isCreating}
+            />
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">
+              Description <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="A brief description of your project..."
+              disabled={isCreating}
+              rows={3}
+              maxLength={500}
+              className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {description.length}/500 characters
+            </p>
+          </div>
+
+          {themes.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="theme">Theme</Label>
+              <Select value={selectedTheme} onValueChange={setSelectedTheme} disabled={isCreating}>
+                <SelectTrigger id="theme">
+                  <SelectValue placeholder="Select a theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {themes.map((theme) => (
+                    <SelectItem key={theme.id} value={theme.id}>
+                      {theme.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
           <Button variant="ghost" onClick={handleClose} disabled={isCreating}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleCreate}
-            disabled={isCreating || !projectName.trim()}
-          >
+          <Button onClick={handleCreate} disabled={isCreating || !projectName.trim()}>
             {isCreating ? 'Creating...' : 'Create Project'}
           </Button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <Input
-          label="Project Name"
-          value={projectName}
-          onChange={(e) => {
-            setProjectName(e.target.value);
-            setError('');
-          }}
-          placeholder="My Document"
-          error={error}
-          autoFocus
-          disabled={isCreating}
-        />
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">
-            Description <span className="text-muted-foreground">(optional)</span>
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="A brief description of your project..."
-            disabled={isCreating}
-            rows={3}
-            maxLength={500}
-            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed resize-none"
-          />
-          <p className="text-xs text-muted-foreground text-right">
-            {description.length}/500 characters
-          </p>
-        </div>
-
-        {themes.length > 0 && (
-          <Select
-            label="Theme"
-            value={selectedTheme}
-            onChange={(e) => setSelectedTheme(e.target.value)}
-            options={themes.map((theme) => ({
-              value: theme.id,
-              label: theme.name,
-            }))}
-            disabled={isCreating}
-          />
-        )}
-
-        <p className="text-sm text-muted-foreground">
-          Your project will be saved in the InkPot projects folder.
-        </p>
-      </div>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
   );
 }

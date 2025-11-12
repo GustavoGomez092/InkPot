@@ -8,6 +8,7 @@ import {
 import EditorView from './views/EditorView';
 import HomeView from './views/HomeView';
 import SettingsView from './views/SettingsView';
+import HelpView from './views/HelpView';
 
 // Root route - renders layout with outlet for child routes
 const rootRoute = createRootRoute({
@@ -39,8 +40,15 @@ const settingsRoute = createRoute({
   component: SettingsView,
 });
 
+// Help route - features and documentation
+const helpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/help',
+  component: HelpView,
+});
+
 // Create route tree
-const routeTree = rootRoute.addChildren([indexRoute, editorRoute, settingsRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, editorRoute, settingsRoute, helpRoute]);
 
 // Create hash history for Electron file:// protocol compatibility
 const hashHistory = createHashHistory();

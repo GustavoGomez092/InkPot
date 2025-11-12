@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Card } from './components/ui';
+import { Button, Card, CardHeader, CardContent } from './components/ui';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import './styles/global.css';
 
@@ -91,10 +91,10 @@ function AppContent() {
         </div>
         <p className="text-lg text-foreground mb-8">Professional Markdown to PDF Conversion</p>
         <Card className="mb-6">
-          <Card.Header>
+          <CardHeader>
             <h2 className="text-2xl font-semibold">System Status</h2>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
               <div className="flex items-center">
                 <span
@@ -110,23 +110,23 @@ function AppContent() {
                 </div>
               )}
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>{' '}
         {!loading && themes.length > 0 && (
           <Card>
-            <Card.Header>
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold">Available Themes</h2>
                 <Button size="sm" variant="outline">
                   Create New Theme
                 </Button>
               </div>
-            </Card.Header>
-            <Card.Body>
+            </CardHeader>
+            <CardContent>
               <div className="grid gap-4">
                 {themes.map((themeItem: Theme) => (
-                  <Card key={themeItem.id} hover>
-                    <Card.Body className="py-3">
+                  <Card key={themeItem.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="py-3">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-lg font-medium text-card-foreground">
                           {themeItem.name}
@@ -140,11 +140,11 @@ function AppContent() {
                       <p className="text-sm text-muted-foreground">
                         Heading: {themeItem.headingFont} • Body: {themeItem.bodyFont}
                       </p>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
-            </Card.Body>
+            </CardContent>
           </Card>
         )}
       </div>

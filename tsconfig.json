@@ -21,7 +21,8 @@
 			"@main/*": ["./src/main/*"],
 			"@renderer/*": ["./src/renderer/*"],
 			"@shared/*": ["./src/shared/*"],
-			"@prisma-client": ["./src/main/database/generated/client"]
+			"@prisma-client": ["./src/main/database/generated/client"],
+			"@/*": ["./src/renderer/*"]
 		}
 	},
 	"include": ["src/**/*"],

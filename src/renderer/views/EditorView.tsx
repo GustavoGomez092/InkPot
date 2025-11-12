@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type CoverData, CoverEditor, TiptapEditor } from '../components/editor';
-import { Button, Card } from '../components/ui';
+import { Button, Card, CardHeader, CardContent } from '../components/ui';
 
 function EditorView() {
   const { projectId } = useParams({ from: '/editor/$projectId' });
@@ -392,20 +392,20 @@ function EditorView() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
-          <Card.Header>
+          <CardHeader>
             <h2 className="text-lg font-semibold text-destructive">Error Loading Project</h2>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <p className="text-muted-foreground mb-4">{loadError}</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => navigate({ to: '/' })}>
                 ← Back to Home
               </Button>
-              <Button variant="primary" onClick={() => window.location.reload()}>
+              <Button onClick={() => window.location.reload()}>
                 Retry
               </Button>
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
       </div>
     );
@@ -457,7 +457,6 @@ function EditorView() {
             <span className="text-sm text-muted-foreground">Last saved: {formatLastSaved()}</span>
             <Button
               size="sm"
-              variant="primary"
               onClick={handleExport}
               disabled={isExporting || !content}
             >
@@ -479,14 +478,14 @@ function EditorView() {
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  variant={editorMode === 'content' ? 'primary' : 'outline'}
+                  variant={editorMode === 'content' ? 'default' : 'outline'}
                   onClick={() => setEditorMode('content')}
                 >
                   Content Editor
                 </Button>
                 <Button
                   size="sm"
-                  variant={editorMode === 'cover' ? 'primary' : 'outline'}
+                  variant={editorMode === 'cover' ? 'default' : 'outline'}
                   onClick={() => setEditorMode('cover')}
                 >
                   Cover Editor

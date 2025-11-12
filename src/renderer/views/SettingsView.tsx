@@ -1,7 +1,6 @@
-import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import AppLogo from '/Assets/SVG/App-logo-wide.svg';
-import { Button, Card } from '../components/ui';
+import Sidebar from '../components/Sidebar';
+import { Button, Card, CardContent } from '../components/ui';
 
 interface FontOption {
   value: string;
@@ -90,7 +89,6 @@ function SettingsView() {
   const [deleting, setDeleting] = useState(false);
   const [settingActive, setSettingActive] = useState(false);
   const [downloadingFont, setDownloadingFont] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const hasElectronAPI = typeof window !== 'undefined' && 'electronAPI' in window;
 
@@ -427,66 +425,12 @@ function SettingsView() {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
-      {/* Sidebar */}
-      <aside className="w-60 bg-card border-r border-border flex flex-col">
-        {/* App Header */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-3 mb-1">
-            <img src={AppLogo} alt="InkPot Logo" className="w-auto h-full" />
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-1">
-          <button
-            onClick={() => navigate({ to: '/' })}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all cursor-pointer hover:opacity-90"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Recent Projects
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md bg-accent text-accent-foreground cursor-pointer hover:opacity-90 transition-all">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            Settings
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all cursor-pointer hover:opacity-90">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Help
-          </button>
-        </nav>
-      </aside>
+      <Sidebar activePage="settings" />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="px-8 py-6 border-b border-border">
+        <header className="px-8 py-8 border-b  max-h-32 border-border">
           <h2 className="text-3xl font-bold text-foreground mb-2">Settings</h2>
           <p className="text-sm text-muted-foreground">
             Customize fonts and themes for your PDF exports
@@ -526,7 +470,7 @@ function SettingsView() {
                 <div className="max-w-2xl space-y-6">
                   {/* Theme Selection */}
                   <Card>
-                    <Card.Body className="p-6">
+                    <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-foreground mb-4">Theme</h3>
                       <div className="space-y-4">
                         <div>
@@ -564,12 +508,12 @@ function SettingsView() {
                           </p>
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
 
                   {/* Font Settings */}
                   <Card>
-                    <Card.Body className="p-6">
+                    <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-foreground mb-4">Font Settings</h3>
                       <div className="space-y-6">
                         {/* Heading Font */}
@@ -639,12 +583,12 @@ function SettingsView() {
                           )}
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
 
                   {/* Typography Sizes */}
                   <Card>
-                    <Card.Body className="p-6">
+                    <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-foreground mb-4">
                         Typography Sizes
                       </h3>
@@ -748,12 +692,12 @@ function SettingsView() {
                           />
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
 
                   {/* Spacing */}
                   <Card>
-                    <Card.Body className="p-6">
+                    <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-foreground mb-4">Spacing</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -791,12 +735,12 @@ function SettingsView() {
                           </p>
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
 
                   {/* Page Layout */}
                   <Card>
-                    <Card.Body className="p-6">
+                    <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-foreground mb-4">Page Layout</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -884,12 +828,12 @@ function SettingsView() {
                           />
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
 
                   {/* Colors */}
                   <Card>
-                    <Card.Body className="p-6">
+                    <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-foreground mb-4">Colors</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -993,7 +937,7 @@ function SettingsView() {
                           </div>
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
 
                   {/* Action Buttons */}
@@ -1018,7 +962,6 @@ function SettingsView() {
                         </Button>
                       )}
                       <Button
-                        variant="primary"
                         onClick={handleSaveTheme}
                         disabled={saving || downloadingFont !== null || settingActive}
                       >

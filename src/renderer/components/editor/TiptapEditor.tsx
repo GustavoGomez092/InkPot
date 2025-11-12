@@ -7,6 +7,35 @@ import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import {
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
+  Pilcrow,
+  List,
+  ListOrdered,
+  ListTodo,
+  Quote,
+  FileCode,
+  Minus,
+  FileBreak,
+  Table as TableIcon,
+  Smile,
+  ImagePlus,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  X,
+  Trash2,
+} from 'lucide-react';
 import { marked } from 'marked';
 import { useEffect, useRef, useState } from 'react';
 import { Image } from '../../editor/image-extension';
@@ -302,156 +331,196 @@ function TiptapEditor({
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar - Sticky */}
-      <div className="sticky top-0 z-10 border-b border-gray-300 bg-gray-50 p-2 flex flex-wrap gap-1 shadow-sm">
+      <div className="sticky top-0 z-10 border-b border-border bg-card p-2 flex flex-wrap gap-1 items-center">
         {/* Text formatting */}
         <Button
-          size="sm"
-          variant={editor.isActive('bold') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('bold') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleBold().run()}
           type="button"
+          title="Bold (Cmd+B)"
         >
-          <strong>B</strong>
+          <Bold className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('italic') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('italic') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleItalic().run()}
           type="button"
+          title="Italic (Cmd+I)"
         >
-          <em>I</em>
+          <Italic className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('strike') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('strike') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleStrike().run()}
           type="button"
+          title="Strikethrough"
         >
-          <s>S</s>
+          <Strikethrough className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('code') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('code') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleCode().run()}
           type="button"
+          title="Inline Code"
         >
-          {'</>'}
+          <Code className="h-4 w-4" />
         </Button>
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Headings */}
         <Button
-          size="sm"
-          variant={editor.isActive('heading', { level: 1 }) ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('heading', { level: 1 }) ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           type="button"
+          title="Heading 1"
         >
-          H1
+          <Heading1 className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('heading', { level: 2 }) ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('heading', { level: 2 }) ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           type="button"
+          title="Heading 2"
         >
-          H2
+          <Heading2 className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('heading', { level: 3 }) ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('heading', { level: 3 }) ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           type="button"
+          title="Heading 3"
         >
-          H3
+          <Heading3 className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('paragraph') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('heading', { level: 4 }) ? 'default' : 'ghost'}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+          type="button"
+          title="Heading 4"
+        >
+          <Heading4 className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant={editor.isActive('heading', { level: 5 }) ? 'default' : 'ghost'}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}
+          type="button"
+          title="Heading 5"
+        >
+          <Heading5 className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant={editor.isActive('heading', { level: 6 }) ? 'default' : 'ghost'}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}
+          type="button"
+          title="Heading 6"
+        >
+          <Heading6 className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant={editor.isActive('paragraph') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().setParagraph().run()}
           type="button"
-          title="Convert to paragraph"
+          title="Paragraph"
         >
-          ¶
+          <Pilcrow className="h-4 w-4" />
         </Button>
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Lists */}
         <Button
-          size="sm"
-          variant={editor.isActive('bulletList') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('bulletList') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           type="button"
+          title="Bullet List"
         >
-          • List
+          <List className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('orderedList') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('orderedList') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           type="button"
+          title="Numbered List"
         >
-          1. List
+          <ListOrdered className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('taskList') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('taskList') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleTaskList().run()}
           type="button"
+          title="Task List"
         >
-          ☐ Tasks
+          <ListTodo className="h-4 w-4" />
         </Button>
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Blocks */}
         <Button
-          size="sm"
-          variant={editor.isActive('blockquote') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('blockquote') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           type="button"
+          title="Blockquote"
         >
-          Quote
+          <Quote className="h-4 w-4" />
         </Button>
         <Button
-          size="sm"
-          variant={editor.isActive('codeBlock') ? 'primary' : 'ghost'}
+          size="icon"
+          variant={editor.isActive('codeBlock') ? 'default' : 'ghost'}
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           type="button"
+          title="Code Block"
         >
-          Code Block
+          <FileCode className="h-4 w-4" />
         </Button>
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Horizontal rule */}
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
           type="button"
+          title="Horizontal Rule"
         >
-          ---
+          <Minus className="h-4 w-4" />
         </Button>
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Page break */}
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={() => editor.chain().focus().setPageBreak().run()}
           type="button"
           title="Insert page break (Cmd/Ctrl+Enter)"
         >
-          📄 Break
+          <FileBreak className="h-4 w-4" />
         </Button>
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Table controls */}
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={() =>
             editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
@@ -459,100 +528,102 @@ function TiptapEditor({
           type="button"
           title="Insert table"
         >
-          📊 Table
+          <TableIcon className="h-4 w-4" />
         </Button>
         {editor.isActive('table') && (
           <>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               onClick={() => editor.chain().focus().addColumnBefore().run()}
               type="button"
               title="Add column before"
             >
-              ⬅️ Col
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               onClick={() => editor.chain().focus().addColumnAfter().run()}
               type="button"
               title="Add column after"
             >
-              ➡️ Col
+              <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               onClick={() => editor.chain().focus().deleteColumn().run()}
               type="button"
               title="Delete column"
             >
-              ❌ Col
+              <X className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               onClick={() => editor.chain().focus().addRowBefore().run()}
               type="button"
               title="Add row before"
             >
-              ⬆️ Row
+              <ChevronUp className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               onClick={() => editor.chain().focus().addRowAfter().run()}
               type="button"
               title="Add row after"
             >
-              ⬇️ Row
+              <ChevronDown className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               onClick={() => editor.chain().focus().deleteRow().run()}
               type="button"
               title="Delete row"
             >
-              ❌ Row
+              <X className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               onClick={() => editor.chain().focus().deleteTable().run()}
               type="button"
               title="Delete table"
             >
-              🗑️ Table
+              <Trash2 className="h-4 w-4" />
             </Button>
           </>
         )}
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Emoji picker */}
         <div className="relative" ref={emojiPickerRef}>
           <Button
-            size="sm"
-            variant={showEmojiPicker ? 'primary' : 'ghost'}
+            size="icon"
+            variant={showEmojiPicker ? 'default' : 'ghost'}
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             type="button"
             title="Insert emoji"
           >
-            😀 Emoji
+            <Smile className="h-4 w-4" />
           </Button>
           {showEmojiPicker && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-50 w-80 max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg p-2 z-50 w-80 max-h-64 overflow-y-auto">
               {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
                 <div key={category} className="mb-3">
-                  <div className="text-xs font-semibold text-gray-600 mb-1 px-1">{category}</div>
+                  <div className="text-xs font-semibold text-muted-foreground mb-1 px-1">
+                    {category}
+                  </div>
                   <div className="flex flex-wrap gap-1">
                     {emojis.map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
-                        className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
+                        className="text-2xl hover:bg-accent rounded p-1 transition-colors"
                         onClick={() => {
                           editor?.chain().focus().insertContent(emoji).run();
                           setShowEmojiPicker(false);
@@ -569,18 +640,18 @@ function TiptapEditor({
           )}
         </div>
 
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Image upload */}
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={() => fileInputRef.current?.click()}
           type="button"
           title="Insert image"
           disabled={!projectId}
         >
-          🖼️ Image
+          <ImagePlus className="h-4 w-4" />
         </Button>
         <input
           ref={fileInputRef}
@@ -592,7 +663,7 @@ function TiptapEditor({
       </div>
 
       {/* Editor content - Scrollable */}
-      <div className="flex-1 overflow-auto border border-gray-300 rounded-b-lg bg-white">
+      <div className="flex-1 overflow-auto bg-background">
         <EditorContent editor={editor} />
       </div>
     </div>
