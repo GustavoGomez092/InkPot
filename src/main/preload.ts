@@ -29,6 +29,7 @@ const electronAPI: ElectronAPI = {
 		export: (req) => ipcRenderer.invoke("pdf:export", req),
 		calculatePageBreaks: (req) =>
 			ipcRenderer.invoke("pdf:calculate-page-breaks", req),
+		saveMermaidImage: (req) => ipcRenderer.invoke("pdf:saveMermaidImage", req),
 	},
 	cover: {
 		listTemplates: (req) => ipcRenderer.invoke("cover:list-templates", req),

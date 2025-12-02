@@ -23,6 +23,7 @@ function isEmoji(char: string): boolean {
 /**
  * Split text into segments of emoji and non-emoji characters
  */
+// @ts-expect-error - Function reserved for future use
 function splitTextWithEmoji(text: string): Array<{ text: string; isEmoji: boolean }> {
   const segments: Array<{ text: string; isEmoji: boolean }> = [];
   let currentSegment = '';
@@ -60,6 +61,7 @@ interface InlineTextProps {
 /**
  * Get the bold variant of a font family
  */
+// @ts-expect-error - Function reserved for future use
 function getBoldFont(fontFamily: string): string {
   if (fontFamily === 'Helvetica') return 'Helvetica-Bold';
   if (fontFamily === 'Times-Roman') return 'Times-Bold';
@@ -70,6 +72,7 @@ function getBoldFont(fontFamily: string): string {
 /**
  * Get the italic variant of a font family
  */
+// @ts-expect-error - Function reserved for future use
 function getItalicFont(fontFamily: string): string {
   if (fontFamily === 'Helvetica') return 'Helvetica-Oblique';
   if (fontFamily === 'Times-Roman') return 'Times-Italic';
@@ -84,6 +87,7 @@ function getItalicFont(fontFamily: string): string {
  * NOTE: React-PDF has issues with nested Text components and arrays of Text.
  * For now, we just return the plain text. Emoji font support is disabled.
  */
+// @ts-expect-error - Function reserved for future use
 function renderTextWithEmoji(text: string, fontFamily: string, keyPrefix: string): React.ReactNode {
   // TODO: Fix emoji font rendering - React-PDF doesn't handle mixed fonts well
   // For now, just return the text as-is

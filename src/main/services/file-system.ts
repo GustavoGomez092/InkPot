@@ -97,6 +97,32 @@ export async function createDirectory(dirPath: string): Promise<void> {
 }
 
 /**
+ * Write binary file (e.g., images) from base64 data
+ */
+export async function writeBinaryFile(
+	filePath: string,
+	base64Data: string,
+): Promise<void> {
+	try {
+		// Remove data URL prefix if present (e.g., "data:image/png;base64,")
+		const base64Content = base64Data.includes(",")
+			? base64Data.split(",")[1]
+			: base64Data;
+
+		// Ensure directory exists
+		const dir = path.dirname(filePath);
+		await fs.mkdir(dir, { recursive: true });
+
+		// Write file
+		await fs.writeFile(filePath, Buffer.from(base64Content, "base64"));
+	} catch (error) {
+		throw new Error(`Failed to write binary file: ${filePath}`, {
+			cause: error,
+		});
+	}
+}
+
+/**
  * List files in a directory
  */
 export async function listDirectory(dirPath: string): Promise<string[]> {

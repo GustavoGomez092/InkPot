@@ -22,6 +22,7 @@ import {
 	previewPDFSchema,
 	readFileSchema,
 	saveFileDialogSchema,
+	saveMermaidImageSchema,
 	saveProjectSchema,
 	selectFileSchema,
 	updateThemeSchema,
@@ -836,7 +837,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"pdf:export",
 		wrapIPCHandler(async (args) => {
-			const { projectId, outputPath, openAfterExport } =
+			const { projectId, outputPath, openAfterExport, mermaidDiagrams } =
 				exportPDFSchema.parse(args);
 
 			// Get project with theme
@@ -925,6 +926,7 @@ export function registerIPCHandlers(): void {
 				theme,
 				projectDir,
 				coverData,
+				mermaidDiagrams as Record<string, string> | undefined,
 			);
 
 			// Export to file
@@ -940,12 +942,92 @@ export function registerIPCHandlers(): void {
 	);
 
 	/**
+	 * Save Mermaid Diagram Image
+	 * Saves a rendered mermaid diagram PNG to the project's assets folder
+	 */
+	ipcMain.handle(
+		"pdf:saveMermaidImage",
+		wrapIPCHandler(async (args) => {
+			const { projectId, diagramCode, imageDataUrl } =
+				saveMermaidImageSchema.parse(args);
+
+			// Get project to find its directory
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			const projectDir = path.dirname(project.filePath);
+			const assetsDir = path.join(projectDir, ".inkpot", "diagrams");
+
+			// Create a hash of the diagram code for the filename (matches renderer implementation)
+			let hash = 0;
+			for (let i = 0; i < diagramCode.length; i++) {
+				const char = diagramCode.charCodeAt(i);
+				hash = (hash << 5) - hash + char;
+				hash = hash & hash; // Convert to 32bit integer
+			}
+			const hashString = Math.abs(hash).toString(36);
+			const fileName = `mermaid-${hashString}.png`;
+			const filePath = path.join(assetsDir, fileName); // Write the image file
+			await fileSystem.writeBinaryFile(filePath, imageDataUrl);
+
+			// Get file size
+			const fs = await import("node:fs/promises");
+			const stats = await fs.stat(filePath);
+
+			console.log(
+				`✅ Saved mermaid diagram: ${fileName} (${stats.size} bytes)`,
+			);
+
+			// Return just the data object - wrapIPCHandler will wrap it
+			return {
+				filePath,
+				fileSize: stats.size,
+			};
+		}),
+	);
+
+	/**
 	 * Preview PDF
 	 */
 	ipcMain.handle(
 		"pdf:preview",
 		wrapIPCHandler(async (args) => {
-			const { projectId, content: liveContent } = previewPDFSchema.parse(args);
+			console.log("📥 pdf:preview - Received args:", {
+				projectId: args.projectId,
+				hasContent: !!args.content,
+				hasMermaidDiagrams: !!args.mermaidDiagrams,
+				mermaidDiagramKeys: args.mermaidDiagrams
+					? Object.keys(args.mermaidDiagrams)
+					: [],
+				mermaidDiagramSample: args.mermaidDiagrams
+					? Object.entries(args.mermaidDiagrams)
+							.slice(0, 1)
+							.map(([k, v]) => ({ key: k, value: v, valueType: typeof v }))
+					: [],
+			});
+
+			// Try parsing with detailed error
+			let projectId: string;
+			let liveContent: string | undefined;
+			let mermaidDiagrams: Record<string, string> | undefined;
+
+			try {
+				const parsed = previewPDFSchema.parse(args);
+				projectId = parsed.projectId;
+				liveContent = parsed.content;
+				mermaidDiagrams = parsed.mermaidDiagrams;
+			} catch (error) {
+				console.error("❌ Validation error:", error);
+				if (error instanceof Error && "issues" in error) {
+					console.error("❌ Zod issues:", (error as any).issues);
+				}
+				throw error;
+			}
 
 			// Get project with theme
 			const project = await prisma.project.findUnique({
@@ -972,11 +1054,23 @@ export function registerIPCHandlers(): void {
 			let content: string;
 			if (liveContent !== undefined) {
 				content = liveContent;
+				console.log(
+					"🔍 IPC Handler - Using live content, contains mermaid:",
+					content.includes("```mermaid"),
+				);
 			} else {
 				const fileContent = await fileSystem.readFile(project.filePath);
 				const projectData = JSON.parse(fileContent);
 				content = projectData.content || "";
+				console.log(
+					"🔍 IPC Handler - Using saved content, contains mermaid:",
+					content.includes("```mermaid"),
+				);
 			}
+			console.log(
+				"🔍 IPC Handler - Content (first 500 chars):",
+				content.substring(0, 500),
+			);
 
 			// Get project directory for resolving image paths
 			const projectDir = path.dirname(project.filePath);
@@ -1034,11 +1128,16 @@ export function registerIPCHandlers(): void {
 			}
 
 			// Generate preview
+			console.log(
+				"🎨 Generating PDF preview with mermaidDiagrams:",
+				mermaidDiagrams,
+			);
 			const pdfDataUrl = await previewPDF(
 				content,
 				theme,
 				projectDir,
 				coverData,
+				mermaidDiagrams as Record<string, string> | undefined,
 			);
 
 			// For now, we don't have pageCount and fileSize from previewPDF

@@ -9,6 +9,7 @@ import type React from 'react';
 import type { MarkdownElement } from '../markdown-parser.js';
 import { parseInlineFormatting } from '../markdown-parser.js';
 import { InlineText } from './InlineText.js';
+import { MermaidDiagram } from './MermaidDiagram.js';
 
 // biome-ignore lint/suspicious/noExplicitAny: React-PDF Style type
 type PDFStyle = any;
@@ -54,6 +55,20 @@ export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, th
 
           case 'table':
             return <TableElement key={key} element={element} theme={theme} />;
+
+          case 'mermaidDiagram':
+            console.log(
+              '📊 Rendering mermaid diagram element, diagram length:',
+              element.diagram?.length
+            );
+            return (
+              <MermaidDiagram
+                key={key}
+                svgContent={element.diagram || ''}
+                caption={element.caption}
+                theme={theme}
+              />
+            );
 
           case 'pageBreak':
             // Page breaks are handled by PDF page generation
@@ -110,6 +125,7 @@ const HeadingElement: React.FC<{
     marginBottom: 8,
     letterSpacing: theme.kerning,
     lineHeight: theme.leading,
+    textAlign: element.textAlign || 'left',
   };
 
   return (
@@ -135,6 +151,7 @@ const ParagraphElement: React.FC<{
     marginBottom: 12,
     letterSpacing: theme.kerning,
     lineHeight: theme.leading,
+    textAlign: element.textAlign || 'left',
   };
 
   return (
@@ -244,10 +261,6 @@ const CodeBlockElement: React.FC<{
     lineHeight: 1.5,
   };
 
-  // Log the content to verify indentation is present
-  console.log('📄 Code block content length:', element.content.length);
-  console.log('📄 Code block first 200 chars:', element.content.substring(0, 200));
-
   // React-PDF requires explicit line-by-line rendering to preserve spaces
   // Split by newlines and render each line separately
   const lines = element.content.split('\n');
@@ -317,8 +330,6 @@ const ImageElement: React.FC<{
     return null;
   }
 
-  console.log('📸 Rendering image in PDF:', element.src);
-
   // For React-PDF, we need to provide the image source correctly
   // File paths with spaces can cause issues, so we need to use proper file:// URLs
   let imageSrc = element.src;
@@ -335,7 +346,6 @@ const ImageElement: React.FC<{
     } else {
       // Convert to file:// URL - React-PDF handles file:// URLs better
       imageSrc = `file://${imageSrc}`;
-      console.log('📸 Converted to file URL:', imageSrc);
     }
   }
 

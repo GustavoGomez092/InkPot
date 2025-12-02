@@ -35,7 +35,21 @@ export const markdownSerializer = new MarkdownSerializer(
 			state.write("```");
 			state.closeBlock(node);
 		},
-		heading: defaultMarkdownSerializer.nodes.heading,
+		heading: (state, node) => {
+			// Custom serializer to preserve textAlign attribute
+			const textAlign = node.attrs.textAlign;
+			if (textAlign && textAlign !== "left") {
+				// Use HTML with inline style for non-left alignment
+				const level = node.attrs.level;
+				state.write(`<h${level} style="text-align: ${textAlign}">`);
+				state.renderInline(node);
+				state.write(`</h${level}>`);
+				state.closeBlock(node);
+			} else {
+				// Use default markdown for left-aligned or unspecified
+				defaultMarkdownSerializer.nodes.heading(state, node, node, 0);
+			}
+		},
 		horizontal_rule: defaultMarkdownSerializer.nodes.horizontal_rule,
 		horizontalRule: defaultMarkdownSerializer.nodes.horizontal_rule, // Alias for Tiptap
 		bullet_list: defaultMarkdownSerializer.nodes.bullet_list,
@@ -71,9 +85,20 @@ export const markdownSerializer = new MarkdownSerializer(
 			state.renderInline(node);
 		},
 
-		paragraph: defaultMarkdownSerializer.nodes.paragraph,
-
-		// Inline nodes
+		paragraph: (state, node) => {
+			// Custom serializer to preserve textAlign attribute
+			const textAlign = node.attrs.textAlign;
+			if (textAlign && textAlign !== "left") {
+				// Use HTML with inline style for non-left alignment
+				state.write(`<p style="text-align: ${textAlign}">`);
+				state.renderInline(node);
+				state.write("</p>");
+			state.closeBlock(node);
+		} else {
+			// Use default markdown for left-aligned or unspecified
+			defaultMarkdownSerializer.nodes.paragraph(state, node, node, 0);
+		}
+	},		// Inline nodes
 		text: defaultMarkdownSerializer.nodes.text,
 		// Hard break (Shift+Enter) - use backslash + newline for clarity
 		hard_break: (state) => {
@@ -86,6 +111,24 @@ export const markdownSerializer = new MarkdownSerializer(
 		// Custom page break serializer
 		pageBreak: (state) => {
 			state.write("\n\n---PAGE_BREAK---\n\n");
+		},
+
+		// Mermaid diagram serializer - output as fenced code block with caption
+		mermaidDiagram: (state, node) => {
+			const { code, caption } = node.attrs;
+			console.log('💾 Serializing mermaid diagram:', { code: code?.substring(0, 50), caption });
+			// Write opening fence with mermaid language tag
+			state.write("```mermaid\n");
+			// Write diagram code exactly as stored
+			state.text(code || "", false);
+			state.ensureNewLine();
+			state.write("```");
+			// Add caption as italic text on next line if present
+			if (caption) {
+				state.ensureNewLine();
+				state.write(`*${caption}*`);
+			}
+			state.closeBlock(node);
 		},
 
 		// Image serializer - ensure each image is on its own line

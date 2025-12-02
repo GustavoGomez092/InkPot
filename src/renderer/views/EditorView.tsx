@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type CoverData, CoverEditor, TiptapEditor } from '../components/editor';
-import { Button, Card, CardHeader, CardContent } from '../components/ui';
+import { Button, Card, CardContent, CardHeader } from '../components/ui';
 
 function EditorView() {
   const { projectId } = useParams({ from: '/editor/$projectId' });
@@ -134,6 +134,9 @@ function EditorView() {
         // Save content editor data
         const activeThemeId = localStorage.getItem('activeThemeId');
 
+        console.log('💾 Saving content (first 500 chars):', contentRef.current.substring(0, 500));
+        console.log('💾 Content contains mermaid:', contentRef.current.includes('```mermaid'));
+
         const result = await api.projects.save({
           id: projectId,
           content: contentRef.current,
@@ -142,7 +145,7 @@ function EditorView() {
 
         if (result.success) {
           setLastSaved(new Date());
-          console.log('Project saved successfully');
+          console.log('✅ Project saved successfully');
         } else {
           throw new Error('Save failed');
         }
@@ -250,6 +253,283 @@ function EditorView() {
     };
   }, [handleMouseMove, handleMouseUp]);
 
+  // Render all Mermaid diagrams to SVG
+  /**
+   * Convert SVG string to high-resolution PNG data URL
+   * React-PDF's Image component doesn't support SVG data URIs
+   * Uses DOM-based rendering for large SVGs (>50KB) to avoid Image element limitations
+   */
+  const svgToPngDataUrl = async (svg: string, maxWidth: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      // Parse SVG to get dimensions
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svg, 'image/svg+xml');
+      const svgElement = doc.querySelector('svg');
+
+      if (!svgElement) {
+        reject(new Error('Invalid SVG'));
+        return;
+      }
+
+      // Get SVG dimensions
+      const viewBox = svgElement.getAttribute('viewBox');
+      let width = parseFloat(svgElement.getAttribute('width') || '0');
+      let height = parseFloat(svgElement.getAttribute('height') || '0');
+
+      // If no width/height, use viewBox
+      if (!width || !height) {
+        if (viewBox) {
+          const parts = viewBox.split(' ');
+          width = parseFloat(parts[2]);
+          height = parseFloat(parts[3]);
+        } else {
+          width = 600; // default
+          height = 400;
+        }
+      }
+
+      // Calculate scaled dimensions
+      const scale = maxWidth / width;
+      const scaledWidth = width * scale;
+      const scaledHeight = height * scale;
+
+      // Create canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = scaledWidth;
+      canvas.height = scaledHeight;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      console.log(`🖼️ Converting SVG to PNG (size: ${svg.length} bytes)`);
+
+      // Keep transparent background (no white fill)
+
+      // For very large SVGs (>50KB), split into chunks to avoid browser memory issues
+      const isLargeSvg = svg.length > 50000;
+
+      if (isLargeSvg) {
+        console.log('🔄 Processing large SVG with special handling');
+
+        // Create a reduced-size version for very large diagrams
+        // Scale down further if needed
+        const maxPixels = 4096 * 4096; // 16MP limit for canvas
+        const currentPixels = scaledWidth * scaledHeight;
+
+        let finalWidth = scaledWidth;
+        let finalHeight = scaledHeight;
+
+        if (currentPixels > maxPixels) {
+          const reductionScale = Math.sqrt(maxPixels / currentPixels);
+          finalWidth = Math.floor(scaledWidth * reductionScale);
+          finalHeight = Math.floor(scaledHeight * reductionScale);
+          canvas.width = finalWidth;
+          canvas.height = finalHeight;
+          console.log(
+            `📏 Reduced canvas size to ${finalWidth}x${finalHeight} to stay within limits`
+          );
+
+          // Keep transparent background (no fill needed)
+        }
+      }
+
+      // Create image and load SVG
+      const img = new window.Image();
+
+      try {
+        // Encode SVG as UTF-8 data URL (more reliable than base64 for large SVGs)
+        const encodedSvg = encodeURIComponent(svg).replace(/'/g, '%27').replace(/"/g, '%22');
+        const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+
+        const timeoutDuration = isLargeSvg ? 30000 : 10000; // 30s for large, 10s for small
+
+        const timeout = setTimeout(() => {
+          reject(new Error(`SVG loading timeout after ${timeoutDuration}ms`));
+        }, timeoutDuration);
+
+        img.onload = () => {
+          clearTimeout(timeout);
+
+          try {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL('image/png', 0.95); // Slight compression
+            console.log(`✅ Successfully converted SVG to PNG (${dataUrl.length} bytes)`);
+            resolve(dataUrl);
+          } catch (error) {
+            console.error('❌ Canvas export failed:', error);
+            reject(new Error('Failed to export canvas: ' + (error as Error).message));
+          }
+        };
+
+        img.onerror = (error) => {
+          clearTimeout(timeout);
+          console.error('❌ Image load failed:', error);
+          console.error('SVG size:', svg.length, 'bytes');
+          console.error('Canvas size:', canvas.width, 'x', canvas.height);
+
+          // Last resort: try with even smaller dimensions
+          if (isLargeSvg && canvas.width > 1000) {
+            console.warn('🔄 Retrying with reduced dimensions...');
+            canvas.width = 800;
+            canvas.height = 600;
+            const retryCtx = canvas.getContext('2d');
+            // Keep transparent background (no fill)
+
+            const retryEncodedSvg = encodeURIComponent(svg)
+              .replace(/'/g, '%27')
+              .replace(/"/g, '%22');
+            const retrySvgDataUrl = `data:image/svg+xml;charset=utf-8,${retryEncodedSvg}`;
+            const retryImg = new window.Image();
+
+            retryImg.onload = () => {
+              try {
+                if (retryCtx) {
+                  retryCtx.drawImage(retryImg, 0, 0, 800, 600);
+                  const dataUrl = canvas.toDataURL('image/png', 0.9);
+                  console.log(`✅ Retry successful (${dataUrl.length} bytes)`);
+                  resolve(dataUrl);
+                }
+              } catch (e) {
+                reject(new Error('Retry failed: ' + (e as Error).message));
+              }
+            };
+
+            retryImg.onerror = () => {
+              reject(new Error('Failed to load SVG even with reduced dimensions'));
+            };
+
+            retryImg.src = retrySvgDataUrl;
+          } else {
+            reject(new Error('Failed to load SVG image'));
+          }
+        };
+
+        img.src = svgDataUrl;
+      } catch (error) {
+        console.error('❌ SVG encoding failed:', error);
+        reject(error);
+      }
+    });
+  };
+
+  // Simple hash function for diagram codes
+  const hashDiagramCode = (code: string): string => {
+    let hash = 0;
+    for (let i = 0; i < code.length; i++) {
+      const char = code.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return `diagram-${Math.abs(hash).toString(36)}`;
+  };
+
+  const renderMermaidDiagrams = async (content: string): Promise<Record<string, string>> => {
+    const mermaidRegex = /```mermaid\n([\s\S]*?)```/g;
+    const diagrams: Record<string, string> = {};
+    const diagramCodeToHash: Record<string, string> = {}; // Map diagram code to hash
+    const matches: string[] = [];
+    let match;
+
+    // First, collect all diagram codes
+    while ((match = mermaidRegex.exec(content)) !== null) {
+      matches.push(match[1].trim());
+    }
+
+    console.log(`📊 Found ${matches.length} mermaid diagrams to render`);
+
+    if (typeof window === 'undefined' || !('electronAPI' in window)) {
+      console.error('Electron API not available');
+      return diagrams;
+    }
+
+    const api = window.electronAPI;
+
+    // Process diagrams sequentially
+    for (let i = 0; i < matches.length; i++) {
+      const diagramCode = matches[i];
+      const diagramHash = hashDiagramCode(diagramCode);
+      diagramCodeToHash[diagramCode] = diagramHash;
+
+      console.log(`🔑 [${i + 1}/${matches.length}] Rendering diagram (hash: ${diagramHash})`);
+      try {
+        // Dynamically import mermaid
+        const mermaid = (await import('mermaid')).default;
+
+        // Initialize with transparent background
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: {
+            background: 'transparent',
+          },
+          securityLevel: 'strict',
+        });
+
+        // Generate unique ID for this diagram
+        const diagramId = `mermaid-render-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 11)}`;
+
+        // Render to SVG
+        const { svg } = await mermaid.render(diagramId, diagramCode);
+        console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG`);
+
+        // Convert to PNG
+        const pngDataUrl = await svgToPngDataUrl(svg, 2000);
+        console.log(`✅ [${i + 1}/${matches.length}] Converted to PNG`);
+
+        // Save to project folder via IPC
+        const response = await api.pdf.saveMermaidImage({
+          projectId,
+          diagramCode,
+          imageDataUrl: pngDataUrl,
+        });
+
+        console.log(`📦 Response from saveMermaidImage:`, response);
+
+        if (response.success && response.data?.filePath) {
+          // Use hash as key instead of full diagram code
+          const filePath = response.data.filePath;
+          if (typeof filePath === 'string' && filePath.length > 0) {
+            diagrams[diagramHash] = filePath;
+            console.log(
+              `✅ [${i + 1}/${matches.length}] Saved to file: ${filePath} (${response.data.fileSize} bytes)`
+            );
+            console.log(`🔑 Hash: ${diagramHash}, Path: ${filePath}, Type: ${typeof filePath}`);
+          } else {
+            console.error(
+              `❌ [${i + 1}/${matches.length}] Invalid file path:`,
+              filePath,
+              typeof filePath
+            );
+          }
+        } else {
+          console.error(
+            `❌ [${i + 1}/${matches.length}] Failed to save image:`,
+            response.success ? 'success but no data' : response.error
+          );
+        }
+
+        // Add small delay between conversions
+        if (i < matches.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        console.error(`❌ [${i + 1}/${matches.length}] Failed to render diagram:`, error);
+      }
+    }
+
+    console.log(
+      `📊 Total diagrams successfully saved: ${Object.keys(diagrams).length}/${matches.length}`
+    );
+    console.log('📊 Diagram hash keys:', Object.keys(diagrams));
+    return diagrams;
+  };
+
   // Generate PDF preview - NOT a useCallback to avoid dependency issues
   const generatePreview = async () => {
     const currentContent = contentRef.current;
@@ -260,14 +540,48 @@ function EditorView() {
       return;
     }
 
+    console.log('🔍 Preview content contains mermaid:', currentContent.includes('```mermaid'));
+    console.log('🔍 Preview content (first 500 chars):', currentContent.substring(0, 500));
+
     setIsGeneratingPreview(true);
     try {
       const api = window.electronAPI;
-      // Pass live content for real-time preview
-      const result = await api.pdf.preview({
+
+      // Pre-render any Mermaid diagrams
+      const mermaidDiagrams = await renderMermaidDiagrams(currentContent);
+      console.log('🎨 Mermaid diagrams result:', mermaidDiagrams);
+      console.log(
+        '🎨 Pre-rendered mermaid diagrams:',
+        mermaidDiagrams ? Object.keys(mermaidDiagrams).length : 'undefined'
+      );
+      if (mermaidDiagrams && Object.keys(mermaidDiagrams).length > 0) {
+        console.log('🎨 First diagram file path:', Object.values(mermaidDiagrams)[0]);
+        console.log(
+          '🎨 Diagram keys (first 50 chars):',
+          Object.keys(mermaidDiagrams).map((k) => k.substring(0, 50))
+        );
+      }
+
+      // Pass live content and pre-rendered diagrams for real-time preview
+      const requestData = {
         projectId,
         content: currentContent,
-      });
+        mermaidDiagrams:
+          mermaidDiagrams && Object.keys(mermaidDiagrams).length > 0 ? mermaidDiagrams : undefined,
+      };
+      console.log(
+        '📤 Sending request with mermaidDiagrams:',
+        requestData.mermaidDiagrams ? 'YES' : 'NO'
+      );
+      if (requestData.mermaidDiagrams) {
+        console.log(
+          '📤 Mermaid diagram keys being sent:',
+          Object.keys(requestData.mermaidDiagrams)
+        );
+        console.log('📤 Full mermaidDiagrams object:', requestData.mermaidDiagrams);
+      }
+
+      const result = await api.pdf.preview(requestData);
 
       if (result.success && result.data.pdfDataUrl) {
         // Force iframe reload by appending a timestamp to the URL
@@ -287,14 +601,18 @@ function EditorView() {
     }
   };
 
-  // Generate initial preview on load - regenerate whenever projectId changes
+  // Generate initial preview on load - regenerate whenever content changes
   useEffect(() => {
-    if (content && !isLoading) {
-      console.log('📋 Project loaded - generating preview');
-      void generatePreview();
+    if (!isLoading && content) {
+      console.log('📋 Content ready - generating preview');
+      // Small delay to ensure the editor has rendered
+      const timer = setTimeout(() => {
+        void generatePreview();
+      }, 100);
+      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, isLoading, content]);
+  }, [isLoading, content]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -330,11 +648,15 @@ function EditorView() {
       });
 
       if (saveResult.success && saveResult.data.filePath) {
+        // Pre-render any Mermaid diagrams
+        const mermaidDiagrams = await renderMermaidDiagrams(contentRef.current);
+
         // Export PDF
         const exportResult = await api.pdf.export({
           projectId,
           outputPath: saveResult.data.filePath,
           openAfterExport: true,
+          mermaidDiagrams: Object.keys(mermaidDiagrams).length > 0 ? mermaidDiagrams : undefined,
         });
 
         if (exportResult.success) {
@@ -401,9 +723,7 @@ function EditorView() {
               <Button variant="outline" onClick={() => navigate({ to: '/' })}>
                 ← Back to Home
               </Button>
-              <Button onClick={() => window.location.reload()}>
-                Retry
-              </Button>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
             </div>
           </CardContent>
         </Card>
@@ -412,7 +732,7 @@ function EditorView() {
   }
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="h-[calc(100vh-56px)] bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-card border-b border-border px-6 py-4 shrink-0">
         <div className="flex items-center justify-between">
@@ -455,11 +775,7 @@ function EditorView() {
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground">Last saved: {formatLastSaved()}</span>
-            <Button
-              size="sm"
-              onClick={handleExport}
-              disabled={isExporting || !content}
-            >
+            <Button size="sm" onClick={handleExport} disabled={isExporting || !content}>
               {isExporting ? 'Exporting...' : 'Export PDF'}
             </Button>
           </div>

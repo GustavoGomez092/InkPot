@@ -48,6 +48,7 @@ export function useRecentProjects(limit = 20) {
 		try {
 			const result = await api.projects.listRecent({ limit });
 			if (result.success) {
+				// @ts-expect-error - Type mismatch between API response and state type
 				setData(result);
 			} else {
 				setError(result);

@@ -120,15 +120,23 @@ export const isFontCachedSchema = z.object({
 // PDF CHANNEL SCHEMAS
 // ============================================================================
 
+export const saveMermaidImageSchema = z.object({
+	projectId: uuidSchema,
+	diagramCode: z.string(),
+	imageDataUrl: z.string(),
+});
+
 export const exportPDFSchema = z.object({
 	projectId: uuidSchema,
 	outputPath: filePathSchema,
 	openAfterExport: z.boolean().optional(),
+	mermaidDiagrams: z.record(z.string(), z.string()).optional(), // Map of diagram code -> file path
 });
 
 export const previewPDFSchema = z.object({
 	projectId: uuidSchema,
 	content: z.string().optional(), // Optional live content for real-time preview
+	mermaidDiagrams: z.record(z.string(), z.string()).optional(), // Map of diagram code -> file path
 });
 
 // ============================================================================
@@ -272,6 +280,7 @@ export type SearchFontsInput = z.infer<typeof searchFontsSchema>;
 export type DownloadFontInput = z.infer<typeof downloadFontSchema>;
 export type IsFontCachedInput = z.infer<typeof isFontCachedSchema>;
 
+export type SaveMermaidImageInput = z.infer<typeof saveMermaidImageSchema>;
 export type ExportPDFInput = z.infer<typeof exportPDFSchema>;
 export type PreviewPDFInput = z.infer<typeof previewPDFSchema>;
 

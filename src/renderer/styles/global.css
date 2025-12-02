@@ -419,6 +419,42 @@ code {
   pointer-events: all;
 }
 
+/* Mermaid diagram styles */
+.mermaid-node-view {
+  margin: 1rem 0;
+}
+
+.mermaid-node-view.ProseMirror-selectednode .mermaid-container {
+  @apply border-blue-500 bg-blue-50;
+}
+
+.mermaid-output svg {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.mermaid-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  width: 100%;
+}
+
+.mermaid-preview svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Mermaid dialog z-index fixes - ensure dialog appears above all UI */
+[data-radix-portal] {
+  z-index: 999997 !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

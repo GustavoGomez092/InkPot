@@ -1,3 +1,4 @@
+import { Extension } from '@tiptap/core';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Table } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
@@ -5,9 +6,13 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { TableRow } from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
+import TextAlign from '@tiptap/extension-text-align';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
   ChevronDown,
   ChevronLeft,
@@ -37,11 +42,14 @@ import {
   X,
 } from 'lucide-react';
 import { marked } from 'marked';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from '../../editor/image-extension';
 import { getMarkdownContent } from '../../editor/markdown-serializer';
+import { MermaidDiagram } from '../../editor/mermaid-extension';
 import { PageBreak } from '../../editor/page-break-extension';
+import { DiagramIcon } from '../icons/DiagramIcon';
 import { Button } from '../ui';
+import { MermaidModal } from './MermaidModal';
 
 interface TiptapEditorProps {
   content?: string;
@@ -135,6 +143,29 @@ function TiptapEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [mermaidModalOpen, setMermaidModalOpen] = useState(false);
+  const [editingDiagramId, setEditingDiagramId] = useState<string | undefined>();
+  const [editingDiagramCode, setEditingDiagramCode] = useState<string>('');
+  const [editingDiagramCaption, setEditingDiagramCaption] = useState<string>('');
+
+  // Configure marked to render mermaid code blocks as custom elements
+  marked.use({
+    renderer: {
+      code(token: { text: string; lang?: string; escaped?: boolean }) {
+        // Check if this is a mermaid diagram
+        if (token.lang === 'mermaid') {
+          // Generate a unique ID for the diagram
+          const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          // Escape quotes in the code
+          const escapedCode = token.text.replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+          // Return custom HTML that our MermaidDiagram extension can parse
+          return `<div data-type="mermaidDiagram" data-code="${escapedCode}" data-id="${id}"></div>`;
+        }
+        // For non-mermaid code blocks, return false to use default rendering
+        return false;
+      },
+    },
+  });
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -194,6 +225,163 @@ function TiptapEditor({
     }
   };
 
+  const handleOpenMermaidModal = (
+    diagramId?: string,
+    currentCode?: string,
+    currentCaption?: string
+  ) => {
+    setEditingDiagramId(diagramId);
+    setEditingDiagramCode(currentCode || '');
+    setEditingDiagramCaption(currentCaption || '');
+    setMermaidModalOpen(true);
+  };
+
+  const handleSaveMermaidDiagram = async (code: string, caption?: string) => {
+    console.log('📝 TiptapEditor: handleSaveMermaidDiagram called');
+    console.log('   - code length:', code.length);
+    console.log('   - caption:', caption);
+    console.log('   - editingDiagramId:', editingDiagramId);
+
+    // Generate and save PNG
+    let imagePath: string | undefined;
+
+    try {
+      console.log('🔍 Checking prerequisites...');
+      console.log('   - projectId:', projectId);
+      console.log('   - window.electronAPI exists:', !!window.electronAPI);
+      console.log('   - window.electronAPI.pdf exists:', !!(window.electronAPI as any)?.pdf);
+
+      if (projectId && window.electronAPI) {
+        console.log('🎨 Generating PNG for diagram...');
+
+        // Import mermaid and render to SVG
+        const mermaid = (await import('mermaid')).default;
+
+        // Initialize with transparent background
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: {
+            background: 'transparent',
+          },
+          securityLevel: 'strict',
+        });
+
+        const renderId = `mermaid-save-${editingDiagramId || 'new'}-${Date.now()}`;
+        console.log('   - Rendering SVG with ID:', renderId);
+        const { svg } = await mermaid.render(renderId, code);
+        console.log('   - SVG rendered, length:', svg.length);
+
+        // Convert SVG to PNG
+        console.log('   - Converting SVG to PNG...');
+        const pngDataUrl = await svgToPngDataUrl(svg, 2000);
+        console.log('   - PNG data URL generated, length:', pngDataUrl.length);
+
+        // Save PNG via IPC
+        console.log('   - Saving PNG via IPC...');
+        const response = await window.electronAPI.pdf.saveMermaidImage({
+          projectId,
+          diagramCode: code,
+          imageDataUrl: pngDataUrl,
+        });
+        console.log('   - IPC response:', response);
+
+        if (response.success && response.data?.filePath) {
+          console.log('✅ PNG saved to:', response.data.filePath);
+          console.log('✅ Using data URL for imagePath, length:', pngDataUrl.length);
+          imagePath = pngDataUrl;
+        } else {
+          console.error('❌ PNG save failed, response:', response);
+        }
+      } else {
+        console.warn('⚠️ Skipping PNG generation - missing prerequisites');
+      }
+    } catch (err) {
+      console.error('❌ Failed to generate PNG:', err);
+      // Continue without imagePath
+    }
+
+    console.log(
+      '   - Final imagePath:',
+      imagePath ? `present (${imagePath.length} chars)` : 'undefined'
+    );
+
+    if (editingDiagramId) {
+      // Update existing diagram
+      console.log('🔄 Updating existing diagram:', editingDiagramId);
+      editor?.commands.updateMermaidDiagram(editingDiagramId, code, caption, imagePath);
+    } else {
+      // Insert new diagram
+      console.log('➕ Inserting new diagram');
+      editor?.commands.insertMermaidDiagram(code, caption, imagePath);
+    }
+    setMermaidModalOpen(false);
+    setEditingDiagramId(undefined);
+    setEditingDiagramCode('');
+    setEditingDiagramCaption('');
+  };
+
+  // Helper function to convert SVG to PNG
+  const svgToPngDataUrl = useCallback((svg: string, maxWidth: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svg, 'image/svg+xml');
+      const svgElement = doc.querySelector('svg');
+
+      if (!svgElement) {
+        reject(new Error('Invalid SVG'));
+        return;
+      }
+
+      const viewBox = svgElement.getAttribute('viewBox');
+      let width = parseFloat(svgElement.getAttribute('width') || '0');
+      let height = parseFloat(svgElement.getAttribute('height') || '0');
+
+      if (!width || !height) {
+        if (viewBox) {
+          const parts = viewBox.split(' ');
+          width = parseFloat(parts[2]);
+          height = parseFloat(parts[3]);
+        } else {
+          width = 600;
+          height = 400;
+        }
+      }
+
+      const scale = maxWidth / width;
+      const scaledWidth = Math.floor(width * scale);
+      const scaledHeight = Math.floor(height * scale);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = scaledWidth;
+      canvas.height = scaledHeight;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      const img = new window.Image();
+
+      // Encode SVG as UTF-8 data URL (more reliable than base64 for large SVGs)
+      const encodedSvg = encodeURIComponent(svg).replace(/'/g, '%27').replace(/"/g, '%22');
+      const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+
+      img.onload = () => {
+        // Keep transparent background (no fill)
+        ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+        resolve(canvas.toDataURL('image/png'));
+      };
+
+      img.onerror = () => {
+        reject(new Error('Failed to load SVG'));
+      };
+
+      img.src = svgDataUrl;
+    });
+  }, []);
+
   const extensions = [
     StarterKit.configure({
       heading: {
@@ -217,6 +405,25 @@ function TiptapEditor({
     Image.configure({
       inline: false,
       allowBase64: true, // Allow base64 data URLs for displaying loaded images
+    }),
+    MermaidDiagram.configure({
+      draggable: true,
+      onOpenModal: handleOpenMermaidModal,
+    }),
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+      alignments: ['left', 'center', 'right'],
+      defaultAlignment: 'left',
+    }),
+    Extension.create({
+      name: 'customAlignmentShortcuts',
+      addKeyboardShortcuts() {
+        return {
+          'Mod-l': () => this.editor.commands.setTextAlign('left'),
+          'Mod-e': () => this.editor.commands.setTextAlign('center'),
+          'Mod-r': () => this.editor.commands.setTextAlign('right'),
+        };
+      },
     }),
   ];
 
@@ -285,6 +492,78 @@ function TiptapEditor({
     },
   });
 
+  // Function to regenerate PNG images for mermaid diagrams without imagePath
+  const regenerateMermaidImages = useCallback(async () => {
+    if (!editor || !projectId) return;
+
+    console.log('🔄 Regenerating mermaid diagram images...');
+
+    const doc = editor.state.doc;
+    const updates: { pos: number; attrs: Record<string, unknown> }[] = [];
+
+    // Find all mermaid diagram nodes without imagePath
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'mermaidDiagram' && !node.attrs.imagePath && node.attrs.code) {
+        updates.push({ pos, attrs: node.attrs });
+      }
+    });
+
+    console.log(`📊 Found ${updates.length} mermaid diagrams without images`);
+
+    // Process each diagram
+    for (const { pos, attrs } of updates) {
+      try {
+        const code = attrs.code as string;
+        if (!code) continue;
+
+        console.log(`🎨 Generating PNG for diagram at pos ${pos}...`);
+
+        // Import mermaid and render to SVG
+        const mermaid = (await import('mermaid')).default;
+
+        // Initialize with transparent background
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: {
+            background: 'transparent',
+          },
+          securityLevel: 'strict',
+        });
+
+        const renderId = `mermaid-regen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(renderId, code);
+
+        // Convert SVG to PNG
+        const pngDataUrl = await svgToPngDataUrl(svg, 2000);
+
+        // Save PNG via IPC
+        const response = await window.electronAPI.pdf.saveMermaidImage({
+          projectId,
+          diagramCode: code,
+          imageDataUrl: pngDataUrl,
+        });
+
+        if (response.success) {
+          console.log(`✅ PNG saved for diagram at pos ${pos}`);
+
+          // Update the node with imagePath
+          editor.commands.command(({ tr }) => {
+            tr.setNodeMarkup(pos, undefined, {
+              ...attrs,
+              imagePath: pngDataUrl,
+            });
+            return true;
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Failed to regenerate image for diagram at pos ${pos}:`, error);
+      }
+    }
+
+    console.log('✅ Finished regenerating mermaid images');
+  }, [editor, projectId, svgToPngDataUrl]);
+
   // Set projectId on window for ImageNodeView to access
   useEffect(() => {
     if (projectId) {
@@ -306,15 +585,48 @@ function TiptapEditor({
       const loadContent = async () => {
         try {
           // Replace custom page break markers with HTML that Tiptap can parse
-          const processedContent = content.replace(
+          let processedContent = content.replace(
             /---PAGE_BREAK---/g,
             '<div data-type="page-break"><hr data-page-break="true"></div>'
           );
 
+          // Convert mermaid blocks to custom nodes
+          // First, handle mermaid blocks with captions: ```mermaid\n...code...\n```\n*caption*
+          processedContent = processedContent.replace(
+            /```mermaid\n([\s\S]*?)```(?:\n\*([^*]+)\*)?/g,
+            (_match, code, caption) => {
+              const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              // Escape HTML entities for data attribute, but preserve mermaid syntax
+              const escapedCode = code
+                .trim()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/\n/g, '&#10;');
+              if (caption) {
+                const escapedCaption = caption.trim().replace(/"/g, '&quot;');
+                return `<div data-type="mermaidDiagram" data-code="${escapedCode}" data-id="${id}" data-caption="${escapedCaption}"></div>`;
+              }
+              return `<div data-type="mermaidDiagram" data-code="${escapedCode}" data-id="${id}"></div>`;
+            }
+          );
+
+          console.log(
+            '📄 Loading content with mermaid blocks:',
+            processedContent.includes('```mermaid') || processedContent.includes('mermaidDiagram')
+          );
           const html = await marked.parse(processedContent);
+          console.log('📄 Parsed HTML contains mermaidDiagram:', html.includes('mermaidDiagram'));
           // Set content without adding to history or triggering update
           // Images will keep their relative paths (assets/...)
           editor.commands.setContent(html, { emitUpdate: false });
+
+          // After content is loaded, regenerate PNG images for mermaid diagrams
+          // that don't have imagePath set
+          setTimeout(() => {
+            regenerateMermaidImages();
+          }, 100); // Small delay to ensure editor has rendered
         } catch (error) {
           console.error('Error loading content:', error);
         }
@@ -322,7 +634,7 @@ function TiptapEditor({
 
       loadContent();
     }
-  }, [editor, content]);
+  }, [editor, content, regenerateMermaidImages]);
 
   if (!editor) {
     return null;
@@ -368,6 +680,37 @@ function TiptapEditor({
           title="Inline Code"
         >
           <Code className="h-4 w-4" />
+        </Button>
+
+        <div className="w-px h-6 bg-border mx-1" />
+
+        {/* Text Alignment */}
+        <Button
+          size="icon"
+          variant={editor.isActive({ textAlign: 'left' }) ? 'default' : 'ghost'}
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          type="button"
+          title="Align Left (Cmd+L)"
+        >
+          <AlignLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant={editor.isActive({ textAlign: 'center' }) ? 'default' : 'ghost'}
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          type="button"
+          title="Align Center (Cmd+E)"
+        >
+          <AlignCenter className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant={editor.isActive({ textAlign: 'right' }) ? 'default' : 'ghost'}
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          type="button"
+          title="Align Right (Cmd+R)"
+        >
+          <AlignRight className="h-4 w-4" />
         </Button>
 
         <div className="w-px h-6 bg-border mx-1" />
@@ -660,12 +1003,38 @@ function TiptapEditor({
           onChange={handleImageUpload}
           className="hidden"
         />
+
+        {/* Mermaid diagram */}
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => handleOpenMermaidModal()}
+          type="button"
+          title="Insert Diagram (Mod+Shift+D)"
+        >
+          <DiagramIcon size={16} />
+        </Button>
       </div>
 
       {/* Editor content - Scrollable */}
       <div className="flex-1 overflow-auto bg-background overflow-x-hidden">
         <EditorContent editor={editor} />
       </div>
+
+      {/* Mermaid Modal */}
+      <MermaidModal
+        open={mermaidModalOpen}
+        onClose={() => {
+          setMermaidModalOpen(false);
+          setEditingDiagramId(undefined);
+          setEditingDiagramCode('');
+          setEditingDiagramCaption('');
+        }}
+        initialCode={editingDiagramCode}
+        initialCaption={editingDiagramCaption}
+        onSave={handleSaveMermaidDiagram}
+        diagramId={editingDiagramId}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ export async function generatePDF(
 	theme: ThemeData,
 	projectDir?: string,
 	coverData?: CoverData,
+	mermaidDiagrams?: Record<string, string>,
 ): Promise<Buffer> {
 	try {
 		console.log("📄 Generating PDF with theme:", theme.name);
@@ -38,7 +39,13 @@ export async function generatePDF(
 		}
 
 		// Create PDF document element
-		const document = createPDFDocument(content, theme, projectDir, coverData);
+		const document = await createPDFDocument(
+			content,
+			theme,
+			projectDir,
+			coverData,
+			mermaidDiagrams,
+		);
 
 		// Render to buffer
 		const buffer = await renderToBuffer(document);
@@ -83,12 +90,13 @@ export async function previewPDF(
 	theme: ThemeData,
 	projectDir?: string,
 	coverData?: CoverData,
+	mermaidDiagrams?: Record<string, string>,
 ): Promise<string> {
 	try {
 		console.log("👁️  Generating PDF preview with theme:", theme.name);
 
 		// Generate PDF buffer
-		const buffer = await generatePDF(content, theme, projectDir, coverData);
+		const buffer = await generatePDF(content, theme, projectDir, coverData, mermaidDiagrams);
 
 		// Convert to base64 data URL
 		const base64 = buffer.toString("base64");

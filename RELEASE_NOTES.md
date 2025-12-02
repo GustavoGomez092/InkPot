@@ -269,7 +269,7 @@ npm run package
 ## 🎊 Release Highlights
 
 ### What Makes InkPot Special?
-
+I
 1. **True WYSIWYG Markdown**: Unlike traditional Markdown editors, InkPot shows you exactly how your content will look in the PDF
 2. **Professional Output**: Built-in themes designed by typography experts
 3. **Local-First**: Your data is yours, stored securely on your machine

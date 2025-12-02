@@ -4,6 +4,8 @@
 // GLOBAL TYPES
 // ============================================================================
 
+export type TextAlignment = "left" | "center" | "right";
+
 export interface SuccessResponse<T> {
 	success: true;
 	data: T;
@@ -265,9 +267,21 @@ export interface IsFontCachedResponse {
 // PDF CHANNEL
 // ============================================================================
 
+export interface SaveMermaidImageRequest {
+	projectId: string;
+	diagramCode: string; // Hash or unique identifier for the diagram
+	imageDataUrl: string; // PNG data URL
+}
+
+export interface SaveMermaidImageResponse {
+	filePath: string; // Absolute path to saved image
+	fileSize: number;
+}
+
 export interface PreviewPDFRequest {
 	projectId: string;
 	content?: string; // Optional live content for real-time preview
+	mermaidDiagrams?: Record<string, string>; // Map of diagram code -> file path
 }
 
 export interface PreviewPDFResponse {
@@ -280,6 +294,7 @@ export interface ExportPDFRequest {
 	projectId: string;
 	outputPath: string;
 	openAfterExport?: boolean;
+	mermaidDiagrams?: Record<string, string>; // Map of diagram code -> file path
 }
 
 export interface ExportPDFResponse {
@@ -541,6 +556,9 @@ export interface ElectronAPI {
 		calculatePageBreaks: (
 			req: CalculatePageBreaksRequest,
 		) => Promise<IPCResponse<PageBreak[]>>;
+		saveMermaidImage: (
+			req: SaveMermaidImageRequest,
+		) => Promise<IPCResponse<SaveMermaidImageResponse>>;
 	};
 	cover: {
 		listTemplates: (

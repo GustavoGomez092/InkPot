@@ -8,7 +8,7 @@ import type { ThemeData } from '@shared/types/ipc-contracts.js';
 import React from 'react';
 import { CoverPage } from './components/CoverPage.js';
 import { MarkdownElements } from './components/MarkdownElements.js';
-import { parseMarkdown } from './markdown-parser.js';
+import { type MarkdownElement, parseMarkdown } from './markdown-parser.js';
 
 // Register emoji support for PDFs using React-PDF's built-in emoji source
 // This uses Apple emoji images from a CDN for consistent emoji rendering across all platforms
@@ -53,16 +53,120 @@ export interface CoverData {
 }
 
 /**
+ * Simple hash function for diagram codes (matches renderer implementation)
+ */
+function hashDiagramCode(code: string): string {
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    const char = code.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return `diagram-${Math.abs(hash).toString(36)}`;
+}
+
+/**
+ * Apply pre-rendered diagram file paths to mermaid diagram elements
+ * Converts file paths to data URLs to avoid path encoding issues
+ * @param elements Parsed markdown elements
+ * @param mermaidDiagrams Map of diagram hash -> file path to PNG image
+ */
+async function applyMermaidSVGs(
+  elements: MarkdownElement[],
+  mermaidDiagrams?: Record<string, string>
+): Promise<MarkdownElement[]> {
+  if (!mermaidDiagrams) {
+    console.warn('⚠️ No pre-rendered mermaid diagrams provided');
+    return elements;
+  }
+
+  console.log('📊 Available diagram hashes:', Object.keys(mermaidDiagrams));
+
+  const processedElements: MarkdownElement[] = [];
+
+  for (const element of elements) {
+    if (element.type === 'mermaidDiagram' && element.diagram) {
+      // Hash the diagram code to match the key from renderer
+      const diagramHash = hashDiagramCode(element.diagram);
+      console.log(
+        `🔍 Looking up diagram with hash: ${diagramHash} (code length ${element.diagram.length})`
+      );
+      const imagePath = mermaidDiagrams[diagramHash];
+      if (imagePath) {
+        console.log('✅ Using pre-rendered diagram from file:', imagePath);
+
+        // Convert file path to data URL to avoid path encoding issues
+        try {
+          const fs = await import('fs/promises');
+          const imageBuffer = await fs.readFile(imagePath);
+          const base64 = imageBuffer.toString('base64');
+          const dataUrl = `data:image/png;base64,${base64}`;
+
+          console.log(`📊 Converted diagram to data URL (${dataUrl.length} bytes)`);
+
+          processedElements.push({
+            ...element,
+            diagram: dataUrl, // Store data URL instead of file path
+          });
+          console.log('📊 Pushed mermaid element with data URL');
+        } catch (error) {
+          console.error('❌ Failed to read diagram file:', error);
+          // Push error placeholder
+          processedElements.push({
+            ...element,
+            diagram: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100">
+              <text x="10" y="50" fill="red">Failed to load diagram</text>
+            </svg>`,
+          });
+        }
+      } else {
+        console.warn('⚠️ No pre-rendered image found for mermaid diagram');
+        console.warn(`🔍 Available keys: ${Object.keys(mermaidDiagrams).length} total`);
+        if (Object.keys(mermaidDiagrams).length > 0) {
+          console.warn(
+            '🔍 First available key (length ' + Object.keys(mermaidDiagrams)[0].length + '):',
+            Object.keys(mermaidDiagrams)[0].substring(0, 50)
+          );
+        }
+        // Keep original element
+        processedElements.push({
+          ...element,
+          diagram: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100">
+            <text x="10" y="50" fill="red">Failed to render diagram</text>
+          </svg>`,
+        });
+      }
+    } else {
+      processedElements.push(element);
+    }
+  }
+
+  return processedElements;
+}
+
+/**
  * Generate PDF document element from markdown content with theme styling
  */
-export function createPDFDocument(
+export async function createPDFDocument(
   content: string,
   theme: ThemeData,
   projectDir?: string,
-  coverData?: CoverData
+  coverData?: CoverData,
+  mermaidDiagrams?: Record<string, string>
 ) {
+  console.log('📄 PDF Document - Content contains mermaid:', content.includes('```mermaid'));
+  console.log('📄 PDF Document - Content (first 500 chars):', content.substring(0, 500));
+
   // Parse markdown to structured elements
-  const elements = parseMarkdown(content, projectDir);
+  let elements = parseMarkdown(content, projectDir);
+  console.log('📄 PDF Document - Parsed elements:', elements.length, 'total');
+  console.log(
+    '📄 PDF Document - Mermaid elements found:',
+    elements.filter((e) => e.type === 'mermaidDiagram').length
+  );
+
+  // Apply pre-rendered Mermaid SVGs (converts file paths to data URLs)
+  elements = await applyMermaidSVGs(elements, mermaidDiagrams);
 
   // Split elements by page breaks
   const pages: (typeof elements)[] = [];

@@ -17,7 +17,8 @@ export interface MarkdownElement {
 		| "pageBreak"
 		| "horizontalRule"
 		| "image"
-		| "table";
+		| "table"
+		| "mermaidDiagram";
 	level?: number; // For headings (1-6)
 	ordered?: boolean; // For lists
 	items?: string[]; // For lists
@@ -31,6 +32,9 @@ export interface MarkdownElement {
 	title?: string; // For images
 	headers?: string[]; // For tables
 	rows?: string[][]; // For tables
+	textAlign?: "left" | "center" | "right"; // Text alignment for paragraphs and headings
+	diagram?: string; // For mermaid diagrams - contains the mermaid code
+	caption?: string; // For mermaid diagrams - optional caption text
 }
 
 export interface InlineElement {
@@ -246,6 +250,28 @@ function stripHTML(html: string): string {
 }
 
 /**
+ * Parse text alignment from HTML element's style attribute
+ * Validates and returns alignment value or undefined if not set/invalid
+ */
+function parseAlignment(html: string): "left" | "center" | "right" | undefined {
+	// Match style attribute and extract text-align value
+	const styleMatch = html.match(/style\s*=\s*["']([^"']+)["']/i);
+	if (!styleMatch) return undefined;
+
+	const styles = styleMatch[1];
+	const alignMatch = styles.match(/text-align\s*:\s*(left|center|right)/i);
+	if (!alignMatch) return undefined;
+
+	const alignment = alignMatch[1].toLowerCase();
+	// Validate against allowed values
+	if (alignment === "left" || alignment === "center" || alignment === "right") {
+		return alignment;
+	}
+
+	return undefined;
+}
+
+/**
  * Parse markdown content into structured elements
  */
 export function parseMarkdown(
@@ -265,8 +291,26 @@ export function parseMarkdown(
 		return placeholder;
 	});
 
-	// Now strip HTML if detected
+	// Extract alignment information before stripping HTML
+	// Store alignment markers that will be parsed later
+	const alignmentMarkers: Map<number, "left" | "center" | "right"> = new Map();
+	let elementCounter = 0;
+
 	if (markdown.trim().startsWith("<") || /<[a-z][\s\S]*>/i.test(markdown)) {
+		// Pre-process to inject alignment markers before HTML stripping
+		markdown = markdown.replace(
+			/<(h[1-6]|p)([^>]*)>(.*?)<\/\1>/gi,
+			(match, _tag, _attrs, _content) => {
+				const alignment = parseAlignment(match);
+				const marker = alignment
+					? `__ALIGN_${alignment.toUpperCase()}_${elementCounter}__`
+					: "";
+				alignmentMarkers.set(elementCounter, alignment || "left");
+				elementCounter++;
+				return `${marker}${match}`;
+			},
+		);
+
 		markdown = stripHTML(markdown);
 	}
 
@@ -383,13 +427,30 @@ export function parseMarkdown(
 		// Headings
 		const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
 		if (headingMatch) {
-			const headingText = headingMatch[2];
-			console.log(`📝 Heading H${headingMatch[1].length}: "${headingText}"`);
+			let headingText = headingMatch[2];
+
+			// Extract alignment marker if present
+			let textAlign: "left" | "center" | "right" | undefined;
+			const alignMarkerMatch = headingText.match(
+				/^__ALIGN_(LEFT|CENTER|RIGHT)_(\d+)__(.*)$/,
+			);
+			if (alignMarkerMatch) {
+				textAlign = alignMarkerMatch[1].toLowerCase() as
+					| "left"
+					| "center"
+					| "right";
+				headingText = alignMarkerMatch[3];
+			}
+
+			console.log(
+				`📝 Heading H${headingMatch[1].length}: "${headingText}"${textAlign ? ` [${textAlign}]` : ""}`,
+			);
 			elements.push({
 				type: "heading",
 				level: headingMatch[1].length,
 				content: headingText,
 				inline: parseInlineFormatting(headingText),
+				textAlign,
 			});
 			i++;
 			continue;
@@ -427,7 +488,7 @@ export function parseMarkdown(
 			continue;
 		}
 
-		// Code block
+		// Code block (or Mermaid diagram)
 		if (line.trim().startsWith("```")) {
 			const language = line.trim().slice(3).trim() || "text";
 			const codeLines: string[] = [];
@@ -439,11 +500,37 @@ export function parseMarkdown(
 			}
 			i++; // Skip closing ```
 
-			elements.push({
-				type: "codeBlock",
-				language,
-				content: codeLines.join("\n"),
-			});
+			// Check if this is a Mermaid diagram
+			if (language === "mermaid") {
+				const diagramCode = codeLines.join("\n");
+				console.log('📊 Found mermaid diagram in markdown:', diagramCode.substring(0, 100));
+				let caption: string | undefined;
+
+				// Check if next line contains caption (italic text)
+				if (i < lines.length) {
+					const nextLine = lines[i].trim();
+					const captionMatch = nextLine.match(/^\*([^*]+)\*$/);
+					if (captionMatch) {
+						caption = captionMatch[1];
+						i++; // Skip caption line
+					}
+				}
+
+				elements.push({
+					type: "mermaidDiagram",
+					diagram: diagramCode,
+					caption,
+					content: diagramCode,
+				});
+				console.log('📊 Added mermaid diagram element with caption:', caption);
+			} else {
+				// Regular code block
+				elements.push({
+					type: "codeBlock",
+					language,
+					content: codeLines.join("\n"),
+				});
+			}
 			continue;
 		}
 
@@ -641,10 +728,24 @@ export function parseMarkdown(
 				}
 			}
 
+			// Extract alignment marker if present
+			let textAlign: "left" | "center" | "right" | undefined;
+			const alignMarkerMatch = content.match(
+				/^__ALIGN_(LEFT|CENTER|RIGHT)_(\d+)__(.*)$/s,
+			);
+			if (alignMarkerMatch) {
+				textAlign = alignMarkerMatch[1].toLowerCase() as
+					| "left"
+					| "center"
+					| "right";
+				content = alignMarkerMatch[3];
+			}
+
 			elements.push({
 				type: "paragraph",
 				content: content,
 				inline: parseInlineFormatting(content),
+				textAlign,
 			});
 			continue;
 		}
