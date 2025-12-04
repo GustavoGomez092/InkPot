@@ -943,13 +943,18 @@ export function registerIPCHandlers(): void {
 
 	/**
 	 * Save Mermaid Diagram Image
-	 * Saves a rendered mermaid diagram PNG to the project's assets folder
+	 * Saves PNG image (converted in renderer using Canvas API) to project's assets folder
+	 * Canvas-based conversion preserves foreignObject HTML content
 	 */
 	ipcMain.handle(
 		"pdf:saveMermaidImage",
 		wrapIPCHandler(async (args) => {
-			const { projectId, diagramCode, imageDataUrl } =
+			const { projectId, diagramCode, svgString } =
 				saveMermaidImageSchema.parse(args);
+
+			console.log(
+				`🎨 Saving mermaid diagram (data length: ${svgString.length} bytes)`,
+			);
 
 			// Get project to find its directory
 			const project = await prisma.project.findUnique({
@@ -963,6 +968,9 @@ export function registerIPCHandlers(): void {
 			const projectDir = path.dirname(project.filePath);
 			const assetsDir = path.join(projectDir, ".inkpot", "diagrams");
 
+			// Ensure assets directory exists
+			await fileSystem.createDirectory(assetsDir);
+
 			// Create a hash of the diagram code for the filename (matches renderer implementation)
 			let hash = 0;
 			for (let i = 0; i < diagramCode.length; i++) {
@@ -972,20 +980,29 @@ export function registerIPCHandlers(): void {
 			}
 			const hashString = Math.abs(hash).toString(36);
 			const fileName = `mermaid-${hashString}.png`;
-			const filePath = path.join(assetsDir, fileName); // Write the image file
-			await fileSystem.writeBinaryFile(filePath, imageDataUrl);
+			const absolutePath = path.join(assetsDir, fileName);
+
+			// Save PNG file from data URL
+			// The renderer has already converted SVG to PNG to preserve foreignObject content
+			const fs = await import("node:fs/promises");
+
+			// Extract base64 data from data URL
+			const base64Data = svgString.replace(/^data:image\/png;base64,/, "");
+			const buffer = Buffer.from(base64Data, "base64");
+
+			await fs.writeFile(absolutePath, buffer);
 
 			// Get file size
-			const fs = await import("node:fs/promises");
-			const stats = await fs.stat(filePath);
+			const stats = await fs.stat(absolutePath);
 
 			console.log(
 				`✅ Saved mermaid diagram: ${fileName} (${stats.size} bytes)`,
 			);
+			console.log(`📁 Absolute path: ${absolutePath}`);
 
-			// Return just the data object - wrapIPCHandler will wrap it
+			// Return absolute file path - Electron can load local files directly
 			return {
-				filePath,
+				filePath: absolutePath,
 				fileSize: stats.size,
 			};
 		}),

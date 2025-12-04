@@ -95,20 +95,20 @@ async function applyMermaidSVGs(
       if (imagePath) {
         console.log('✅ Using pre-rendered diagram from file:', imagePath);
 
-        // Convert file path to data URL to avoid path encoding issues
+        // Read PNG and embed as data URL
         try {
           const fs = await import('fs/promises');
-          const imageBuffer = await fs.readFile(imagePath);
-          const base64 = imageBuffer.toString('base64');
+          const pngBuffer = await fs.readFile(imagePath);
+          const base64 = pngBuffer.toString('base64');
           const dataUrl = `data:image/png;base64,${base64}`;
 
-          console.log(`📊 Converted diagram to data URL (${dataUrl.length} bytes)`);
+          console.log(`📊 Converted diagram to PNG data URL (${dataUrl.length} bytes)`);
 
           processedElements.push({
             ...element,
-            diagram: dataUrl, // Store data URL instead of file path
+            diagram: dataUrl,
           });
-          console.log('📊 Pushed mermaid element with data URL');
+          console.log('📊 Pushed mermaid element with PNG data URL');
         } catch (error) {
           console.error('❌ Failed to read diagram file:', error);
           // Push error placeholder

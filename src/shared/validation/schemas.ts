@@ -123,7 +123,7 @@ export const isFontCachedSchema = z.object({
 export const saveMermaidImageSchema = z.object({
 	projectId: uuidSchema,
 	diagramCode: z.string(),
-	imageDataUrl: z.string(),
+	svgString: z.string(), // SVG will be converted to PNG in main process
 });
 
 export const exportPDFSchema = z.object({

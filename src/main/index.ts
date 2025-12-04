@@ -32,7 +32,12 @@ function createWindow() {
 
 	// Set icon path - use PNG for BrowserWindow (works cross-platform in dev mode)
 	// The packagerConfig.icon in forge.config.ts handles packaged apps automatically
-	const iconPath = path.join(process.cwd(), "Assets", "PNG", "App-logo-1024.png");
+	const iconPath = path.join(
+		process.cwd(),
+		"Assets",
+		"PNG",
+		"App-logo-1024.png",
+	);
 
 	const mainWindow = new BrowserWindow({
 		width: 1280,
@@ -47,6 +52,7 @@ function createWindow() {
 			contextIsolation: true,
 			nodeIntegration: false,
 			sandbox: false,
+			webSecurity: false, // Allow loading local files (needed for SVG diagrams)
 		},
 		title: "InkPot",
 		icon: iconPath,

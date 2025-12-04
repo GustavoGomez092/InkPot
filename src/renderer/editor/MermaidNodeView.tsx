@@ -1,19 +1,45 @@
 import type { MermaidDiagramAttributes } from '@shared/types/mermaid';
 import { type NodeViewProps, NodeViewWrapper } from '@tiptap/react';
+import { useMemo } from 'react';
 
 /**
  * React NodeView component for rendering Mermaid diagrams in the editor
- * Displays pre-rendered PNG images that were generated during diagram creation/editing
+ * Displays pre-rendered SVG images that were generated during diagram creation/editing
  */
 export function MermaidNodeView(props: NodeViewProps) {
   const { node, selected, editor } = props;
-  const { code, caption, id, imagePath } = node.attrs as MermaidDiagramAttributes;
+  const { code, caption, id, imagePath, updatedAt } = node.attrs as MermaidDiagramAttributes;
+
+  // Convert absolute file paths to file:// URLs for Electron
+  // Add timestamp to force reload when image is updated
+  const displaySrc = useMemo(() => {
+    if (!imagePath) return '';
+
+    // Convert absolute paths to file:// URLs
+    let fileUrl = imagePath;
+    if (imagePath.startsWith('/') || imagePath.match(/^[A-Z]:\\/i)) {
+      fileUrl = `file://${imagePath}`;
+    }
+
+    // Add timestamp to bust cache when diagram is updated
+    const timestamp = updatedAt || Date.now();
+    const urlWithTimestamp = `${fileUrl}?t=${timestamp}`;
+
+    console.log('🖼️ MermaidNodeView: Display source:', {
+      original: imagePath.substring(0, 50) + '...',
+      withProtocol: fileUrl.substring(0, 50) + '...',
+      final: urlWithTimestamp.substring(0, 50) + '...',
+    });
+
+    return urlWithTimestamp;
+  }, [imagePath, updatedAt]);
 
   console.log('👁️ MermaidNodeView rendered:', {
     id,
     hasCode: !!code,
     hasImagePath: !!imagePath,
     imagePathPreview: imagePath ? imagePath.substring(0, 50) + '...' : 'undefined',
+    displaySrc: displaySrc ? displaySrc.substring(0, 50) + '...' : 'empty',
   });
 
   const handleClick = () => {
@@ -28,6 +54,12 @@ export function MermaidNodeView(props: NodeViewProps) {
     }
 
     editor.commands.focus();
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Use the custom delete command
+    editor.commands.deleteMermaidDiagram(id);
   };
 
   return (
@@ -66,14 +98,37 @@ export function MermaidNodeView(props: NodeViewProps) {
           </svg>
           <span className="text-sm font-medium text-blue-700">Mermaid Diagram</span>
           <span className="ml-auto text-xs text-blue-500">Click to edit</span>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="ml-2 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+            aria-label="Delete diagram"
+            title="Delete diagram"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <title>Delete</title>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
         </div>
 
         {/* Diagram content */}
         <div className="px-4">
-          {imagePath ? (
+          {displaySrc ? (
             <div className="mermaid-output flex items-center justify-center py-4">
               <img
-                src={imagePath}
+                src={displaySrc}
                 alt={caption || 'Mermaid diagram'}
                 className="max-w-full"
                 style={{

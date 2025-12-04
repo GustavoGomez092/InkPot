@@ -49,6 +49,227 @@ import { MermaidDiagram } from '../../editor/mermaid-extension';
 import { PageBreak } from '../../editor/page-break-extension';
 import { DiagramIcon } from '../icons/DiagramIcon';
 import { Button } from '../ui';
+
+/**
+ * Convert SVG to PNG using browser canvas
+ * This preserves foreignObject content that Sharp cannot handle
+ */
+async function convertSvgToPng(svgString: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Parse SVG to get dimensions
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
+    const svgElement = svgDoc.querySelector('svg');
+
+    if (!svgElement) {
+      reject(new Error('Invalid SVG'));
+      return;
+    }
+
+    // Ensure SVG has proper namespace and attributes for rendering
+    if (!svgElement.hasAttribute('xmlns')) {
+      svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+
+    // Get SVG dimensions (default to viewBox if width/height not set)
+    let width = parseFloat(svgElement.getAttribute('width') || '800');
+    let height = parseFloat(svgElement.getAttribute('height') || '600');
+
+    const viewBox = svgElement.getAttribute('viewBox');
+    if (viewBox && (!svgElement.getAttribute('width') || !svgElement.getAttribute('height'))) {
+      const [, , vbWidth, vbHeight] = viewBox.split(' ').map(parseFloat);
+      width = vbWidth || width;
+      height = vbHeight || height;
+    }
+
+    // Set explicit width/height if not present to ensure proper rendering
+    if (!svgElement.getAttribute('width')) {
+      svgElement.setAttribute('width', width.toString());
+    }
+    if (!svgElement.getAttribute('height')) {
+      svgElement.setAttribute('height', height.toString());
+    }
+
+    // Serialize the cleaned SVG back to string
+    const serializer = new XMLSerializer();
+    const cleanedSvg = serializer.serializeToString(svgElement);
+
+    // Use 2x scale for better quality
+    const scale = 2;
+    const scaledWidth = width * scale;
+    const scaledHeight = height * scale;
+
+    // Create an image element
+    const img = document.createElement('img');
+
+    // Encode SVG as data URL to avoid CORS/taint issues
+    const svgBase64 = btoa(unescape(encodeURIComponent(cleanedSvg)));
+    const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
+
+    img.onload = () => {
+      // Add small delay to ensure SVG is fully rendered
+      setTimeout(() => {
+        try {
+          // Create canvas with scaled dimensions
+          const canvas = document.createElement('canvas');
+          canvas.width = scaledWidth;
+          canvas.height = scaledHeight;
+
+          // Draw image to canvas
+          const ctx = canvas.getContext('2d', { alpha: true });
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+
+          // Keep transparent background - don't fill
+          // Draw SVG at scaled size
+          ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+          // Convert to PNG data URL
+          const pngDataUrl = canvas.toDataURL('image/png');
+
+          resolve(pngDataUrl);
+        } catch (error) {
+          reject(error);
+        }
+      }, 50);
+    };
+
+    img.onerror = () => {
+      reject(new Error('Failed to load SVG image'));
+    };
+
+    img.src = dataUrl;
+  });
+} /**
+ * Sanitizes mermaid SVG output to fix XML parsing issues.
+ * Mermaid uses foreignObject elements with HTML that isn't properly XML-encoded.
+ * This function ensures all HTML tags are properly closed and self-closing where needed.
+ */
+function sanitizeMermaidSvg(svg: string): string {
+  try {
+    // Parse the SVG to manipulate it
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svg, 'image/svg+xml');
+
+    // Check for parsing errors
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) {
+      console.warn('SVG parsing error, attempting text-based fix');
+      // Fall back to text-based fix
+      return fixSvgTextBased(svg);
+    }
+
+    // Find all foreignObject elements
+    const foreignObjects = doc.querySelectorAll('foreignObject');
+
+    foreignObjects.forEach((fo) => {
+      // Get the HTML content
+      const htmlContent = fo.innerHTML;
+
+      // Fix common issues:
+      // 1. Unclosed <br> tags -> <br/>
+      // 2. Unclosed <p> tags
+      const fixed = htmlContent
+        .replace(/<br>/gi, '<br/>')
+        .replace(/<br\s+>/gi, '<br/>')
+        .replace(/<p>([^<]*?)(?=<(?:p|br|\/foreignObject)|$)/gi, '<p>$1</p>');
+
+      fo.innerHTML = fixed;
+    });
+
+    // Serialize back to string
+    const serializer = new XMLSerializer();
+    return serializer.serializeToString(doc.documentElement);
+  } catch (error) {
+    console.error('Error sanitizing SVG:', error);
+    // Return text-based fix as fallback
+    return fixSvgTextBased(svg);
+  }
+}
+
+/**
+ * Text-based SVG fix for cases where DOM parsing fails
+ */
+function fixSvgTextBased(svg: string): string {
+  let result = svg;
+
+  // Step 1: Fix self-closing tags
+  result = result
+    .replace(/<br>/gi, '<br/>')
+    .replace(/<br\s+>/gi, '<br/>')
+    .replace(/<hr>/gi, '<hr/>')
+    .replace(/<img([^>]*)>/gi, '<img$1/>');
+
+  // Step 2: Fix nested HTML in foreignObject by tracking open tags
+  result = result.replace(
+    /<foreignObject([^>]*)>([\s\S]*?)<\/foreignObject>/gi,
+    (_match, attrs, content) => {
+      // Track opening and closing tags
+      const tagStack: Array<{ name: string; attrs: string }> = [];
+      let fixedContent = '';
+      let pos = 0;
+
+      // Match all tags
+      const tagRegex = /<\/?([a-z][a-z0-9]*)(\s[^>]*)?>|<br\s*\/?>/gi;
+      let tagMatch: RegExpExecArray | null;
+
+      while ((tagMatch = tagRegex.exec(content)) !== null) {
+        // Add text before this tag
+        fixedContent += content.slice(pos, tagMatch.index);
+
+        const fullTag = tagMatch[0];
+        const tagName = tagMatch[1]?.toLowerCase();
+        const tagAttrs = tagMatch[2] || '';
+
+        if (!tagName) {
+          // Self-closing tag like <br/>
+          fixedContent += fullTag.replace(/<br>/gi, '<br/>');
+        } else if (fullTag.startsWith('</')) {
+          // Closing tag
+          if (tagStack.length > 0 && tagStack[tagStack.length - 1].name === tagName) {
+            tagStack.pop();
+            fixedContent += fullTag;
+          } else {
+            // Unmatched closing tag, skip it
+            console.warn(`Skipping unmatched closing tag: ${fullTag}`);
+          }
+        } else if (fullTag.endsWith('/>')) {
+          // Self-closing tag
+          fixedContent += fullTag;
+        } else {
+          // Opening tag
+          tagStack.push({ name: tagName, attrs: tagAttrs });
+          fixedContent += fullTag;
+        }
+
+        pos = tagRegex.lastIndex;
+      }
+
+      // Add remaining text
+      fixedContent += content.slice(pos);
+
+      // Close any unclosed tags
+      while (tagStack.length > 0) {
+        const tag = tagStack.pop();
+        if (tag) {
+          fixedContent += `</${tag.name}>`;
+        }
+      }
+
+      return `<foreignObject${attrs}>${fixedContent}</foreignObject>`;
+    }
+  );
+
+  // Step 3: Final cleanup
+  result = result
+    .replace(/^<\?xml[^>]*\?>/, '') // Remove XML declaration
+    .trim();
+
+  return result;
+}
+
 import { MermaidModal } from './MermaidModal';
 
 interface TiptapEditorProps {
@@ -252,19 +473,30 @@ function TiptapEditor({
       console.log('   - window.electronAPI.pdf exists:', !!(window.electronAPI as any)?.pdf);
 
       if (projectId && window.electronAPI) {
-        console.log('🎨 Generating PNG for diagram...');
+        console.log('🎨 Rendering diagram to SVG...');
 
         // Import mermaid and render to SVG
         const mermaid = (await import('mermaid')).default;
 
-        // Initialize with transparent background
+        // Initialize with default theme for proper edge rendering
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'base',
+          theme: 'default',
           themeVariables: {
             background: 'transparent',
+            primaryColor: '#fff',
+            primaryTextColor: '#000',
+            primaryBorderColor: '#000',
+            lineColor: '#000',
+            secondaryColor: '#f4f4f4',
+            tertiaryColor: '#f4f4f4',
           },
-          securityLevel: 'strict',
+          flowchart: {
+            htmlLabels: true,
+            curve: 'basis',
+          },
+          securityLevel: 'loose',
+          logLevel: 'error',
         });
 
         const renderId = `mermaid-save-${editingDiagramId || 'new'}-${Date.now()}`;
@@ -272,26 +504,29 @@ function TiptapEditor({
         const { svg } = await mermaid.render(renderId, code);
         console.log('   - SVG rendered, length:', svg.length);
 
-        // Convert SVG to PNG
-        console.log('   - Converting SVG to PNG...');
-        const pngDataUrl = await svgToPngDataUrl(svg, 2000);
-        console.log('   - PNG data URL generated, length:', pngDataUrl.length);
+        // Sanitize SVG to fix XML issues with foreignObject HTML
+        const sanitizedSvg = sanitizeMermaidSvg(svg);
+        console.log('   - SVG sanitized');
+
+        // Convert SVG to PNG in browser (preserves foreignObject content)
+        console.log('   - Converting SVG to PNG in browser...');
+        const pngDataUrl = await convertSvgToPng(sanitizedSvg);
+        console.log('   - PNG generated, length:', pngDataUrl.length);
 
         // Save PNG via IPC
         console.log('   - Saving PNG via IPC...');
         const response = await window.electronAPI.pdf.saveMermaidImage({
           projectId,
           diagramCode: code,
-          imageDataUrl: pngDataUrl,
+          svgString: pngDataUrl, // Send PNG data URL instead of SVG
         });
-        console.log('   - IPC response:', response);
 
         if (response.success && response.data?.filePath) {
-          console.log('✅ PNG saved to:', response.data.filePath);
-          console.log('✅ Using data URL for imagePath, length:', pngDataUrl.length);
-          imagePath = pngDataUrl;
+          // Use the file path (not data URL) for efficient storage
+          imagePath = response.data.filePath;
+          console.log('   - File saved:', imagePath);
         } else {
-          console.error('❌ PNG save failed, response:', response);
+          console.warn('   - Failed to save file:', response.error);
         }
       } else {
         console.warn('⚠️ Skipping PNG generation - missing prerequisites');
@@ -320,67 +555,6 @@ function TiptapEditor({
     setEditingDiagramCode('');
     setEditingDiagramCaption('');
   };
-
-  // Helper function to convert SVG to PNG
-  const svgToPngDataUrl = useCallback((svg: string, maxWidth: number): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(svg, 'image/svg+xml');
-      const svgElement = doc.querySelector('svg');
-
-      if (!svgElement) {
-        reject(new Error('Invalid SVG'));
-        return;
-      }
-
-      const viewBox = svgElement.getAttribute('viewBox');
-      let width = parseFloat(svgElement.getAttribute('width') || '0');
-      let height = parseFloat(svgElement.getAttribute('height') || '0');
-
-      if (!width || !height) {
-        if (viewBox) {
-          const parts = viewBox.split(' ');
-          width = parseFloat(parts[2]);
-          height = parseFloat(parts[3]);
-        } else {
-          width = 600;
-          height = 400;
-        }
-      }
-
-      const scale = maxWidth / width;
-      const scaledWidth = Math.floor(width * scale);
-      const scaledHeight = Math.floor(height * scale);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = scaledWidth;
-      canvas.height = scaledHeight;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
-
-      const img = new window.Image();
-
-      // Encode SVG as UTF-8 data URL (more reliable than base64 for large SVGs)
-      const encodedSvg = encodeURIComponent(svg).replace(/'/g, '%27').replace(/"/g, '%22');
-      const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
-
-      img.onload = () => {
-        // Keep transparent background (no fill)
-        ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
-        resolve(canvas.toDataURL('image/png'));
-      };
-
-      img.onerror = () => {
-        reject(new Error('Failed to load SVG'));
-      };
-
-      img.src = svgDataUrl;
-    });
-  }, []);
 
   const extensions = [
     StarterKit.configure({
@@ -521,40 +695,57 @@ function TiptapEditor({
         // Import mermaid and render to SVG
         const mermaid = (await import('mermaid')).default;
 
-        // Initialize with transparent background
+        // Initialize with default theme for proper edge rendering
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'base',
+          theme: 'default',
           themeVariables: {
             background: 'transparent',
+            primaryColor: '#fff',
+            primaryTextColor: '#000',
+            primaryBorderColor: '#000',
+            lineColor: '#000',
+            secondaryColor: '#f4f4f4',
+            tertiaryColor: '#f4f4f4',
           },
-          securityLevel: 'strict',
+          flowchart: {
+            htmlLabels: true,
+            curve: 'basis',
+          },
+          securityLevel: 'loose',
+          logLevel: 'error',
         });
 
         const renderId = `mermaid-regen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const { svg } = await mermaid.render(renderId, code);
 
-        // Convert SVG to PNG
-        const pngDataUrl = await svgToPngDataUrl(svg, 2000);
+        // Sanitize and convert SVG to PNG
+        const sanitizedSvg = sanitizeMermaidSvg(svg);
+        const pngDataUrl = await convertSvgToPng(sanitizedSvg);
 
         // Save PNG via IPC
+        if (!projectId) {
+          console.warn('⚠️ No projectId available for saving diagram');
+          continue;
+        }
         const response = await window.electronAPI.pdf.saveMermaidImage({
           projectId,
           diagramCode: code,
-          imageDataUrl: pngDataUrl,
+          svgString: pngDataUrl, // Send PNG data URL
         });
 
-        if (response.success) {
-          console.log(`✅ PNG saved for diagram at pos ${pos}`);
-
-          // Update the node with imagePath
+        if (response.success && response.data?.filePath) {
+          console.log(`✅ Saved to file: ${response.data.filePath}`);
+          // Update the node with file path
           editor.commands.command(({ tr }) => {
             tr.setNodeMarkup(pos, undefined, {
               ...attrs,
-              imagePath: pngDataUrl,
+              imagePath: response.data.filePath,
             });
             return true;
           });
+        } else {
+          console.warn(`⚠️ Failed to save diagram:`, response.error);
         }
       } catch (error) {
         console.error(`❌ Failed to regenerate image for diagram at pos ${pos}:`, error);
@@ -562,7 +753,7 @@ function TiptapEditor({
     }
 
     console.log('✅ Finished regenerating mermaid images');
-  }, [editor, projectId, svgToPngDataUrl]);
+  }, [editor, projectId]);
 
   // Set projectId on window for ImageNodeView to access
   useEffect(() => {

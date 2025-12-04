@@ -716,7 +716,7 @@ export function MermaidModal(props: MermaidModalProps) {
             {/* Right: Live Preview */}
             <div className="flex flex-col">
               <Label className="mb-2">Preview</Label>
-              <div className="flex-1 overflow-auto rounded border border-gray-300 bg-gray-50 p-4">
+              <div className="flex-1 overflow-auto rounded border border-gray-300 bg-gray-50 p-4 max-h-[380px]">
                 {state.isValidating && (
                   <div className="flex h-full items-center justify-center text-gray-500">
                     Validating...

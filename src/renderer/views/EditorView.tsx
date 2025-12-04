@@ -1,7 +1,483 @@
+import { createPluginRegistration } from '@embedpdf/core';
+import { EmbedPDF } from '@embedpdf/core/react';
+import { usePdfiumEngine } from '@embedpdf/engines/react';
+import {
+  GlobalPointerProvider,
+  InteractionManagerPluginPackage,
+} from '@embedpdf/plugin-interaction-manager/react';
+import { LoaderPluginPackage } from '@embedpdf/plugin-loader/react';
+import { PanPluginPackage, usePan } from '@embedpdf/plugin-pan/react';
+import { RenderLayer, RenderPluginPackage } from '@embedpdf/plugin-render/react';
+import { Scroller, ScrollPluginPackage } from '@embedpdf/plugin-scroll/react';
+import { Viewport, ViewportPluginPackage } from '@embedpdf/plugin-viewport/react';
+import { useZoom, ZoomPluginPackage } from '@embedpdf/plugin-zoom/react';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type CoverData, CoverEditor, TiptapEditor } from '../components/editor';
 import { Button, Card, CardContent, CardHeader } from '../components/ui';
+
+/**
+ * Convert SVG to PNG using browser canvas
+ * This preserves foreignObject content that Sharp cannot handle
+ */
+async function convertSvgToPng(svgString: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Parse SVG to get dimensions
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
+    const svgElement = svgDoc.querySelector('svg');
+
+    if (!svgElement) {
+      reject(new Error('Invalid SVG'));
+      return;
+    }
+
+    // Ensure SVG has proper namespace and attributes for rendering
+    if (!svgElement.hasAttribute('xmlns')) {
+      svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+
+    // Get SVG dimensions (default to viewBox if width/height not set)
+    let width = parseFloat(svgElement.getAttribute('width') || '800');
+    let height = parseFloat(svgElement.getAttribute('height') || '600');
+
+    const viewBox = svgElement.getAttribute('viewBox');
+    if (viewBox && (!svgElement.getAttribute('width') || !svgElement.getAttribute('height'))) {
+      const [, , vbWidth, vbHeight] = viewBox.split(' ').map(parseFloat);
+      width = vbWidth || width;
+      height = vbHeight || height;
+    }
+
+    // Set explicit width/height if not present to ensure proper rendering
+    if (!svgElement.getAttribute('width')) {
+      svgElement.setAttribute('width', width.toString());
+    }
+    if (!svgElement.getAttribute('height')) {
+      svgElement.setAttribute('height', height.toString());
+    }
+
+    // Serialize the cleaned SVG back to string
+    const serializer = new XMLSerializer();
+    const cleanedSvg = serializer.serializeToString(svgElement);
+
+    // Use 2x scale for better quality
+    const scale = 2;
+    const scaledWidth = width * scale;
+    const scaledHeight = height * scale;
+
+    const img = document.createElement('img');
+    const svgBase64 = btoa(unescape(encodeURIComponent(cleanedSvg)));
+    const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
+
+    img.onload = () => {
+      // Add small delay to ensure SVG is fully rendered
+      setTimeout(() => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = scaledWidth;
+          canvas.height = scaledHeight;
+
+          const ctx = canvas.getContext('2d', { alpha: true });
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+
+          // Keep transparent background - don't fill
+          // Draw SVG at scaled size
+          ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+          const pngDataUrl = canvas.toDataURL('image/png');
+          resolve(pngDataUrl);
+        } catch (error) {
+          reject(error);
+        }
+      }, 50);
+    };
+
+    img.onerror = () => {
+      reject(new Error('Failed to load SVG image'));
+    };
+
+    img.src = dataUrl;
+  });
+} /**
+ * Sanitizes mermaid SVG output to fix XML parsing issues.
+ * Mermaid uses foreignObject elements with HTML that isn't properly XML-encoded.
+ * This function ensures all HTML tags are properly closed and self-closing where needed.
+ */
+function sanitizeMermaidSvg(svg: string): string {
+  try {
+    // Parse the SVG to manipulate it
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svg, 'image/svg+xml');
+
+    // Check for parsing errors
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) {
+      console.warn('SVG parsing error, attempting text-based fix');
+      // Fall back to text-based fix
+      return fixSvgTextBased(svg);
+    }
+
+    // Find all foreignObject elements
+    const foreignObjects = doc.querySelectorAll('foreignObject');
+
+    foreignObjects.forEach((fo) => {
+      // Get the HTML content
+      const htmlContent = fo.innerHTML;
+
+      // Fix common issues:
+      // 1. Unclosed <br> tags -> <br/>
+      // 2. Unclosed <p> tags
+      const fixed = htmlContent
+        .replace(/<br>/gi, '<br/>')
+        .replace(/<br\s+>/gi, '<br/>')
+        .replace(/<p>([^<]*?)(?=<(?:p|br|\/foreignObject)|$)/gi, '<p>$1</p>');
+
+      fo.innerHTML = fixed;
+    });
+
+    // Serialize back to string
+    const serializer = new XMLSerializer();
+    return serializer.serializeToString(doc.documentElement);
+  } catch (error) {
+    console.error('Error sanitizing SVG:', error);
+    // Return text-based fix as fallback
+    return fixSvgTextBased(svg);
+  }
+}
+
+/**
+ * Text-based SVG fix for cases where DOM parsing fails
+ */
+function fixSvgTextBased(svg: string): string {
+  let result = svg;
+
+  // Step 1: Fix self-closing tags
+  result = result
+    .replace(/<br>/gi, '<br/>')
+    .replace(/<br\s+>/gi, '<br/>')
+    .replace(/<hr>/gi, '<hr/>')
+    .replace(/<img([^>]*)>/gi, '<img$1/>');
+
+  // Step 2: Fix nested HTML in foreignObject by tracking open tags
+  result = result.replace(
+    /<foreignObject([^>]*)>([\s\S]*?)<\/foreignObject>/gi,
+    (_match, attrs, content) => {
+      // Track opening and closing tags
+      const tagStack: Array<{ name: string; attrs: string }> = [];
+      let fixedContent = '';
+      let pos = 0;
+
+      // Match all tags
+      const tagRegex = /<\/?([a-z][a-z0-9]*)(\s[^>]*)?>|<br\s*\/?>/gi;
+      let tagMatch;
+
+      while ((tagMatch = tagRegex.exec(content)) !== null) {
+        // Add text before this tag
+        fixedContent += content.slice(pos, tagMatch.index);
+
+        const fullTag = tagMatch[0];
+        const tagName = tagMatch[1]?.toLowerCase();
+        const tagAttrs = tagMatch[2] || '';
+
+        if (!tagName) {
+          // Self-closing tag like <br/>
+          fixedContent += fullTag.replace(/<br>/gi, '<br/>');
+        } else if (fullTag.startsWith('</')) {
+          // Closing tag
+          if (tagStack.length > 0 && tagStack[tagStack.length - 1].name === tagName) {
+            tagStack.pop();
+            fixedContent += fullTag;
+          } else {
+            // Unmatched closing tag, skip it
+            console.warn(`Skipping unmatched closing tag: ${fullTag}`);
+          }
+        } else if (fullTag.endsWith('/>')) {
+          // Self-closing tag
+          fixedContent += fullTag;
+        } else {
+          // Opening tag
+          tagStack.push({ name: tagName, attrs: tagAttrs });
+          fixedContent += fullTag;
+        }
+
+        pos = tagRegex.lastIndex;
+      }
+
+      // Add remaining text
+      fixedContent += content.slice(pos);
+
+      // Close any unclosed tags
+      while (tagStack.length > 0) {
+        const tag = tagStack.pop();
+        if (tag) {
+          fixedContent += `</${tag.name}>`;
+        }
+      }
+
+      return `<foreignObject${attrs}>${fixedContent}</foreignObject>`;
+    }
+  );
+
+  // Step 3: Final cleanup
+  result = result
+    .replace(/^<\?xml[^>]*\?>/, '') // Remove XML declaration
+    .trim();
+
+  return result;
+}
+
+/**
+ * Zoom and Pan Toolbar Component using EmbedPDF plugins
+ */
+function ZoomAndPanToolbar() {
+  const { provides: zoomProvides, state: zoomState } = useZoom();
+  const { provides: pan, isPanning } = usePan();
+  const zoomLevels = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+  if (!zoomProvides || !pan) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-4 p-2 bg-card border-b border-border">
+      {/* Mode Toggle Buttons */}
+      <div className="flex items-center gap-1 border-r border-border pr-4">
+        <button
+          type="button"
+          onClick={() => pan.disablePan()}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-colors text-sm ${
+            !isPanning
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'bg-transparent hover:bg-muted text-muted-foreground hover:text-foreground'
+          }`}
+          title="Pointer Mode - Click to select"
+          aria-label="Pointer Mode"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-4 h-4"
+          >
+            <path d="M13.64 21.97c-.16 0-.32-.05-.45-.15L9.14 19.3c-.18-.15-.3-.38-.3-.63v-8.67l-1.88-1.88c-.38-.38-.38-1 0-1.38.38-.38 1-.38 1.38 0l2.32 2.32c.18.18.29.43.29.69v8.17l3.65 2.19 5.25-10.5-10.5 5.25v-3.65c0-.26.11-.51.29-.69l2.32-2.32c.38-.38 1-.38 1.38 0 .38.38.38 1 0 1.38l-1.88 1.88v3.52c0 .36-.19.69-.51.87-.13.08-.28.12-.43.12-.19 0-.38-.05-.55-.17L3.29 10.43c-.31-.18-.51-.51-.51-.87V6.04l1.88-1.88c.38-.38.38-1 0-1.38-.38-.38-1-.38-1.38 0L.97 5.09c-.18.18-.29.43-.29.69v3.78c0 .55.29 1.05.76 1.32l6.57 3.94v4.49c0 .36.19.69.51.87l4.05 2.43c.13.08.28.12.43.12.16 0 .32-.05.45-.15.31-.18.51-.51.51-.87v-3.52l10.5-5.25c.31-.15.51-.47.51-.82s-.2-.67-.51-.82L14.45 6.05c-.31-.15-.67-.09-.93.15-.26.24-.37.6-.3.94l.87 4.32-3.65-2.19v-3.17l1.88-1.88c.38-.38.38-1 0-1.38-.38-.38-1-.38-1.38 0l-2.32 2.32c-.18.18-.29.43-.29.69v3.65L3.29 11.7c-.31.19-.51.51-.51.87v3.52c0 .25.12.48.3.63l4.05 2.43c.13.1.29.15.45.15.19 0 .38-.06.55-.17.31-.19.51-.51.51-.87V14.5l10.5 5.25c.55.28 1.22.05 1.5-.5.28-.55.05-1.22-.5-1.5L13.64 14.5v-4.49l3.65 2.19c.31.19.69.19 1 0 .31-.19.51-.51.51-.87v-3.52l1.88 1.88c.38.38 1 .38 1.38 0 .38-.38.38-1 0-1.38l-2.32-2.32c-.18-.18-.43-.29-.69-.29-.26 0-.51.11-.69.29l-1.88 1.88v3.17l-3.65-2.19.87-4.32c.07-.34-.04-.7-.3-.94-.26-.24-.62-.3-.93-.15L2.47 8.68c-.31.15-.51.47-.51.82s.2.67.51.82l10.5 5.25v3.52c0 .36.19.69.51.87.13.1.29.15.45.15z" />
+          </svg>
+          <span className="font-medium">Pointer</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => pan.enablePan()}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-colors text-sm ${
+            isPanning
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'bg-transparent hover:bg-muted text-muted-foreground hover:text-foreground'
+          }`}
+          title="Pan Mode - Click and drag to move"
+          aria-label="Pan Mode"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-4 h-4"
+          >
+            <path d="M20.5 11H17V7.5C17 6.12 15.88 5 14.5 5S12 6.12 12 7.5V11h-1V3.5C11 2.12 9.88 1 8.5 1S6 2.12 6 3.5V11H5c-1.1 0-2 .9-2 2v1c0 3.31 2.69 6 6 6h5c3.31 0 6-2.69 6-6v-1c0-1.1-.9-2-2-2zm0 3c0 2.21-1.79 4-4 4h-5c-2.21 0-4-1.79-4-4v-1h3V3.5C10.5 2.67 11.17 2 12 2s1.5.67 1.5 1.5V11h2V7.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5V11h2v3z" />
+          </svg>
+          <span className="font-medium">Hand</span>
+        </button>
+        {isPanning && <span className="text-xs text-muted-foreground ml-2">Panning...</span>}
+      </div>
+
+      {/* Zoom Controls */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={zoomProvides.zoomOut}
+          className="px-3 py-1 rounded bg-primary/10 hover:bg-primary/20 transition-colors text-sm"
+          title="Zoom Out"
+        >
+          −
+        </button>
+        <select
+          value={
+            zoomLevels.find((level) => Math.abs(level - zoomState.currentZoomLevel) < 0.05) ||
+            zoomState.currentZoomLevel
+          }
+          onChange={(e) => zoomProvides.requestZoom(Number(e.target.value))}
+          className="px-2 py-1 rounded bg-background border border-border text-sm"
+        >
+          {zoomLevels.map((level) => (
+            <option key={level} value={level}>
+              {Math.round(level * 100)}%
+            </option>
+          ))}
+          {!zoomLevels.some((level) => Math.abs(level - zoomState.currentZoomLevel) < 0.05) && (
+            <option value={zoomState.currentZoomLevel}>
+              {Math.round(zoomState.currentZoomLevel * 100)}%
+            </option>
+          )}
+        </select>
+        <button
+          type="button"
+          onClick={zoomProvides.zoomIn}
+          className="px-3 py-1 rounded bg-primary/10 hover:bg-primary/20 transition-colors text-sm"
+          title="Zoom In"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => zoomProvides.requestZoom(1.0)}
+          className="px-3 py-1 rounded bg-primary/10 hover:bg-primary/20 transition-colors text-sm ml-2"
+          title="Reset Zoom"
+        >
+          Reset
+        </button>
+        <span className="text-sm text-muted-foreground ml-2">
+          {Math.round(zoomState.currentZoomLevel * 100)}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * PDF Viewer Component using EmbedPDF
+ */
+function PDFViewerComponent({ pdfDataUrl }: { pdfDataUrl: string }) {
+  const { engine, isLoading } = usePdfiumEngine();
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string>('');
+
+  // Convert data URL to blob URL for LoaderPluginPackage
+  useEffect(() => {
+    let createdBlobUrl: string | null = null;
+
+    if (pdfDataUrl) {
+      try {
+        // If it's already a blob URL, use it directly
+        if (pdfDataUrl.startsWith('blob:')) {
+          setPdfBlobUrl(pdfDataUrl);
+          return;
+        }
+
+        // If it's a data URL, convert to blob
+        if (pdfDataUrl.startsWith('data:')) {
+          // Remove the hash if present (timestamp added for cache busting)
+          const cleanUrl = pdfDataUrl.split('#')[0];
+
+          // Extract the base64 data
+          const base64Match = cleanUrl.match(/^data:([^;]+);base64,(.+)$/);
+          if (base64Match) {
+            const mimeType = base64Match[1];
+            const base64Data = base64Match[2];
+
+            // Convert base64 to binary
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            // Create blob and blob URL
+            const blob = new Blob([bytes], { type: mimeType });
+            createdBlobUrl = URL.createObjectURL(blob);
+            setPdfBlobUrl(createdBlobUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to process PDF URL:', error);
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (createdBlobUrl) {
+        URL.revokeObjectURL(createdBlobUrl);
+      }
+    };
+  }, [pdfDataUrl]);
+
+  if (isLoading || !engine || !pdfBlobUrl) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="text-center text-muted-foreground">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading PDF Engine...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const plugins = [
+    createPluginRegistration(LoaderPluginPackage, {
+      loadingOptions: {
+        type: 'url',
+        pdfFile: {
+          id: 'preview-pdf',
+          url: pdfBlobUrl,
+        },
+      },
+    }),
+    createPluginRegistration(ViewportPluginPackage),
+    createPluginRegistration(ScrollPluginPackage),
+    createPluginRegistration(RenderPluginPackage),
+    createPluginRegistration(InteractionManagerPluginPackage),
+    createPluginRegistration(ZoomPluginPackage, {
+      defaultZoomLevel: 1.0,
+    }),
+    createPluginRegistration(PanPluginPackage, {
+      defaultMode: 'never', // Manual control via toolbar buttons
+    }),
+  ];
+
+  return (
+    <div className="w-full h-full flex flex-col">
+      <EmbedPDF engine={engine} plugins={plugins}>
+        <ZoomAndPanToolbar />
+        <GlobalPointerProvider>
+          <Viewport
+            data-embedpdf-viewport
+            style={
+              {
+                backgroundColor: '#3f3f46',
+                width: '100%',
+                height: 'calc(100% - 48px)',
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
+                WebkitTouchCallout: 'none',
+                pointerEvents: 'auto',
+              } as React.CSSProperties
+            }
+            onDragStart={(e) => e.preventDefault()}
+          >
+            <Scroller
+              renderPage={({ width, height, pageIndex, scale }) => (
+                <div
+                  style={
+                    {
+                      width,
+                      height,
+                      userSelect: 'none',
+                      WebkitUserDrag: 'none',
+                      WebkitTouchCallout: 'none',
+                      pointerEvents: 'auto',
+                    } as React.CSSProperties
+                  }
+                  onDragStart={(e) => e.preventDefault()}
+                  draggable={false}
+                >
+                  <RenderLayer pageIndex={pageIndex} scale={scale} />
+                </div>
+              )}
+            />
+          </Viewport>
+        </GlobalPointerProvider>
+      </EmbedPDF>
+    </div>
+  );
+}
 
 function EditorView() {
   const { projectId } = useParams({ from: '/editor/$projectId' });
@@ -18,7 +494,7 @@ function EditorView() {
   const [charCount, setCharCount] = useState(0);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
-  const [rightWidth, setRightWidth] = useState(499); // Fixed width in pixels for preview
+  const [rightWidth, setRightWidth] = useState(650); // Fixed width in pixels for preview
   const [isDraggingResize, setIsDraggingResize] = useState(false);
   const [editorMode, setEditorMode] = useState<'content' | 'cover'>('content');
   const [coverTitle, setCoverTitle] = useState<string | null>(null);
@@ -226,8 +702,8 @@ function EditorView() {
     const windowWidth = window.innerWidth;
     const newRightWidth = windowWidth - e.clientX;
 
-    // Constrain between 300px and 80% of window
-    const minWidth = 300;
+    // Constrain between 650px and 80% of window
+    const minWidth = 650;
     const maxWidth = windowWidth * 0.8;
 
     if (newRightWidth >= minWidth && newRightWidth <= maxWidth) {
@@ -254,169 +730,7 @@ function EditorView() {
   }, [handleMouseMove, handleMouseUp]);
 
   // Render all Mermaid diagrams to SVG
-  /**
-   * Convert SVG string to high-resolution PNG data URL
-   * React-PDF's Image component doesn't support SVG data URIs
-   * Uses DOM-based rendering for large SVGs (>50KB) to avoid Image element limitations
-   */
-  const svgToPngDataUrl = async (svg: string, maxWidth: number): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      // Parse SVG to get dimensions
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(svg, 'image/svg+xml');
-      const svgElement = doc.querySelector('svg');
-
-      if (!svgElement) {
-        reject(new Error('Invalid SVG'));
-        return;
-      }
-
-      // Get SVG dimensions
-      const viewBox = svgElement.getAttribute('viewBox');
-      let width = parseFloat(svgElement.getAttribute('width') || '0');
-      let height = parseFloat(svgElement.getAttribute('height') || '0');
-
-      // If no width/height, use viewBox
-      if (!width || !height) {
-        if (viewBox) {
-          const parts = viewBox.split(' ');
-          width = parseFloat(parts[2]);
-          height = parseFloat(parts[3]);
-        } else {
-          width = 600; // default
-          height = 400;
-        }
-      }
-
-      // Calculate scaled dimensions
-      const scale = maxWidth / width;
-      const scaledWidth = width * scale;
-      const scaledHeight = height * scale;
-
-      // Create canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = scaledWidth;
-      canvas.height = scaledHeight;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
-
-      console.log(`🖼️ Converting SVG to PNG (size: ${svg.length} bytes)`);
-
-      // Keep transparent background (no white fill)
-
-      // For very large SVGs (>50KB), split into chunks to avoid browser memory issues
-      const isLargeSvg = svg.length > 50000;
-
-      if (isLargeSvg) {
-        console.log('🔄 Processing large SVG with special handling');
-
-        // Create a reduced-size version for very large diagrams
-        // Scale down further if needed
-        const maxPixels = 4096 * 4096; // 16MP limit for canvas
-        const currentPixels = scaledWidth * scaledHeight;
-
-        let finalWidth = scaledWidth;
-        let finalHeight = scaledHeight;
-
-        if (currentPixels > maxPixels) {
-          const reductionScale = Math.sqrt(maxPixels / currentPixels);
-          finalWidth = Math.floor(scaledWidth * reductionScale);
-          finalHeight = Math.floor(scaledHeight * reductionScale);
-          canvas.width = finalWidth;
-          canvas.height = finalHeight;
-          console.log(
-            `📏 Reduced canvas size to ${finalWidth}x${finalHeight} to stay within limits`
-          );
-
-          // Keep transparent background (no fill needed)
-        }
-      }
-
-      // Create image and load SVG
-      const img = new window.Image();
-
-      try {
-        // Encode SVG as UTF-8 data URL (more reliable than base64 for large SVGs)
-        const encodedSvg = encodeURIComponent(svg).replace(/'/g, '%27').replace(/"/g, '%22');
-        const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
-
-        const timeoutDuration = isLargeSvg ? 30000 : 10000; // 30s for large, 10s for small
-
-        const timeout = setTimeout(() => {
-          reject(new Error(`SVG loading timeout after ${timeoutDuration}ms`));
-        }, timeoutDuration);
-
-        img.onload = () => {
-          clearTimeout(timeout);
-
-          try {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-            const dataUrl = canvas.toDataURL('image/png', 0.95); // Slight compression
-            console.log(`✅ Successfully converted SVG to PNG (${dataUrl.length} bytes)`);
-            resolve(dataUrl);
-          } catch (error) {
-            console.error('❌ Canvas export failed:', error);
-            reject(new Error('Failed to export canvas: ' + (error as Error).message));
-          }
-        };
-
-        img.onerror = (error) => {
-          clearTimeout(timeout);
-          console.error('❌ Image load failed:', error);
-          console.error('SVG size:', svg.length, 'bytes');
-          console.error('Canvas size:', canvas.width, 'x', canvas.height);
-
-          // Last resort: try with even smaller dimensions
-          if (isLargeSvg && canvas.width > 1000) {
-            console.warn('🔄 Retrying with reduced dimensions...');
-            canvas.width = 800;
-            canvas.height = 600;
-            const retryCtx = canvas.getContext('2d');
-            // Keep transparent background (no fill)
-
-            const retryEncodedSvg = encodeURIComponent(svg)
-              .replace(/'/g, '%27')
-              .replace(/"/g, '%22');
-            const retrySvgDataUrl = `data:image/svg+xml;charset=utf-8,${retryEncodedSvg}`;
-            const retryImg = new window.Image();
-
-            retryImg.onload = () => {
-              try {
-                if (retryCtx) {
-                  retryCtx.drawImage(retryImg, 0, 0, 800, 600);
-                  const dataUrl = canvas.toDataURL('image/png', 0.9);
-                  console.log(`✅ Retry successful (${dataUrl.length} bytes)`);
-                  resolve(dataUrl);
-                }
-              } catch (e) {
-                reject(new Error('Retry failed: ' + (e as Error).message));
-              }
-            };
-
-            retryImg.onerror = () => {
-              reject(new Error('Failed to load SVG even with reduced dimensions'));
-            };
-
-            retryImg.src = retrySvgDataUrl;
-          } else {
-            reject(new Error('Failed to load SVG image'));
-          }
-        };
-
-        img.src = svgDataUrl;
-      } catch (error) {
-        console.error('❌ SVG encoding failed:', error);
-        reject(error);
-      }
-    });
-  };
+  // SVG to PNG conversion now handled by main process using sharp library
 
   // Simple hash function for diagram codes
   const hashDiagramCode = (code: string): string => {
@@ -461,14 +775,25 @@ function EditorView() {
         // Dynamically import mermaid
         const mermaid = (await import('mermaid')).default;
 
-        // Initialize with transparent background
+        // Initialize with default theme for proper edge rendering
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'base',
+          theme: 'default',
           themeVariables: {
             background: 'transparent',
+            primaryColor: '#fff',
+            primaryTextColor: '#000',
+            primaryBorderColor: '#000',
+            lineColor: '#000',
+            secondaryColor: '#f4f4f4',
+            tertiaryColor: '#f4f4f4',
           },
-          securityLevel: 'strict',
+          flowchart: {
+            htmlLabels: true,
+            curve: 'basis',
+          },
+          securityLevel: 'loose',
+          logLevel: 'error',
         });
 
         // Generate unique ID for this diagram
@@ -476,42 +801,31 @@ function EditorView() {
 
         // Render to SVG
         const { svg } = await mermaid.render(diagramId, diagramCode);
-        console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG`);
+        console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG (${svg.length} bytes)`);
 
-        // Convert to PNG
-        const pngDataUrl = await svgToPngDataUrl(svg, 2000);
-        console.log(`✅ [${i + 1}/${matches.length}] Converted to PNG`);
+        // Sanitize SVG to fix XML issues with foreignObject HTML
+        const sanitizedSvg = sanitizeMermaidSvg(svg);
 
-        // Save to project folder via IPC
-        const response = await api.pdf.saveMermaidImage({
+        // Convert SVG to PNG in browser (preserves foreignObject content)
+        console.log(`🔄 [${i + 1}/${matches.length}] Converting SVG to PNG...`);
+        const pngDataUrl = await convertSvgToPng(sanitizedSvg);
+        console.log(`✅ [${i + 1}/${matches.length}] PNG generated (${pngDataUrl.length} bytes)`);
+
+        // Save PNG via IPC
+        console.log(`🔄 [${i + 1}/${matches.length}] Saving PNG via IPC...`);
+        const response = await window.electronAPI.pdf.saveMermaidImage({
           projectId,
           diagramCode,
-          imageDataUrl: pngDataUrl,
+          svgString: pngDataUrl, // Send PNG data URL
         });
 
-        console.log(`📦 Response from saveMermaidImage:`, response);
-
         if (response.success && response.data?.filePath) {
-          // Use hash as key instead of full diagram code
-          const filePath = response.data.filePath;
-          if (typeof filePath === 'string' && filePath.length > 0) {
-            diagrams[diagramHash] = filePath;
-            console.log(
-              `✅ [${i + 1}/${matches.length}] Saved to file: ${filePath} (${response.data.fileSize} bytes)`
-            );
-            console.log(`🔑 Hash: ${diagramHash}, Path: ${filePath}, Type: ${typeof filePath}`);
-          } else {
-            console.error(
-              `❌ [${i + 1}/${matches.length}] Invalid file path:`,
-              filePath,
-              typeof filePath
-            );
-          }
+          // Store file path (not data URL)
+          diagrams[diagramHash] = response.data.filePath;
+          console.log(`✅ [${i + 1}/${matches.length}] Saved to: ${response.data.filePath}`);
+          console.log(`🔑 Hash: ${diagramHash}, Type: file path`);
         } else {
-          console.error(
-            `❌ [${i + 1}/${matches.length}] Failed to save image:`,
-            response.success ? 'success but no data' : response.error
-          );
+          console.warn(`⚠️ [${i + 1}/${matches.length}] Failed to save diagram`);
         }
 
         // Add small delay between conversions
@@ -891,7 +1205,7 @@ function EditorView() {
           </div>
           <div className="flex-1 overflow-hidden bg-zinc-700 flex items-center justify-center">
             {pdfDataUrl ? (
-              <iframe src={pdfDataUrl} className="w-full h-full border-0" title="PDF Preview" />
+              <PDFViewerComponent pdfDataUrl={pdfDataUrl} />
             ) : (
               <div className="text-center text-muted-foreground">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>

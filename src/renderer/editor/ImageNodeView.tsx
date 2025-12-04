@@ -14,8 +14,10 @@ export function ImageNodeView(props: NodeViewProps) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If src is a relative path (starts with 'assets/'), resolve it
-    if (src?.startsWith('assets/')) {
+    // If src is a relative path (starts with 'assets/' or '.inkpot/'), resolve it
+    const isRelativePath = src?.startsWith('assets/') || src?.startsWith('.inkpot/');
+
+    if (isRelativePath) {
       setLoading(true);
       console.log('🖼️ ImageNodeView: Resolving image path:', src);
 

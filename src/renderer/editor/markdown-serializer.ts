@@ -93,12 +93,12 @@ export const markdownSerializer = new MarkdownSerializer(
 				state.write(`<p style="text-align: ${textAlign}">`);
 				state.renderInline(node);
 				state.write("</p>");
-			state.closeBlock(node);
-		} else {
-			// Use default markdown for left-aligned or unspecified
-			defaultMarkdownSerializer.nodes.paragraph(state, node, node, 0);
-		}
-	},		// Inline nodes
+				state.closeBlock(node);
+			} else {
+				// Use default markdown for left-aligned or unspecified
+				defaultMarkdownSerializer.nodes.paragraph(state, node, node, 0);
+			}
+		}, // Inline nodes
 		text: defaultMarkdownSerializer.nodes.text,
 		// Hard break (Shift+Enter) - use backslash + newline for clarity
 		hard_break: (state) => {
@@ -113,10 +113,15 @@ export const markdownSerializer = new MarkdownSerializer(
 			state.write("\n\n---PAGE_BREAK---\n\n");
 		},
 
-		// Mermaid diagram serializer - output as fenced code block with caption
+		// Mermaid diagram serializer - output as fenced code block
+		// Note: imagePath is NOT saved in markdown - it's regenerated on load
 		mermaidDiagram: (state, node) => {
 			const { code, caption } = node.attrs;
-			console.log('💾 Serializing mermaid diagram:', { code: code?.substring(0, 50), caption });
+			console.log("💾 Serializing mermaid diagram:", {
+				code: code?.substring(0, 50),
+				caption,
+			});
+
 			// Write opening fence with mermaid language tag
 			state.write("```mermaid\n");
 			// Write diagram code exactly as stored

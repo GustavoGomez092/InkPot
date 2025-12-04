@@ -270,12 +270,13 @@ export interface IsFontCachedResponse {
 export interface SaveMermaidImageRequest {
 	projectId: string;
 	diagramCode: string; // Hash or unique identifier for the diagram
-	imageDataUrl: string; // PNG data URL
+	svgString: string; // SVG string to be converted to PNG by main process
 }
 
 export interface SaveMermaidImageResponse {
 	filePath: string; // Absolute path to saved image
 	fileSize: number;
+	dataUrl: string; // PNG data URL for immediate use in renderer
 }
 
 export interface PreviewPDFRequest {

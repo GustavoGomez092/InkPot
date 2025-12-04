@@ -51,8 +51,10 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ svgContent, capt
   // React-PDF's Image component supports both file paths and data URLs
   // File paths are preferred to avoid memory issues with large diagrams
   return (
-    <View style={styles.container}>
-      <Image src={svgContent} style={styles.image} />
+    <View style={styles.container} wrap={false}>
+      <View style={styles.imageContainer}>
+        <Image src={svgContent} style={styles.image} />
+      </View>
       {caption && (
         <Text
           style={[
@@ -73,17 +75,24 @@ const styles: Record<string, PDFStyle> = {
     marginHorizontal: 0,
     display: 'flex',
     flexDirection: 'column',
+    width: '100%',
+  },
+  imageContainer: {
+    width: '100%',
+    display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   image: {
-    maxWidth: '100%',
-    maxHeight: 400,
+    width: '100%',
     objectFit: 'contain',
   },
   caption: {
-    marginTop: 6,
+    marginTop: 0,
     fontStyle: 'italic',
     textAlign: 'center',
+    width: '100%',
   },
   errorBox: {
     padding: 12,

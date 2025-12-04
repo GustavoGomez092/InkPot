@@ -455,6 +455,19 @@ code {
   z-index: 999997 !important;
 }
 
+/* PDF Viewer - Prevent drag preview and improve pan behavior */
+[data-embedpdf-viewport] *,
+[data-embedpdf-viewport] img,
+[data-embedpdf-viewport] canvas,
+[data-embedpdf-viewport] svg {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-user-drag: none !important;
+  -webkit-touch-callout: none !important;
+  pointer-events: auto !important;
+  draggable: false !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

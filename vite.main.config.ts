@@ -10,6 +10,11 @@ export default defineConfig({
 					src: "src/main/assets/fonts/*",
 					dest: "assets/fonts",
 				},
+				{
+					// Copy sharp-loader.cjs without processing it
+					src: "src/main/services/sharp-loader.cjs",
+					dest: ".",
+				},
 			],
 		}),
 	],
@@ -21,6 +26,7 @@ export default defineConfig({
 				"@libsql/client",
 				"@prisma/adapter-libsql",
 				".prisma/client/index-browser",
+				"sharp", // Native module for image processing
 			],
 			output: {
 				format: "cjs",
