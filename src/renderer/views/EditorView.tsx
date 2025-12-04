@@ -12,7 +12,7 @@ import { Scroller, ScrollPluginPackage } from '@embedpdf/plugin-scroll/react';
 import { Viewport, ViewportPluginPackage } from '@embedpdf/plugin-viewport/react';
 import { useZoom, ZoomPluginPackage } from '@embedpdf/plugin-zoom/react';
 import { useNavigate, useParams } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type CoverData, CoverEditor, TiptapEditor } from '../components/editor';
 import { Button, Card, CardContent, CardHeader } from '../components/ui';
 
@@ -345,10 +345,47 @@ function ZoomAndPanToolbar() {
 
 /**
  * PDF Viewer Component using EmbedPDF
+ * Memoized to prevent re-renders on every keystroke
  */
-function PDFViewerComponent({ pdfDataUrl }: { pdfDataUrl: string }) {
+const PDFViewerComponent = memo(function PDFViewerComponent({
+  pdfDataUrl,
+}: {
+  pdfDataUrl: string;
+}) {
   const { engine, isLoading } = usePdfiumEngine();
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string>('');
+
+  // Extract timestamp from URL for unique PDF ID
+  const pdfId = useMemo(() => {
+    const timestamp = pdfBlobUrl.split('#')[1];
+    return timestamp ? `preview-pdf-${timestamp}` : 'preview-pdf';
+  }, [pdfBlobUrl]);
+
+  // Memoize plugins array to prevent EmbedPDF from recreating on every render
+  const plugins = useMemo(
+    () => [
+      createPluginRegistration(LoaderPluginPackage, {
+        loadingOptions: {
+          type: 'url',
+          pdfFile: {
+            id: pdfId,
+            url: pdfBlobUrl,
+          },
+        },
+      }),
+      createPluginRegistration(ViewportPluginPackage),
+      createPluginRegistration(ScrollPluginPackage),
+      createPluginRegistration(RenderPluginPackage),
+      createPluginRegistration(InteractionManagerPluginPackage),
+      createPluginRegistration(ZoomPluginPackage, {
+        defaultZoomLevel: 1.0,
+      }),
+      createPluginRegistration(PanPluginPackage, {
+        defaultMode: 'never', // Manual control via toolbar buttons
+      }),
+    ],
+    [pdfBlobUrl, pdfId]
+  );
 
   // Convert data URL to blob URL for LoaderPluginPackage
   useEffect(() => {
@@ -366,12 +403,19 @@ function PDFViewerComponent({ pdfDataUrl }: { pdfDataUrl: string }) {
         if (pdfDataUrl.startsWith('data:')) {
           // Remove the hash if present (timestamp added for cache busting)
           const cleanUrl = pdfDataUrl.split('#')[0];
+          console.log('🔄 Converting PDF data URL to blob (triggered by pdfDataUrl change)');
 
           // Extract the base64 data
           const base64Match = cleanUrl.match(/^data:([^;]+);base64,(.+)$/);
           if (base64Match) {
             const mimeType = base64Match[1];
             const base64Data = base64Match[2];
+
+            // Validate base64 data
+            if (!base64Data || base64Data.length === 0) {
+              console.error('Invalid base64 data in PDF URL');
+              return;
+            }
 
             // Convert base64 to binary
             const binaryString = atob(base64Data);
@@ -380,14 +424,31 @@ function PDFViewerComponent({ pdfDataUrl }: { pdfDataUrl: string }) {
               bytes[i] = binaryString.charCodeAt(i);
             }
 
+            // Validate PDF header (should start with %PDF)
+            const pdfHeader = String.fromCharCode.apply(null, Array.from(bytes.slice(0, 4)));
+            if (!pdfHeader.startsWith('%PDF')) {
+              console.error('Invalid PDF data: missing PDF header');
+              return;
+            }
+
             // Create blob and blob URL
             const blob = new Blob([bytes], { type: mimeType });
             createdBlobUrl = URL.createObjectURL(blob);
-            setPdfBlobUrl(createdBlobUrl);
+            // Preserve the timestamp hash to force plugin reload
+            const timestamp = pdfDataUrl.split('#')[1];
+            const blobUrlWithTimestamp = timestamp
+              ? `${createdBlobUrl}#${timestamp}`
+              : createdBlobUrl;
+            setPdfBlobUrl(blobUrlWithTimestamp);
+            console.log('✅ PDF blob URL created successfully with timestamp:', timestamp);
+          } else {
+            console.error('Failed to parse data URL format');
           }
         }
       } catch (error) {
         console.error('Failed to process PDF URL:', error);
+        // Don't set an invalid blob URL
+        setPdfBlobUrl('');
       }
     }
 
@@ -409,28 +470,6 @@ function PDFViewerComponent({ pdfDataUrl }: { pdfDataUrl: string }) {
       </div>
     );
   }
-
-  const plugins = [
-    createPluginRegistration(LoaderPluginPackage, {
-      loadingOptions: {
-        type: 'url',
-        pdfFile: {
-          id: 'preview-pdf',
-          url: pdfBlobUrl,
-        },
-      },
-    }),
-    createPluginRegistration(ViewportPluginPackage),
-    createPluginRegistration(ScrollPluginPackage),
-    createPluginRegistration(RenderPluginPackage),
-    createPluginRegistration(InteractionManagerPluginPackage),
-    createPluginRegistration(ZoomPluginPackage, {
-      defaultZoomLevel: 1.0,
-    }),
-    createPluginRegistration(PanPluginPackage, {
-      defaultMode: 'never', // Manual control via toolbar buttons
-    }),
-  ];
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -477,7 +516,7 @@ function PDFViewerComponent({ pdfDataUrl }: { pdfDataUrl: string }) {
       </EmbedPDF>
     </div>
   );
-}
+});
 
 function EditorView() {
   const { projectId } = useParams({ from: '/editor/$projectId' });
@@ -500,6 +539,24 @@ function EditorView() {
   const [coverTitle, setCoverTitle] = useState<string | null>(null);
   const [coverSubtitle, setCoverSubtitle] = useState<string | null>(null);
   const [coverAuthor, setCoverAuthor] = useState<string | null>(null);
+  const [projectThemeId, setProjectThemeId] = useState<string | null>(null);
+  const [availableThemes, setAvailableThemes] = useState<Array<{ id: string; name: string }>>([]);
+  const [activeTheme, setActiveTheme] = useState<{
+    backgroundColor: string;
+    textColor: string;
+    headingColor: string;
+    headingFont: string;
+    bodyFont: string;
+    h1Size: number;
+    h2Size: number;
+    h3Size: number;
+    h4Size: number;
+    h5Size: number;
+    h6Size: number;
+    bodySize: number;
+    leading: number;
+    codeBackground: string;
+  } | null>(null);
   const contentRef = useRef(content);
   const coverDataRef = useRef<CoverData>({
     title: '',
@@ -565,16 +622,49 @@ function EditorView() {
           setCoverSubtitle(result.data.project.coverSubtitle);
           setCoverAuthor(result.data.project.coverAuthor);
 
-          // Apply active theme on load to ensure preview uses current theme
-          const activeThemeId = localStorage.getItem('activeThemeId');
-          if (activeThemeId && activeThemeId !== result.data.project.themeId) {
-            console.log('📋 Applying active theme on load:', activeThemeId);
-            // Save with the active theme to update the database
-            await api.projects.save({
-              id: projectId,
-              content: loadedContent,
-              themeId: activeThemeId,
-            });
+          // Load theme data for editor styling - use project's theme
+          const projectThemeId = result.data.project.themeId;
+          console.log('🎨 Project theme ID:', projectThemeId);
+          setProjectThemeId(projectThemeId);
+          if (projectThemeId) {
+            const themeResult = await api.themes.get({ id: projectThemeId });
+            console.log('🎨 Theme fetch result:', themeResult);
+            if (themeResult.success && themeResult.data) {
+              console.log('🎨 Setting active theme:', {
+                name: themeResult.data.name,
+                headingFont: themeResult.data.headingFont,
+                bodyFont: themeResult.data.bodyFont,
+                h1Size: themeResult.data.h1Size,
+                backgroundColor: themeResult.data.backgroundColor,
+                textColor: themeResult.data.textColor,
+              });
+
+              // Load Google Fonts dynamically
+              const fontsToLoad = [themeResult.data.headingFont, themeResult.data.bodyFont];
+              const uniqueFonts = [...new Set(fontsToLoad)];
+
+              // Check if fonts are already loaded
+              const loadedFonts = Array.from(document.fonts.values()).map((f) => f.family);
+              const fontsToFetch = uniqueFonts.filter((font) => !loadedFonts.includes(`"${font}"`));
+
+              if (fontsToFetch.length > 0) {
+                console.log('🎨 Loading Google Fonts:', fontsToFetch);
+                const fontFamilies = fontsToFetch.map((f) => f.replace(/ /g, '+')).join('&family=');
+                const link = document.createElement('link');
+                link.href = `https://fonts.googleapis.com/css2?family=${fontFamilies}:wght@400;600;700&display=swap`;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+
+                // Wait a bit for fonts to load
+                await new Promise((resolve) => setTimeout(resolve, 300));
+              }
+
+              setActiveTheme(themeResult.data);
+            } else {
+              console.error('🎨 Failed to load theme:', themeResult);
+            }
+          } else {
+            console.warn('🎨 No theme ID found for project');
           }
         } else {
           throw new Error('Failed to load project data');
@@ -593,6 +683,21 @@ function EditorView() {
     loadProject();
   }, [projectId]);
 
+  // Load available themes
+  useEffect(() => {
+    const loadThemes = async () => {
+      if (typeof window === 'undefined' || !('electronAPI' in window)) {
+        return;
+      }
+      const api = window.electronAPI;
+      const result = await api.themes.list({});
+      if (result.success && result.data) {
+        setAvailableThemes(result.data.map((t) => ({ id: t.id, name: t.name })));
+      }
+    };
+    loadThemes();
+  }, []);
+
   // Save function (wrapped in useCallback to prevent unnecessary re-renders)
   const handleSave = useCallback(async () => {
     if (isSaving) return;
@@ -608,20 +713,19 @@ function EditorView() {
 
       if (editorMode === 'content') {
         // Save content editor data
-        const activeThemeId = localStorage.getItem('activeThemeId');
-
         console.log('💾 Saving content (first 500 chars):', contentRef.current.substring(0, 500));
         console.log('💾 Content contains mermaid:', contentRef.current.includes('```mermaid'));
 
         const result = await api.projects.save({
           id: projectId,
           content: contentRef.current,
-          themeId: activeThemeId || undefined,
+          themeId: projectThemeId || undefined,
         });
 
         if (result.success) {
           setLastSaved(new Date());
           console.log('✅ Project saved successfully');
+          console.log('✅ Saved content (first 500 chars):', contentRef.current.substring(0, 500));
         } else {
           throw new Error('Save failed');
         }
@@ -648,15 +752,24 @@ function EditorView() {
         }
       }
 
+      // Small delay to ensure file system has synced
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      console.log(
+        '🔄 Generating preview with content (first 500 chars):',
+        contentRef.current.substring(0, 500)
+      );
+
       // Refresh preview after save to show saved content
-      void generatePreview();
+      await generatePreview();
     } catch (error) {
       console.error('Failed to save:', error);
       alert(`Failed to save: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, projectId, editorMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSaving, projectId, editorMode, projectThemeId]);
 
   // Handle title rename
   const handleTitleSave = useCallback(async () => {
@@ -733,7 +846,7 @@ function EditorView() {
   // SVG to PNG conversion now handled by main process using sharp library
 
   // Simple hash function for diagram codes
-  const hashDiagramCode = (code: string): string => {
+  const hashDiagramCode = useCallback((code: string): string => {
     let hash = 0;
     for (let i = 0; i < code.length; i++) {
       const char = code.charCodeAt(i);
@@ -741,111 +854,114 @@ function EditorView() {
       hash = hash & hash; // Convert to 32bit integer
     }
     return `diagram-${Math.abs(hash).toString(36)}`;
-  };
+  }, []);
 
-  const renderMermaidDiagrams = async (content: string): Promise<Record<string, string>> => {
-    const mermaidRegex = /```mermaid\n([\s\S]*?)```/g;
-    const diagrams: Record<string, string> = {};
-    const diagramCodeToHash: Record<string, string> = {}; // Map diagram code to hash
-    const matches: string[] = [];
-    let match;
+  const renderMermaidDiagrams = useCallback(
+    async (content: string): Promise<Record<string, string>> => {
+      const mermaidRegex = /```mermaid\n([\s\S]*?)```/g;
+      const diagrams: Record<string, string> = {};
+      const diagramCodeToHash: Record<string, string> = {}; // Map diagram code to hash
+      const matches: string[] = [];
+      let match;
 
-    // First, collect all diagram codes
-    while ((match = mermaidRegex.exec(content)) !== null) {
-      matches.push(match[1].trim());
-    }
-
-    console.log(`📊 Found ${matches.length} mermaid diagrams to render`);
-
-    if (typeof window === 'undefined' || !('electronAPI' in window)) {
-      console.error('Electron API not available');
-      return diagrams;
-    }
-
-    const api = window.electronAPI;
-
-    // Process diagrams sequentially
-    for (let i = 0; i < matches.length; i++) {
-      const diagramCode = matches[i];
-      const diagramHash = hashDiagramCode(diagramCode);
-      diagramCodeToHash[diagramCode] = diagramHash;
-
-      console.log(`🔑 [${i + 1}/${matches.length}] Rendering diagram (hash: ${diagramHash})`);
-      try {
-        // Dynamically import mermaid
-        const mermaid = (await import('mermaid')).default;
-
-        // Initialize with default theme for proper edge rendering
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: 'default',
-          themeVariables: {
-            background: 'transparent',
-            primaryColor: '#fff',
-            primaryTextColor: '#000',
-            primaryBorderColor: '#000',
-            lineColor: '#000',
-            secondaryColor: '#f4f4f4',
-            tertiaryColor: '#f4f4f4',
-          },
-          flowchart: {
-            htmlLabels: true,
-            curve: 'basis',
-          },
-          securityLevel: 'loose',
-          logLevel: 'error',
-        });
-
-        // Generate unique ID for this diagram
-        const diagramId = `mermaid-render-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 11)}`;
-
-        // Render to SVG
-        const { svg } = await mermaid.render(diagramId, diagramCode);
-        console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG (${svg.length} bytes)`);
-
-        // Sanitize SVG to fix XML issues with foreignObject HTML
-        const sanitizedSvg = sanitizeMermaidSvg(svg);
-
-        // Convert SVG to PNG in browser (preserves foreignObject content)
-        console.log(`🔄 [${i + 1}/${matches.length}] Converting SVG to PNG...`);
-        const pngDataUrl = await convertSvgToPng(sanitizedSvg);
-        console.log(`✅ [${i + 1}/${matches.length}] PNG generated (${pngDataUrl.length} bytes)`);
-
-        // Save PNG via IPC
-        console.log(`🔄 [${i + 1}/${matches.length}] Saving PNG via IPC...`);
-        const response = await window.electronAPI.pdf.saveMermaidImage({
-          projectId,
-          diagramCode,
-          svgString: pngDataUrl, // Send PNG data URL
-        });
-
-        if (response.success && response.data?.filePath) {
-          // Store file path (not data URL)
-          diagrams[diagramHash] = response.data.filePath;
-          console.log(`✅ [${i + 1}/${matches.length}] Saved to: ${response.data.filePath}`);
-          console.log(`🔑 Hash: ${diagramHash}, Type: file path`);
-        } else {
-          console.warn(`⚠️ [${i + 1}/${matches.length}] Failed to save diagram`);
-        }
-
-        // Add small delay between conversions
-        if (i < matches.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      } catch (error) {
-        console.error(`❌ [${i + 1}/${matches.length}] Failed to render diagram:`, error);
+      // First, collect all diagram codes
+      while ((match = mermaidRegex.exec(content)) !== null) {
+        matches.push(match[1].trim());
       }
-    }
 
-    console.log(
-      `📊 Total diagrams successfully saved: ${Object.keys(diagrams).length}/${matches.length}`
-    );
-    console.log('📊 Diagram hash keys:', Object.keys(diagrams));
-    return diagrams;
-  };
+      console.log(`📊 Found ${matches.length} mermaid diagrams to render`);
 
-  // Generate PDF preview - NOT a useCallback to avoid dependency issues
-  const generatePreview = async () => {
+      if (typeof window === 'undefined' || !('electronAPI' in window)) {
+        console.error('Electron API not available');
+        return diagrams;
+      }
+
+      const api = window.electronAPI;
+
+      // Process diagrams sequentially
+      for (let i = 0; i < matches.length; i++) {
+        const diagramCode = matches[i];
+        const diagramHash = hashDiagramCode(diagramCode);
+        diagramCodeToHash[diagramCode] = diagramHash;
+
+        console.log(`🔑 [${i + 1}/${matches.length}] Rendering diagram (hash: ${diagramHash})`);
+        try {
+          // Dynamically import mermaid
+          const mermaid = (await import('mermaid')).default;
+
+          // Initialize with default theme for proper edge rendering
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            themeVariables: {
+              background: 'transparent',
+              primaryColor: '#fff',
+              primaryTextColor: '#000',
+              primaryBorderColor: '#000',
+              lineColor: '#000',
+              secondaryColor: '#f4f4f4',
+              tertiaryColor: '#f4f4f4',
+            },
+            flowchart: {
+              htmlLabels: true,
+              curve: 'basis',
+            },
+            securityLevel: 'loose',
+            logLevel: 'error',
+          });
+
+          // Generate unique ID for this diagram
+          const diagramId = `mermaid-render-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 11)}`;
+
+          // Render to SVG
+          const { svg } = await mermaid.render(diagramId, diagramCode);
+          console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG (${svg.length} bytes)`);
+
+          // Sanitize SVG to fix XML issues with foreignObject HTML
+          const sanitizedSvg = sanitizeMermaidSvg(svg);
+
+          // Convert SVG to PNG in browser (preserves foreignObject content)
+          console.log(`🔄 [${i + 1}/${matches.length}] Converting SVG to PNG...`);
+          const pngDataUrl = await convertSvgToPng(sanitizedSvg);
+          console.log(`✅ [${i + 1}/${matches.length}] PNG generated (${pngDataUrl.length} bytes)`);
+
+          // Save PNG via IPC
+          console.log(`🔄 [${i + 1}/${matches.length}] Saving PNG via IPC...`);
+          const response = await window.electronAPI.pdf.saveMermaidImage({
+            projectId,
+            diagramCode,
+            svgString: pngDataUrl, // Send PNG data URL
+          });
+
+          if (response.success && response.data?.filePath) {
+            // Store file path (not data URL)
+            diagrams[diagramHash] = response.data.filePath;
+            console.log(`✅ [${i + 1}/${matches.length}] Saved to: ${response.data.filePath}`);
+            console.log(`🔑 Hash: ${diagramHash}, Type: file path`);
+          } else {
+            console.warn(`⚠️ [${i + 1}/${matches.length}] Failed to save diagram`);
+          }
+
+          // Add small delay between conversions
+          if (i < matches.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.error(`❌ [${i + 1}/${matches.length}] Failed to render diagram:`, error);
+        }
+      }
+
+      console.log(
+        `📊 Total diagrams successfully saved: ${Object.keys(diagrams).length}/${matches.length}`
+      );
+      console.log('📊 Diagram hash keys:', Object.keys(diagrams));
+      return diagrams;
+    },
+    [projectId, hashDiagramCode]
+  );
+
+  // Generate PDF preview
+  const generatePreview = useCallback(async () => {
     const currentContent = contentRef.current;
     if (!currentContent || isGeneratingPreview) return;
 
@@ -895,13 +1011,18 @@ function EditorView() {
         console.log('📤 Full mermaidDiagrams object:', requestData.mermaidDiagrams);
       }
 
+      console.log(
+        '📤 About to call api.pdf.preview with content length:',
+        requestData.content.length
+      );
       const result = await api.pdf.preview(requestData);
 
       if (result.success && result.data.pdfDataUrl) {
         // Force iframe reload by appending a timestamp to the URL
         const urlWithTimestamp = `${result.data.pdfDataUrl}#${Date.now()}`;
+        console.log('✅ PDF preview updated successfully, setting new URL with timestamp');
+        console.log('📄 New PDF data URL length:', result.data.pdfDataUrl.length);
         setPdfDataUrl(urlWithTimestamp);
-        console.log('✅ PDF preview updated successfully');
       } else {
         console.error('Failed to generate PDF preview:', result);
         if (!result.success && 'error' in result) {
@@ -913,12 +1034,74 @@ function EditorView() {
     } finally {
       setIsGeneratingPreview(false);
     }
-  };
+  }, [projectId, isGeneratingPreview, renderMermaidDiagrams]);
 
-  // Generate initial preview on load - regenerate whenever content changes
+  // Debug: Log when theme changes
+  useEffect(() => {
+    if (activeTheme) {
+      console.log('🎨 Active theme updated in state:', {
+        name: (activeTheme as any).name,
+        headingFont: activeTheme.headingFont,
+        bodyFont: activeTheme.bodyFont,
+        backgroundColor: activeTheme.backgroundColor,
+        textColor: activeTheme.textColor,
+        h1Size: activeTheme.h1Size,
+      });
+    } else {
+      console.log('🎨 Active theme is null');
+    }
+  }, [activeTheme]);
+
+  // Handle theme change
+  const handleThemeChange = useCallback(
+    async (themeId: string) => {
+      if (typeof window === 'undefined' || !('electronAPI' in window)) {
+        return;
+      }
+      const api = window.electronAPI;
+
+      // Fetch the theme data
+      const themeResult = await api.themes.get({ id: themeId });
+      if (themeResult.success && themeResult.data) {
+        // Load Google Fonts dynamically
+        const fontsToLoad = [themeResult.data.headingFont, themeResult.data.bodyFont];
+        const uniqueFonts = [...new Set(fontsToLoad)];
+
+        const loadedFonts = Array.from(document.fonts.values()).map((f) => f.family);
+        const fontsToFetch = uniqueFonts.filter((font) => !loadedFonts.includes(`"${font}"`));
+
+        if (fontsToFetch.length > 0) {
+          console.log('🎨 Loading Google Fonts:', fontsToFetch);
+          const fontFamilies = fontsToFetch.map((f) => f.replace(/ /g, '+')).join('&family=');
+          const link = document.createElement('link');
+          link.href = `https://fonts.googleapis.com/css2?family=${fontFamilies}:wght@400;600;700&display=swap`;
+          link.rel = 'stylesheet';
+          document.head.appendChild(link);
+
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+
+        setActiveTheme(themeResult.data);
+        setProjectThemeId(themeId);
+
+        // Save the theme change to the project
+        await api.projects.save({
+          id: projectId,
+          content: contentRef.current,
+          themeId: themeId,
+        });
+
+        // Regenerate preview with new theme
+        await generatePreview();
+      }
+    },
+    [projectId, generatePreview]
+  );
+
+  // Generate initial preview on load ONLY (not on content changes)
   useEffect(() => {
     if (!isLoading && content) {
-      console.log('📋 Content ready - generating preview');
+      console.log('📋 Content ready - generating initial preview');
       // Small delay to ensure the editor has rendered
       const timer = setTimeout(() => {
         void generatePreview();
@@ -926,7 +1109,7 @@ function EditorView() {
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, content]);
+  }, [isLoading]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1121,7 +1304,22 @@ function EditorView() {
                   Cover Editor
                 </Button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                <select
+                  className="px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={projectThemeId || ''}
+                  onChange={(e) => handleThemeChange(e.target.value)}
+                  disabled={availableThemes.length === 0}
+                >
+                  <option value="" disabled>
+                    Select Theme
+                  </option>
+                  {availableThemes.map((theme) => (
+                    <option key={theme.id} value={theme.id}>
+                      {theme.name}
+                    </option>
+                  ))}
+                </select>
                 <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Save and Update Preview'}
                 </Button>
@@ -1131,10 +1329,32 @@ function EditorView() {
           <div className="flex-1 overflow-hidden flex flex-col bg-card">
             {editorMode === 'content' ? (
               <>
-                <div className="flex-1 overflow-hidden p-4">
+                <div
+                  className="flex-1 overflow-hidden p-4"
+                  style={{
+                    ...((activeTheme
+                      ? {
+                          '--editor-heading-font': activeTheme.headingFont,
+                          '--editor-body-font': activeTheme.bodyFont,
+                          '--editor-h1-size': `${activeTheme.h1Size}pt`,
+                          '--editor-h2-size': `${activeTheme.h2Size}pt`,
+                          '--editor-h3-size': `${activeTheme.h3Size}pt`,
+                          '--editor-h4-size': `${activeTheme.h4Size}pt`,
+                          '--editor-h5-size': `${activeTheme.h5Size}pt`,
+                          '--editor-h6-size': `${activeTheme.h6Size}pt`,
+                          '--editor-body-size': `${activeTheme.bodySize}pt`,
+                          '--editor-text-color': activeTheme.textColor,
+                          '--editor-heading-color': activeTheme.headingColor,
+                          '--editor-code-bg': activeTheme.codeBackground,
+                          '--editor-line-height': `${activeTheme.leading}`,
+                        }
+                      : {}) as React.CSSProperties),
+                  }}
+                >
                   <TiptapEditor
                     content={content}
                     projectId={projectId}
+                    backgroundColor={activeTheme?.backgroundColor}
                     onUpdate={(newContent) => {
                       // Update the ref immediately for saving without causing re-render
                       contentRef.current = newContent;

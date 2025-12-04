@@ -277,6 +277,7 @@ interface TiptapEditorProps {
   onUpdate?: (content: string) => void;
   placeholder?: string;
   projectId?: string; // Required for image uploads
+  backgroundColor?: string; // Theme background color
 }
 
 // Common emojis grouped by category
@@ -360,6 +361,7 @@ function TiptapEditor({
   onUpdate,
   placeholder = 'Start writing your markdown...',
   projectId,
+  backgroundColor,
 }: TiptapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -1208,7 +1210,10 @@ function TiptapEditor({
       </div>
 
       {/* Editor content - Scrollable */}
-      <div className="flex-1 overflow-auto bg-background overflow-x-hidden">
+      <div
+        className="flex-1 overflow-auto overflow-x-hidden"
+        style={{ backgroundColor: backgroundColor || 'var(--background)' }}
+      >
         <EditorContent editor={editor} />
       </div>
 

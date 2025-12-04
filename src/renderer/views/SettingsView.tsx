@@ -87,7 +87,6 @@ function SettingsView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [settingActive, setSettingActive] = useState(false);
   const [downloadingFont, setDownloadingFont] = useState<string | null>(null);
 
   const hasElectronAPI = typeof window !== 'undefined' && 'electronAPI' in window;
@@ -387,33 +386,6 @@ function SettingsView() {
       console.error('Failed to delete theme:', error);
       alert('Failed to delete theme. Please try again.');
       setDeleting(false);
-    }
-  };
-
-  const handleSetAsActiveTheme = async () => {
-    if (!hasElectronAPI) return;
-
-    const selectedTheme = themes.find((t) => t.id === selectedThemeId);
-
-    if (!selectedTheme) {
-      alert('No theme selected');
-      return;
-    }
-
-    setSettingActive(true);
-
-    try {
-      // Store the active theme ID in localStorage for now
-      // TODO: This could be stored in a proper settings table in the database
-      localStorage.setItem('activeThemeId', selectedThemeId);
-      alert(
-        `"${selectedTheme.name}" is now set as the active theme for new projects and PDF exports.`
-      );
-      setSettingActive(false);
-    } catch (error) {
-      console.error('Failed to set active theme:', error);
-      alert('Failed to set active theme. Please try again.');
-      setSettingActive(false);
     }
   };
 
@@ -937,37 +909,23 @@ function SettingsView() {
                   </Card>
 
                   {/* Action Buttons */}
-                  <div className="flex justify-between items-center gap-4">
-                    {/* Left side - Set Active Theme */}
-                    <Button
-                      variant="secondary"
-                      onClick={handleSetAsActiveTheme}
-                      disabled={settingActive || saving || deleting}
-                    >
-                      {settingActive ? 'Setting...' : 'Set as Active Theme'}
-                    </Button>{' '}
-                    {/* Right side - Save/Delete Buttons */}
-                    <div className="flex gap-3">
-                      {!themes.find((t) => t.id === selectedThemeId)?.isBuiltIn && (
-                        <Button
-                          variant="outline"
-                          onClick={handleDeleteTheme}
-                          disabled={deleting || saving || settingActive}
-                        >
-                          {deleting ? 'Deleting...' : 'Delete Theme'}
-                        </Button>
-                      )}
+                  <div className="flex justify-end items-center gap-3">
+                    {!themes.find((t) => t.id === selectedThemeId)?.isBuiltIn && (
                       <Button
-                        onClick={handleSaveTheme}
-                        disabled={saving || downloadingFont !== null || settingActive}
+                        variant="outline"
+                        onClick={handleDeleteTheme}
+                        disabled={deleting || saving}
                       >
-                        {saving
-                          ? 'Saving...'
-                          : themes.find((t) => t.id === selectedThemeId)?.isBuiltIn
-                            ? 'Save as New Theme'
-                            : 'Update Theme'}
+                        {deleting ? 'Deleting...' : 'Delete Theme'}
                       </Button>
-                    </div>
+                    )}
+                    <Button onClick={handleSaveTheme} disabled={saving || downloadingFont !== null}>
+                      {saving
+                        ? 'Saving...'
+                        : themes.find((t) => t.id === selectedThemeId)?.isBuiltIn
+                          ? 'Save as New Theme'
+                          : 'Update Theme'}
+                    </Button>
                   </div>
                 </div>
               </div>
