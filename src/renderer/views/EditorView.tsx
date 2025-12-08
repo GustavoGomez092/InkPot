@@ -911,49 +911,72 @@ function EditorView() {
           // Generate unique ID for this diagram
           const diagramId = `mermaid-render-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 11)}`;
 
-          // Render to SVG
-          const { svg } = await mermaid.render(diagramId, diagramCode);
-          console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG (${svg.length} bytes)`);
+          // Create a temporary container element
+          const tempContainer = document.createElement('div');
+          tempContainer.id = diagramId;
+          tempContainer.style.position = 'absolute';
+          tempContainer.style.left = '-9999px';
+          document.body.appendChild(tempContainer);
 
-          // Clean up ALL mermaid divs that accumulate in the document body
-          const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
-          mermaidDivs.forEach((div) => {
-            if (div.parentNode === document.body) {
-              div.remove();
+          try {
+            // Wait for DOM to register the element
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            // Render to SVG
+            const { svg } = await mermaid.render(diagramId, diagramCode);
+            console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG (${svg.length} bytes)`);
+
+            // Clean up ALL mermaid divs that accumulate in the document body
+            const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+            mermaidDivs.forEach((div) => {
+              if (div.parentNode === document.body) {
+                div.remove();
+              }
+            });
+
+            // Remove the temporary container
+            tempContainer.remove();
+
+            // Sanitize SVG to fix XML issues with foreignObject HTML
+            const sanitizedSvg = sanitizeMermaidSvg(svg);
+
+            // Convert SVG to PNG in browser (preserves foreignObject content)
+            console.log(`🔄 [${i + 1}/${matches.length}] Converting SVG to PNG...`);
+            const pngDataUrl = await convertSvgToPng(sanitizedSvg);
+            console.log(
+              `✅ [${i + 1}/${matches.length}] PNG generated (${pngDataUrl.length} bytes)`
+            );
+
+            // Save PNG via IPC
+            console.log(`🔄 [${i + 1}/${matches.length}] Saving PNG via IPC...`);
+            const response = await window.electronAPI.pdf.saveMermaidImage({
+              projectId,
+              diagramCode,
+              svgString: pngDataUrl, // Send PNG data URL
+            });
+
+            if (response.success && response.data?.filePath) {
+              // Store file path (not data URL)
+              diagrams[diagramHash] = response.data.filePath;
+              console.log(`✅ [${i + 1}/${matches.length}] Saved to: ${response.data.filePath}`);
+              console.log(`🔑 Hash: ${diagramHash}, Type: file path`);
+            } else {
+              console.warn(`⚠️ [${i + 1}/${matches.length}] Failed to save diagram`);
             }
-          });
 
-          // Sanitize SVG to fix XML issues with foreignObject HTML
-          const sanitizedSvg = sanitizeMermaidSvg(svg);
-
-          // Convert SVG to PNG in browser (preserves foreignObject content)
-          console.log(`🔄 [${i + 1}/${matches.length}] Converting SVG to PNG...`);
-          const pngDataUrl = await convertSvgToPng(sanitizedSvg);
-          console.log(`✅ [${i + 1}/${matches.length}] PNG generated (${pngDataUrl.length} bytes)`);
-
-          // Save PNG via IPC
-          console.log(`🔄 [${i + 1}/${matches.length}] Saving PNG via IPC...`);
-          const response = await window.electronAPI.pdf.saveMermaidImage({
-            projectId,
-            diagramCode,
-            svgString: pngDataUrl, // Send PNG data URL
-          });
-
-          if (response.success && response.data?.filePath) {
-            // Store file path (not data URL)
-            diagrams[diagramHash] = response.data.filePath;
-            console.log(`✅ [${i + 1}/${matches.length}] Saved to: ${response.data.filePath}`);
-            console.log(`🔑 Hash: ${diagramHash}, Type: file path`);
-          } else {
-            console.warn(`⚠️ [${i + 1}/${matches.length}] Failed to save diagram`);
-          }
-
-          // Add small delay between conversions
-          if (i < matches.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            // Add small delay between conversions
+            if (i < matches.length - 1) {
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+          } catch (error) {
+            console.error(`❌ [${i + 1}/${matches.length}] Failed to render diagram:`, error);
+            // Clean up temp container on error
+            if (tempContainer.parentNode) {
+              tempContainer.remove();
+            }
           }
         } catch (error) {
-          console.error(`❌ [${i + 1}/${matches.length}] Failed to render diagram:`, error);
+          console.error(`❌ [${i + 1}/${matches.length}] Failed overall:`, error);
         }
       }
 

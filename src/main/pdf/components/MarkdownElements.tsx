@@ -335,6 +335,7 @@ const ImageElement: React.FC<{
   let imageSrc = element.src;
 
   // If it's a file system path (not a URL), convert to proper file:// URL
+  // Note: In main process (PDF generation), file:// protocol is safe to use
   if (
     !imageSrc.startsWith('http://') &&
     !imageSrc.startsWith('https://') &&
@@ -344,7 +345,8 @@ const ImageElement: React.FC<{
     if (!imageSrc.startsWith('/')) {
       console.warn('⚠️ Image path is not absolute:', imageSrc);
     } else {
-      // Convert to file:// URL - React-PDF handles file:// URLs better
+      // Convert to file:// URL - React-PDF handles file:// URLs
+      // This is safe in main process context for PDF generation
       imageSrc = `file://${imageSrc}`;
     }
   }

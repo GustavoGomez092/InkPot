@@ -730,49 +730,71 @@ function TiptapEditor({
         });
 
         const renderId = `mermaid-regen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg } = await mermaid.render(renderId, code);
 
-        // Clean up ALL mermaid divs that accumulate in the document body
-        const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
-        mermaidDivs.forEach((div) => {
-          if (div.parentNode === document.body) {
-            div.remove();
-          }
-        });
+        // Create a temporary container element
+        const tempContainer = document.createElement('div');
+        tempContainer.id = renderId;
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        document.body.appendChild(tempContainer);
 
-        // Sanitize and convert SVG to PNG
-        const sanitizedSvg = sanitizeMermaidSvg(svg);
-        const pngDataUrl = await convertSvgToPng(sanitizedSvg);
+        try {
+          // Wait for DOM to register the element
+          await new Promise((resolve) => setTimeout(resolve, 0));
 
-        // Save PNG via IPC
-        if (!projectId) {
-          console.warn('⚠️ No projectId available for saving diagram');
-          continue;
-        }
-        const response = await window.electronAPI.pdf.saveMermaidImage({
-          projectId,
-          diagramCode: code,
-          svgString: pngDataUrl, // Send PNG data URL
-        });
+          const { svg } = await mermaid.render(renderId, code);
 
-        if (response.success && response.data?.filePath) {
-          console.log(`✅ Saved to file: ${response.data.filePath}`);
-          // Update the node with file path
-          editor.commands.command(({ tr }) => {
-            tr.setNodeMarkup(pos, undefined, {
-              ...attrs,
-              imagePath: response.data.filePath,
-            });
-            return true;
+          // Clean up ALL mermaid divs that accumulate in the document body
+          const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+          mermaidDivs.forEach((div) => {
+            if (div.parentNode === document.body) {
+              div.remove();
+            }
           });
-        } else {
-          console.warn(
-            `⚠️ Failed to save diagram:`,
-            !response.success ? 'Save failed' : 'No file path'
-          );
+
+          // Remove the temporary container
+          tempContainer.remove();
+
+          // Sanitize and convert SVG to PNG
+          const sanitizedSvg = sanitizeMermaidSvg(svg);
+          const pngDataUrl = await convertSvgToPng(sanitizedSvg);
+
+          // Save PNG via IPC
+          if (!projectId) {
+            console.warn('⚠️ No projectId available for saving diagram');
+            continue;
+          }
+          const response = await window.electronAPI.pdf.saveMermaidImage({
+            projectId,
+            diagramCode: code,
+            svgString: pngDataUrl, // Send PNG data URL
+          });
+
+          if (response.success && response.data?.filePath) {
+            console.log(`✅ Saved to file: ${response.data.filePath}`);
+            // Update the node with file path
+            editor.commands.command(({ tr }) => {
+              tr.setNodeMarkup(pos, undefined, {
+                ...attrs,
+                imagePath: response.data.filePath,
+              });
+              return true;
+            });
+          } else {
+            console.warn(
+              `⚠️ Failed to save diagram:`,
+              !response.success ? 'Save failed' : 'No file path'
+            );
+          }
+        } catch (error) {
+          console.error(`❌ Failed to regenerate image for diagram at pos ${pos}:`, error);
+          // Clean up temp container on error
+          if (tempContainer.parentNode) {
+            tempContainer.remove();
+          }
         }
       } catch (error) {
-        console.error(`❌ Failed to regenerate image for diagram at pos ${pos}:`, error);
+        console.error(`❌ Failed overall for diagram at pos ${pos}:`, error);
       }
     }
 

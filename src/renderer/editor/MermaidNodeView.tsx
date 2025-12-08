@@ -10,15 +10,16 @@ export function MermaidNodeView(props: NodeViewProps) {
   const { node, selected, editor } = props;
   const { code, caption, id, imagePath, updatedAt } = node.attrs as MermaidDiagramAttributes;
 
-  // Convert absolute file paths to file:// URLs for Electron
+  // Convert absolute file paths to app:// URLs for secure Electron file access
   // Add timestamp to force reload when image is updated
   const displaySrc = useMemo(() => {
     if (!imagePath) return '';
 
-    // Convert absolute paths to file:// URLs
+    // Convert absolute paths to app:// URLs (custom protocol handler)
     let fileUrl = imagePath;
     if (imagePath.startsWith('/') || imagePath.match(/^[A-Z]:\\/i)) {
-      fileUrl = `file://${imagePath}`;
+      // Use custom app:// protocol for secure local file access
+      fileUrl = `app://${imagePath}`;
     }
 
     // Add timestamp to bust cache when diagram is updated

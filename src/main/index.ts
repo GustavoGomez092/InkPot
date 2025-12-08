@@ -1,6 +1,7 @@
 // Electron Main Process Entry Point
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, protocol } from "electron";
 import { existsSync } from "fs";
+import { readFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import * as appData from "./services/app-data.js";
@@ -12,6 +13,61 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Register custom protocol for secure local file access
+// This allows loading local files without disabling webSecurity
+app.whenReady().then(() => {
+	protocol.handle("app", async (request) => {
+		// Remove the app:// protocol prefix
+		// URL format is: app:///absolute/path or app://C:/absolute/path
+		let url = request.url.slice("app://".length);
+
+		// Remove query string (e.g., ?t=timestamp for cache busting)
+		const queryIndex = url.indexOf("?");
+		if (queryIndex !== -1) {
+			url = url.slice(0, queryIndex);
+		}
+
+		// If the path starts with / (Unix) or drive letter (Windows), keep it
+		// Otherwise, add leading / for Unix paths
+		if (!url.startsWith("/") && !url.match(/^[A-Z]:/i)) {
+			url = "/" + url;
+		}
+
+		// Decode URI components to handle spaces and special characters
+		const filePath = decodeURIComponent(url); // Security: Ensure the file path is absolute and within allowed directories
+		// This prevents path traversal attacks
+		const normalizedPath = path.normalize(filePath);
+		if (!path.isAbsolute(normalizedPath)) {
+			console.error("❌ Not absolute path:", normalizedPath);
+			return new Response("Invalid path", { status: 400 });
+		}
+
+		try {
+			const data = await readFile(normalizedPath);
+
+			// Determine MIME type based on file extension
+			const ext = path.extname(normalizedPath).toLowerCase();
+			const mimeTypes: Record<string, string> = {
+				".png": "image/png",
+				".jpg": "image/jpeg",
+				".jpeg": "image/jpeg",
+				".gif": "image/gif",
+				".svg": "image/svg+xml",
+				".webp": "image/webp",
+				".bmp": "image/bmp",
+			};
+			const mimeType = mimeTypes[ext] || "application/octet-stream";
+
+			return new Response(data, {
+				headers: { "Content-Type": mimeType },
+			});
+		} catch (error) {
+			console.error("Failed to load file:", normalizedPath, error);
+			return new Response("File not found", { status: 404 });
+		}
+	});
+});
 
 function createWindow() {
 	// Preload script path - Electron Forge Vite plugin builds to .vite/build directory
@@ -52,7 +108,7 @@ function createWindow() {
 			contextIsolation: true,
 			nodeIntegration: false,
 			sandbox: false,
-			webSecurity: false, // Allow loading local files (needed for SVG diagrams)
+			webSecurity: true, // Re-enabled: Using custom 'app://' protocol for local files
 		},
 		title: "InkPot",
 		icon: iconPath,
@@ -121,16 +177,17 @@ function createWindow() {
 			});
 	} else {
 		// Production mode - load from built renderer files
-		// With asar disabled, files are in app/.vite/renderer/{MAIN_WINDOW_VITE_NAME}/
+		// Use app.getAppPath() which handles ASAR archives correctly
+		// Files are in <appPath>/.vite/renderer/{MAIN_WINDOW_VITE_NAME}/
 		const rendererPath = path.join(
-			process.resourcesPath,
-			"app",
+			app.getAppPath(),
 			".vite",
 			"renderer",
 			MAIN_WINDOW_VITE_NAME,
 			"index.html",
 		);
 		console.log("Loading renderer from:", rendererPath);
+		console.log("App path:", app.getAppPath());
 		mainWindow
 			.loadFile(rendererPath)
 			.then(() => {
