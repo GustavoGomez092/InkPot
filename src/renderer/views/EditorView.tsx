@@ -917,6 +917,14 @@ function EditorView() {
           const { svg } = await mermaid.render(diagramId, diagramCode);
           console.log(`✅ [${i + 1}/${matches.length}] Rendered to SVG (${svg.length} bytes)`);
 
+          // Clean up ALL mermaid divs that accumulate in the document body
+          const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+          mermaidDivs.forEach((div) => {
+            if (div.parentNode === document.body) {
+              div.remove();
+            }
+          });
+
           // Sanitize SVG to fix XML issues with foreignObject HTML
           const sanitizedSvg = sanitizeMermaidSvg(svg);
 

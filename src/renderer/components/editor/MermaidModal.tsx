@@ -26,29 +26,39 @@ export function MermaidModal(props: MermaidModalProps) {
 
   // Reset state and trigger validation when modal opens
   useEffect(() => {
-    if (open && initialCode.trim()) {
-      // Immediately validate the initial code
-      const validateInitial = async () => {
-        setState((prev) => ({ ...prev, isValidating: true }));
-        const validation = await validateMermaid(initialCode);
+    if (open) {
+      // Clean up any accumulated mermaid divs when modal opens
+      const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+      mermaidDivs.forEach((div) => {
+        if (div.parentNode === document.body) {
+          div.remove();
+        }
+      });
+
+      if (initialCode.trim()) {
+        // Immediately validate the initial code
+        const validateInitial = async () => {
+          setState((prev) => ({ ...prev, isValidating: true }));
+          const validation = await validateMermaid(initialCode);
+          setState({
+            code: initialCode,
+            caption: initialCaption,
+            validation,
+            isValidating: false,
+            previewKey: Date.now(),
+          });
+        };
+        validateInitial();
+      } else {
+        // Empty code - no validation needed, no error to show
         setState({
           code: initialCode,
           caption: initialCaption,
-          validation,
+          validation: { isValid: true, error: null }, // Set to valid when empty
           isValidating: false,
           previewKey: Date.now(),
         });
-      };
-      validateInitial();
-    } else if (open) {
-      // Empty code - no validation needed, no error to show
-      setState({
-        code: initialCode,
-        caption: initialCaption,
-        validation: { isValid: true, error: null }, // Set to valid when empty
-        isValidating: false,
-        previewKey: Date.now(),
-      });
+      }
     }
   }, [open, initialCode, initialCaption, validateMermaid]);
 
@@ -107,6 +117,14 @@ export function MermaidModal(props: MermaidModalProps) {
   };
 
   const handleCancel = () => {
+    // Clean up any lingering mermaid error elements in the document
+    const mermaidErrors = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+    mermaidErrors.forEach((el) => {
+      if (el.parentNode === document.body) {
+        el.remove();
+      }
+    });
+
     setState({
       code: initialCode,
       caption: '',

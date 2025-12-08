@@ -143,12 +143,34 @@ export function useMermaid(): UseMermaidReturn {
 				// Use provided ID or generate one with counter
 				const renderId = id || `mermaid-render-${++renderCounter.current}`;
 
+				// Clean up ALL mermaid divs from document body before rendering
+				// Mermaid creates these temporary containers and they accumulate
+				const allMermaidDivs = document.querySelectorAll(
+					'[id^="dmermaid-"], [id^="mermaid-"]',
+				);
+				allMermaidDivs.forEach((div) => {
+					if (div.parentNode === document.body) {
+						div.remove();
+					}
+				});
+
 				// Clear previous content
 				element.innerHTML = "";
 
 				// Render diagram
 				const { svg } = await mermaid.render(renderId, code);
 				element.innerHTML = svg;
+
+				// Clean up ALL mermaid divs again after rendering
+				// (Mermaid creates new ones during the render process)
+				const newMermaidDivs = document.querySelectorAll(
+					'[id^="dmermaid-"], [id^="mermaid-"]',
+				);
+				newMermaidDivs.forEach((div) => {
+					if (div.parentNode === document.body) {
+						div.remove();
+					}
+				});
 
 				// Ensure SVG has proper attributes for responsive sizing
 				const svgElement = element.querySelector("svg");
@@ -165,6 +187,16 @@ export function useMermaid(): UseMermaidReturn {
 					}
 				}
 			} catch (err) {
+				// Clean up mermaid divs even when error occurs
+				const mermaidDivs = document.querySelectorAll(
+					'[id^="dmermaid-"], [id^="mermaid-"]',
+				);
+				mermaidDivs.forEach((div) => {
+					if (div.parentNode === document.body) {
+						div.remove();
+					}
+				});
+
 				const error = err instanceof Error ? err : new Error(String(err));
 				setError(error);
 				throw error;

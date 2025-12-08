@@ -506,6 +506,14 @@ function TiptapEditor({
         const { svg } = await mermaid.render(renderId, code);
         console.log('   - SVG rendered, length:', svg.length);
 
+        // Clean up ALL mermaid divs that accumulate in the document body
+        const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+        mermaidDivs.forEach((div) => {
+          if (div.parentNode === document.body) {
+            div.remove();
+          }
+        });
+
         // Sanitize SVG to fix XML issues with foreignObject HTML
         const sanitizedSvg = sanitizeMermaidSvg(svg);
         console.log('   - SVG sanitized');
@@ -721,6 +729,14 @@ function TiptapEditor({
         const renderId = `mermaid-regen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const { svg } = await mermaid.render(renderId, code);
 
+        // Clean up ALL mermaid divs that accumulate in the document body
+        const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+        mermaidDivs.forEach((div) => {
+          if (div.parentNode === document.body) {
+            div.remove();
+          }
+        });
+
         // Sanitize and convert SVG to PNG
         const sanitizedSvg = sanitizeMermaidSvg(svg);
         const pngDataUrl = await convertSvgToPng(sanitizedSvg);
@@ -770,6 +786,29 @@ function TiptapEditor({
       ).__inkpot_current_project_id__ = undefined;
     };
   }, [projectId]);
+
+  // Periodic cleanup of accumulated Mermaid divs
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+      mermaidDivs.forEach((div) => {
+        if (div.parentNode === document.body) {
+          div.remove();
+        }
+      });
+    }, 5000); // Clean up every 5 seconds
+
+    return () => {
+      clearInterval(cleanupInterval);
+      // Final cleanup on unmount
+      const mermaidDivs = document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]');
+      mermaidDivs.forEach((div) => {
+        if (div.parentNode === document.body) {
+          div.remove();
+        }
+      });
+    };
+  }, []);
 
   // Convert markdown to HTML and set editor content on initial load
   useEffect(() => {
