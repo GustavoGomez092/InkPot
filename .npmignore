@@ -1,0 +1,38 @@
+# Development files
+.vscode/
+.github/
+.git/
+.eslintrc.json
+.prettierrc
+.gitignore
+.DS_Store
+
+# Build and test files
+dist/
+tests/
+specs/
+scripts/
+coverage/
+*.test.ts
+*.spec.ts
+
+# Config files
+vite*.config.ts
+tsconfig.json
+forge.config.ts
+postcss.config.js
+components.json
+index.html
+
+# Documentation
+*.md
+!README.md
+
+# Source files (compiled versions are in .vite)
+src/
+
+# Asset sources (outputs are in .vite)
+Assets/
+
+# Test files
+test-*.md

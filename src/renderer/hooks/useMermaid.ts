@@ -19,55 +19,6 @@ export interface MermaidThemeColors {
 }
 
 /**
- * Inject mermaid theme configuration into diagram code
- * Adds frontmatter config if not already present
- */
-function injectThemeConfig(
-	code: string,
-	themeColors?: MermaidThemeColors,
-): string {
-	if (!themeColors) return code;
-
-	// Check if code already has frontmatter config
-	if (code.trim().startsWith("---")) {
-		return code; // Don't modify if user has custom config
-	}
-
-	// Build theme variables from provided colors
-	const themeVars: string[] = [];
-	if (themeColors.primaryColor)
-		themeVars.push(`    primaryColor: '${themeColors.primaryColor}'`);
-	if (themeColors.primaryTextColor)
-		themeVars.push(`    primaryTextColor: '${themeColors.primaryTextColor}'`);
-	if (themeColors.primaryBorderColor)
-		themeVars.push(
-			`    primaryBorderColor: '${themeColors.primaryBorderColor}'`,
-		);
-	if (themeColors.lineColor)
-		themeVars.push(`    lineColor: '${themeColors.lineColor}'`);
-	if (themeColors.secondaryColor)
-		themeVars.push(`    secondaryColor: '${themeColors.secondaryColor}'`);
-	if (themeColors.tertiaryColor)
-		themeVars.push(`    tertiaryColor: '${themeColors.tertiaryColor}'`);
-	if (themeColors.backgroundColor)
-		themeVars.push(`    background: '${themeColors.backgroundColor}'`);
-	if (themeColors.textColor)
-		themeVars.push(`    mainBkg: '${themeColors.textColor}'`);
-
-	if (themeVars.length === 0) return code;
-
-	// Inject theme config as frontmatter
-	const config = `---
-config:
-  theme: 'base'
-  themeVariables:
-${themeVars.join("\n")}
----\n`;
-
-	return config + code;
-}
-
-/**
  * Lazy load Mermaid.js library with configuration
  */
 async function loadMermaid() {

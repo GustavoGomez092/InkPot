@@ -876,8 +876,6 @@ function EditorView() {
         return diagrams;
       }
 
-      const api = window.electronAPI;
-
       // Process diagrams sequentially
       for (let i = 0; i < matches.length; i++) {
         const diagramCode = matches[i];

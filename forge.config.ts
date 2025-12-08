@@ -10,14 +10,47 @@ const config: ForgeConfig = {
 		name: "InkPot",
 		executableName: "inkpot",
 		icon: "./Assets/icon/app-icon", // Extension auto-completed: .icns for macOS, .ico for Windows
-		asar: false, // Disable asar to troubleshoot renderer loading
+		asar: true, // Enable ASAR for better performance and smaller size
+		// Exclude dev dependencies and unnecessary files from packaging
+		ignore: [
+			// Development files
+			/^\/\.vscode/,
+			/^\/\.github/,
+			/^\/\.git/,
+			/^\/\.eslintrc/,
+			/^\/\.prettierrc/,
+			/^\/\.gitignore/,
+			/^\/\.DS_Store/,
+			// Build and test directories
+			/^\/dist/,
+			/^\/tests/,
+			/^\/specs/,
+			/^\/scripts/,
+			/^\/coverage/,
+			// Documentation and markdown files (except README)
+			/^\/.*\.md$/,
+			/^\/test-.*\.md$/,
+			/^\/RELEASE_NOTES\.md$/,
+			// Config files not needed in production
+			/^\/vite.*\.config\.ts$/,
+			/^\/tsconfig\.json$/,
+			/^\/forge\.config\.ts$/,
+			/^\/postcss\.config\.js$/,
+			/^\/components\.json$/,
+			/^\/index\.html$/, // Used only in dev
+			// Asset source files (build outputs are in .vite)
+			/^\/Assets/,
+			// Source files (compiled versions in .vite)
+			/^\/src/,
+		],
 	},
 	rebuildConfig: {},
 	hooks: {
 		packageAfterPrune: async (_config, buildPath) => {
 			const fs = await import("fs/promises");
 			const path = await import("path");
-			
+			const fse = await import("fs-extra");
+
 			// Remove "type": "module" from package.json for packaged app
 			// since we're outputting .cjs files which need CommonJS context
 			const pkgPath = path.default.join(buildPath, "package.json");
@@ -25,31 +58,102 @@ const config: ForgeConfig = {
 			delete pkg.type;
 			await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2));
 
-			// Copy entire node_modules to ensure all dependencies are available
-			// This is the simplest approach for Electron apps with complex dependencies
-			const fse = await import("fs-extra");
-			const sourceNodeModules = path.default.join(
-				process.cwd(),
-				"node_modules",
-			);
-			const targetNodeModules = path.default.join(buildPath, "node_modules");
+			console.log("🧹 Pruning unnecessary dependencies from node_modules...");
+			const nodeModulesPath = path.default.join(buildPath, "node_modules");
 
-			console.log("📦 Copying node_modules...");
-			await fse.default.copy(sourceNodeModules, targetNodeModules, {
-				filter: (src) => {
-					// Skip dev dependencies and unnecessary files
-					const relativePath = path.default.relative(sourceNodeModules, src);
-					// Skip electron and build tools
-					if (relativePath.startsWith("electron") ||
-						relativePath.startsWith("@electron-forge") ||
-						relativePath.startsWith("vite") ||
-						relativePath.startsWith("@vitejs")) {
-						return false;
+			// List of dev dependencies and build tools to remove
+			const unnecessaryPackages = [
+				// Build tools
+				"electron",
+				"@electron-forge",
+				"@electron/rebuild",
+				"electron-builder",
+				"app-builder-bin",
+				"app-builder-lib",
+				"7zip-bin",
+				// Vite and bundlers
+				"vite",
+				"@vitejs",
+				"webpack",
+				"esbuild",
+				"@esbuild",
+				"rollup",
+				// TypeScript compiler (not needed at runtime)
+				"typescript",
+				"@typescript-eslint",
+				"tsx",
+				// Linting and formatting
+				"eslint",
+				"prettier",
+				// Testing
+				"vitest",
+				"@playwright",
+				"playwright-core",
+				"@testing-library",
+				// Prisma CLI (keep only @prisma/client)
+				"prisma",
+				// Build utilities
+				"@remotion/google-fonts",
+				"google-fonts-helper",
+				"vite-plugin-static-copy",
+				"node-gyp",
+				// Babel (if using React compiler, it's compile-time)
+				"babel-plugin-react-compiler",
+				"@babel",
+			];
+
+			for (const pkg of unnecessaryPackages) {
+				const pkgPath = path.default.join(nodeModulesPath, pkg);
+				try {
+					if (await fse.default.pathExists(pkgPath)) {
+						await fse.default.remove(pkgPath);
+						console.log(`  ✓ Removed ${pkg}`);
 					}
-					return true;
-				},
-			});
-			console.log("✅ node_modules copied");
+				} catch (error) {
+					console.warn(`  ⚠ Failed to remove ${pkg}:`, error);
+				}
+			}
+
+			// Remove common unnecessary files from all packages
+			console.log("🧹 Removing unnecessary files from packages...");
+			const removePatterns = [
+				"**/*.md",
+				"**/*.map",
+				"**/*.ts", // Keep .d.ts but remove source .ts files where .js exists
+				"**/test/**",
+				"**/tests/**",
+				"**/__tests__/**",
+				"**/*.test.js",
+				"**/*.spec.js",
+				"**/example/**",
+				"**/examples/**",
+				"**/docs/**",
+				"**/LICENSE",
+				"**/CHANGELOG",
+				"**/.github/**",
+			];
+
+			const glob = await import("tinyglobby");
+			for (const pattern of removePatterns) {
+				try {
+					const files = await glob.glob([pattern], {
+						cwd: nodeModulesPath,
+						absolute: true,
+					});
+					for (const file of files) {
+						await fse.default.remove(file);
+					}
+					if (files.length > 0) {
+						console.log(
+							`  ✓ Removed ${files.length} files matching ${pattern}`,
+						);
+					}
+				} catch (error) {
+					console.warn(`  ⚠ Error removing ${pattern}:`, error);
+				}
+			}
+
+			console.log("✅ Pruning complete");
 		},
 	},
 	makers: [

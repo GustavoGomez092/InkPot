@@ -7,8 +7,16 @@ export default defineConfig({
 		viteStaticCopy({
 			targets: [
 				{
-					src: "src/main/assets/fonts/*",
+					// Only copy TTF fonts (exclude WOFF2, ZIP, and emoji font)
+					src: "src/main/assets/fonts/*.ttf",
 					dest: "assets/fonts",
+					rename: (name) => {
+						// Exclude the large emoji font
+						if (name === "NotoColorEmoji.ttf") return false;
+						// Exclude variable font (using specific weights instead)
+						if (name === "Inter-Variable.ttf") return false;
+						return name;
+					},
 				},
 				{
 					// Copy sharp-loader.cjs without processing it
@@ -27,6 +35,11 @@ export default defineConfig({
 				"@prisma/adapter-libsql",
 				".prisma/client/index-browser",
 				"sharp", // Native module for image processing
+				"electron-store",
+				"better-sqlite3",
+				"sql.js",
+				"fs-extra",
+				"image-size",
 			],
 			output: {
 				format: "cjs",

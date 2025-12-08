@@ -41,6 +41,7 @@
 		"@types/better-sqlite3": "^7.6.13",
 		"@types/fs-extra": "^11.0.4",
 		"@types/mermaid": "^9.1.0",
+		"prisma": "^6.19.0",
 		"@types/node": "^24.10.0",
 		"@types/react": "^19.2.2",
 		"@types/react-dom": "^19.2.2",
@@ -59,6 +60,7 @@
 		"postcss": "^8.5.6",
 		"prettier": "^3.6.2",
 		"tailwindcss": "^4.0.0",
+		"tinyglobby": "^0.2.15",
 		"tsx": "^4.20.6",
 		"typescript": "^5.9.3",
 		"vite": "^7.2.2",
@@ -105,11 +107,9 @@
 		"image-size": "^2.0.2",
 		"lucide-react": "^0.553.0",
 		"marked": "^17.0.0",
-		"prisma": "^6.19.0",
 		"prosemirror-markdown": "^1.13.2",
 		"react": "^19.0.0-rc.1",
 		"react-dom": "^19.0.0-rc.1",
-		"sql.js": "^1.13.0",
 		"tailwind-merge": "^3.4.0",
 		"zod": "^4.1.12"
 	}

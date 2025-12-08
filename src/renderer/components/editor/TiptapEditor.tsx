@@ -536,7 +536,10 @@ function TiptapEditor({
           imagePath = response.data.filePath;
           console.log('   - File saved:', imagePath);
         } else {
-          console.warn('   - Failed to save file:', response.error);
+          console.warn(
+            '   - Failed to save file:',
+            !response.success ? 'Save failed' : 'No file path'
+          );
         }
       } else {
         console.warn('⚠️ Skipping PNG generation - missing prerequisites');
@@ -763,7 +766,10 @@ function TiptapEditor({
             return true;
           });
         } else {
-          console.warn(`⚠️ Failed to save diagram:`, response.error);
+          console.warn(
+            `⚠️ Failed to save diagram:`,
+            !response.success ? 'Save failed' : 'No file path'
+          );
         }
       } catch (error) {
         console.error(`❌ Failed to regenerate image for diagram at pos ${pos}:`, error);
