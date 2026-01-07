@@ -37,7 +37,7 @@
 - [✓] 1.2 Research React-PDF emoji handling
 
 ### Phase 2: Emoji Detection & Parsing
-- [ ] 2.1 Create comprehensive emoji detection utility
+- [✓] 2.1 Create comprehensive emoji detection utility
 - [ ] 2.2 Add emoji segment tests
 
 ### Phase 3: Emoji Rendering Implementation
@@ -245,3 +245,97 @@ Font.registerEmojiSource({
 - Update InlineText to use emoji detection utility
 - Add `withVariationSelectors: true` to Font.registerEmojiSource() config
 - Consider switching to Twemoji for licensing compliance
+
+---
+
+### Subtask 2.1 - Emoji Detection Utility Created (2026-01-07)
+
+**Created:** src/main/pdf/utils/emoji-utils.ts
+
+**Implementation Details:**
+
+The emoji detection utility provides comprehensive Unicode emoji support using modern JavaScript APIs:
+
+**Core Architecture:**
+- **Grapheme Segmentation**: Uses `Intl.Segmenter` API with `granularity: 'grapheme'` to properly segment text into user-perceived characters
+- **Multi-Pattern Detection**: Combines multiple regex patterns and Unicode property checks for complete coverage
+- **TypeScript Interface**: Exports `TextSegment` interface with `{text: string, isEmoji: boolean}` structure
+
+**Emoji Types Supported:**
+
+1. **Basic Emojis** (😀, ❤️, 👍)
+   - Detection: Unicode properties `\p{Emoji_Presentation}` and `\p{Emoji}\uFE0F`
+   - Handles variation selectors (U+FE0F) correctly
+
+2. **Skin Tone Modifiers** (👍🏽, 👋🏿)
+   - Detection: Emoji modifier base + Fitzpatrick scale modifiers (U+1F3FB to U+1F3FF)
+   - Grapheme segmentation treats base+modifier as single unit
+
+3. **ZWJ Sequences** (👨‍👩‍👧, 👨‍💻, 🏃‍♂️)
+   - Detection: Zero-Width Joiner (U+200D) presence in grapheme
+   - Grapheme segmentation keeps entire sequence together
+   - Examples: families, professions, gendered variants
+
+4. **Flag Emojis** (🇺🇸, 🇬🇧, 🇯🇵)
+   - Detection: Regional indicator pairs (U+1F1E6 to U+1F1FF)
+   - Pattern: `FLAG_REGEX = /^[\u{1F1E6}-\u{1F1FF}]{2}/u`
+
+5. **Keycap Sequences** (1️⃣, #️⃣, *️⃣)
+   - Detection: Base character + optional VS-16 + combining enclosing keycap (U+20E3)
+   - Pattern: `KEYCAP_REGEX = /^[0-9#*]\uFE0F?\u20E3/`
+
+**Exported Functions:**
+
+```typescript
+// Primary segmentation function (required by acceptance criteria)
+export function splitTextIntoSegments(text: string): TextSegment[]
+
+// Emoji classification
+export function isEmoji(grapheme: string): boolean
+
+// Utility functions
+export function hasEmoji(text: string): boolean
+export function countEmojis(text: string): number
+```
+
+**Key Implementation Decisions:**
+
+1. **Intl.Segmenter over Simple Iteration**:
+   - Correctly handles multi-codepoint graphemes
+   - Prevents splitting compound emojis (e.g., 👨‍👩‍👧 stays as one unit)
+   - Native browser/Node.js API (Node 16+)
+
+2. **Multiple Detection Strategies**:
+   - Keycap sequences checked first (most specific pattern)
+   - Flag emojis checked second (regional indicator pairs)
+   - General emoji checked third (Unicode properties)
+   - Fallback to codepoint range checks for edge cases
+
+3. **Segment Merging**:
+   - Consecutive emoji graphemes merged into single emoji segment
+   - Consecutive non-emoji graphemes merged into single text segment
+   - Reduces number of segments for efficient rendering
+
+**Manual Verification:**
+
+Created test script at `scripts/test-emoji-utils.ts` with:
+- 9 segmentation test cases covering all emoji types
+- 7 individual emoji detection tests
+- 3 utility function tests (hasEmoji, countEmojis)
+
+To run manual verification:
+```bash
+tsx scripts/test-emoji-utils.ts
+```
+
+**Acceptance Criteria Status:**
+- ✅ Detects basic emojis (😀, ❤️)
+- ✅ Detects emoji with skin tone modifiers (👍🏽)
+- ✅ Detects ZWJ sequences (👨‍👩‍👧)
+- ✅ Detects flag emojis (🇺🇸)
+- ✅ Detects keycap sequences (1️⃣)
+- ✅ Function splitTextIntoSegments() returns array of {text, isEmoji} objects
+
+**Next Steps:**
+- Subtask 2.2: Create unit tests using Vitest
+- Subtask 3.1: Integrate emoji-utils into InlineText component
