@@ -1,0 +1,81 @@
+{
+  "subtasks": {
+    "subtask-1-1": {
+      "attempts": [
+        {
+          "session": 1,
+          "timestamp": "2026-01-06T23:12:40.521733",
+          "approach": "Implemented: Install docx npm package",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-2-1": {
+      "attempts": [
+        {
+          "session": 2,
+          "timestamp": "2026-01-06T23:14:18.421923",
+          "approach": "Implemented: Add Word export types to IPC contracts",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-2-2": {
+      "attempts": [
+        {
+          "session": 3,
+          "timestamp": "2026-01-06T23:16:01.272415",
+          "approach": "Implemented: Add Zod validation schemas for Word export",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-3-1": {
+      "attempts": [
+        {
+          "session": 4,
+          "timestamp": "2026-01-06T23:18:18.805306",
+          "approach": "Implemented: Create Heading element converter",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-3-2": {
+      "attempts": [
+        {
+          "session": 5,
+          "timestamp": "2026-01-06T23:19:49.285818",
+          "approach": "Implemented: Create Paragraph element converter",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-3-3": {
+      "attempts": [
+        {
+          "session": 6,
+          "timestamp": "2026-01-06T23:22:23.073519",
+          "approach": "Implemented: Create List element converter (ordered and unordered)",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    }
+  },
+  "stuck_subtasks": [],
+  "metadata": {
+    "created_at": "2026-01-06T23:11:55.910670",
+    "last_updated": "2026-01-06T23:22:23.073538"
+  }
+}

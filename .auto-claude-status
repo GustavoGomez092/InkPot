@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "001-word-document-export",
+  "state": "building",
+  "subtasks": {
+    "completed": 6,
+    "total": 19,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Element Converters",
+    "id": null,
+    "total": 9
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 7,
+    "started_at": "2026-01-06T23:11:55.911042"
+  },
+  "last_update": "2026-01-06T23:22:30.087605"
+}

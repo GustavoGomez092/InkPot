@@ -1,0 +1,4 @@
+{
+  "task_description": "I need you to create a new feature for Inkpot. Currently, Inkpot only exports as PDFs. I want you to research how to use the current Inkpot implementation to have multiple export types. Not only PDFs, but the one that we are going to implement today is going to be Word documents.",
+  "workflow_type": "feature"
+}

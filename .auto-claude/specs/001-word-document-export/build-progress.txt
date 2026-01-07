@@ -1,0 +1,95 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: Word Document Export
+Workspace: InkPot
+Started: 2026-01-06
+
+Workflow Type: feature
+Rationale: This is a new capability being added to the application. It requires creating
+new services, IPC handlers, and UI components while preserving existing PDF export
+functionality.
+
+Session 1 (Planner):
+- Completed deep codebase investigation
+- Documented existing patterns (PDF service, IPC handlers, markdown parser)
+- Created implementation_plan.json
+- Phases: 9
+- Total subtasks: 17
+- Created init.sh
+
+Phase Summary:
+- Phase 1 (Setup): 1 subtask - Install docx dependency
+- Phase 2 (Types): 2 subtasks - IPC contracts and Zod schemas
+- Phase 3 (Elements): 9 subtasks - All element converters (Heading, Paragraph, List, etc.)
+- Phase 4 (Document Builder): 1 subtask - Document.ts builder
+- Phase 5 (Service): 1 subtask - docx-service.ts
+- Phase 6 (IPC): 2 subtasks - handlers.ts and preload.ts
+- Phase 7 (UI): 1 subtask - Export format selection in EditorView
+- Phase 8 (Tests): 1 subtask - Unit tests for docx-service
+- Phase 9 (Integration): 1 subtask - E2E verification
+
+Services Involved:
+- main: Primary service - document generation, IPC handlers
+- renderer: UI changes for format selection
+- tests: Unit tests for Word service
+
+Key Files Identified:
+Files to Create:
+  - src/main/services/docx-service.ts
+  - src/main/docx/Document.ts
+  - src/main/docx/elements/Heading.ts
+  - src/main/docx/elements/Paragraph.ts
+  - src/main/docx/elements/List.ts
+  - src/main/docx/elements/CodeBlock.ts
+  - src/main/docx/elements/Table.ts
+  - src/main/docx/elements/Image.ts
+  - src/main/docx/elements/Blockquote.ts
+  - src/main/docx/elements/HorizontalRule.ts
+  - src/main/docx/elements/index.ts
+  - tests/unit/docx-service.test.ts
+
+Files to Modify:
+  - package.json (add docx dependency)
+  - src/shared/types/ipc-contracts.ts (Word export types)
+  - src/shared/validation/schemas.ts (Word export schemas)
+  - src/main/ipc/handlers.ts (docx:export handler)
+  - src/main/preload.ts (expose docx API)
+  - src/renderer/views/EditorView.tsx (format selection UI)
+
+Pattern Files to Reference:
+  - src/main/services/pdf-service.ts (service structure)
+  - src/main/pdf/Document.tsx (document generation flow)
+  - src/main/pdf/markdown-parser.ts (parseMarkdown() to reuse)
+  - src/main/pdf/components/MarkdownElements.tsx (element conversion pattern)
+  - src/main/ipc/handlers.ts (IPC handler pattern)
+
+Parallelism Analysis:
+- Max parallel phases: 2
+- Recommended workers: 1
+- Parallel groups:
+  * [phase-2-types, phase-3-elements] - Both depend on phase-1-setup
+  * [phase-7-ui, phase-8-tests] - Independent file sets
+
+Critical Implementation Notes:
+1. REUSE parseMarkdown() from markdown-parser.ts - do NOT create new parser
+2. Use docx library patterns:
+   - HeadingLevel.HEADING_1 through HEADING_6 (constants, not strings)
+   - Create separate Paragraph elements for line breaks (never \n in TextRun)
+   - Measurements in DXA units (1440 DXA = 1 inch, 20 DXA = 1 point)
+   - Images REQUIRE type parameter ('png', 'jpg', etc.)
+   - Lists use LevelFormat.BULLET constant, not string 'bullet'
+3. Follow pdf-service.ts pattern for service structure (console logging, try/catch, etc.)
+4. Use wrapIPCHandler() for consistent error handling in IPC
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 1
+
+Or manually:
+  cd /Users/gustavogomez/projects/InkPot/InkPot
+  npm install docx
+  npm run dev
+
+=== END SESSION 1 ===

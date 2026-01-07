@@ -1,0 +1,15 @@
+{
+  "discovered_files": {
+    "src/main/docx/elements/Heading.ts": {
+      "description": "DOCX element converters use functions that take MarkdownElement and ThemeData, return docx Paragraph objects. Font sizes in docx are in half-points (multiply points by 2). Spacing uses DXA units (20 DXA = 1 point). Colors must strip the '#' prefix. Use HeadingLevel enum constants, not strings.",
+      "category": "patterns",
+      "discovered_at": "2026-01-07T07:18:10.621289+00:00"
+    },
+    "src/main/docx/elements/List.ts": {
+      "description": "List element converter returns an array of Paragraphs (one per item) rather than a single element. Uses manual bullet/number prefixes with TextRun instead of built-in Word numbering API. Indentation is handled via left indent with hanging indent for proper text wrapping. 15pt base indent + 20pt per nesting level.",
+      "category": "architecture",
+      "discovered_at": "2026-01-07T07:22:12.533464+00:00"
+    }
+  },
+  "last_updated": "2026-01-07T07:22:12.533473+00:00"
+}

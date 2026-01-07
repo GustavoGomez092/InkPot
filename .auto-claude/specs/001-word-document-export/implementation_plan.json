@@ -1,0 +1,606 @@
+{
+  "feature": "Word Document Export",
+  "workflow_type": "feature",
+  "workflow_rationale": "This is a new capability being added to the application. It requires creating new services, IPC handlers, and UI components while preserving existing PDF export functionality. The task involves both backend document generation logic and frontend UI changes for format selection.",
+  "phases": [
+    {
+      "id": "phase-1-setup",
+      "name": "Project Setup",
+      "type": "setup",
+      "description": "Install docx dependency and verify it's importable",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Install docx npm package",
+          "service": "main",
+          "files_to_modify": [
+            "package.json"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && npm ls docx",
+            "expected": "docx@"
+          },
+          "status": "completed",
+          "notes": "Added docx ^9.4.1 to package.json dependencies. Note: npm install needs to be run to actually install the package (npm commands restricted in sandbox).",
+          "updated_at": "2026-01-07T07:12:34.602395+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-types",
+      "name": "Type Definitions & Validation",
+      "type": "implementation",
+      "description": "Add TypeScript types and Zod validation schemas for Word export",
+      "depends_on": [
+        "phase-1-setup"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Add Word export types to IPC contracts",
+          "service": "main",
+          "files_to_modify": [
+            "src/shared/types/ipc-contracts.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/shared/types/ipc-contracts.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'ExportDocxRequest' src/shared/types/ipc-contracts.ts",
+            "expected": "src/shared/types/ipc-contracts.ts"
+          },
+          "status": "completed",
+          "notes": "Added DOCX channel types (ExportDocxRequest, ExportDocxResponse) and ElectronAPI.docx.export method to ipc-contracts.ts. Follows existing PDF channel patterns. Verification passed.",
+          "updated_at": "2026-01-07T07:14:08.835460+00:00"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Add Zod validation schemas for Word export",
+          "service": "main",
+          "files_to_modify": [
+            "src/shared/validation/schemas.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/shared/validation/schemas.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'exportDocxSchema' src/shared/validation/schemas.ts",
+            "expected": "src/shared/validation/schemas.ts"
+          },
+          "status": "completed",
+          "notes": "Added exportDocxSchema Zod validation schema and ExportDocxInput type export to schemas.ts. Schema validates projectId (UUID), outputPath (file path), openAfterExport (optional boolean), and mermaidDiagrams (optional record). Follows existing exportPDFSchema pattern exactly. Verification passed.",
+          "updated_at": "2026-01-07T07:15:54.106169+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-elements",
+      "name": "Element Converters",
+      "type": "implementation",
+      "description": "Create docx element converters for each markdown element type",
+      "depends_on": [
+        "phase-1-setup"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Create Heading element converter",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/Heading.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/Heading.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created Heading.ts element converter with support for: heading levels H1-H6, theme-based styling (fonts, colors, sizes), inline formatting (bold, italic, code, links, strikethrough), text alignment, and proper DXA unit conversions for spacing. Follows patterns from MarkdownElements.tsx PDF implementation.",
+          "updated_at": "2026-01-07T07:18:03.613275+00:00"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Create Paragraph element converter",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/Paragraph.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/Paragraph.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created Paragraph.ts element converter with support for: theme-based styling (bodyFont, bodySize, textColor), inline formatting (bold, italic, code, links, strikethrough), text alignment, and proper DXA unit conversions for spacing. Follows patterns from Heading.ts implementation.",
+          "updated_at": "2026-01-07T07:19:40.831239+00:00"
+        },
+        {
+          "id": "subtask-3-3",
+          "description": "Create List element converter (ordered and unordered)",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/List.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/List.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created List.ts element converter with support for: ordered lists (numbered 1., 2., etc.), unordered lists (bullet \u2022), nested lists via indentLevels, inline formatting (bold, italic, code, links, strikethrough), proper indentation using DXA units, and margin spacing between items. Follows patterns from Heading.ts and Paragraph.ts implementations.",
+          "updated_at": "2026-01-07T07:22:06.179019+00:00"
+        },
+        {
+          "id": "subtask-3-4",
+          "description": "Create CodeBlock element converter",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/CodeBlock.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/CodeBlock.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-5",
+          "description": "Create Table element converter",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/Table.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/Table.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-6",
+          "description": "Create Image element converter",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/Image.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/Image.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-7",
+          "description": "Create Blockquote element converter",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/Blockquote.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/Blockquote.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-8",
+          "description": "Create HorizontalRule element converter",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/HorizontalRule.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/components/MarkdownElements.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/HorizontalRule.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-9",
+          "description": "Create barrel file for element exports",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/elements/index.ts"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/index.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-document-builder",
+      "name": "Document Builder",
+      "type": "implementation",
+      "description": "Create the main document builder that assembles elements into a Word document",
+      "depends_on": [
+        "phase-3-elements"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create Document.ts builder that converts markdown elements to Word document",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/docx/Document.ts"
+          ],
+          "patterns_from": [
+            "src/main/pdf/Document.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/Document.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-service",
+      "name": "Word Export Service",
+      "type": "implementation",
+      "description": "Create the main docx service for document generation and export",
+      "depends_on": [
+        "phase-4-document-builder"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Create docx-service.ts with generateDocx and exportDocx functions",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/main/services/docx-service.ts"
+          ],
+          "patterns_from": [
+            "src/main/services/pdf-service.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'generateDocx' src/main/services/docx-service.ts",
+            "expected": "src/main/services/docx-service.ts"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-ipc",
+      "name": "IPC Integration",
+      "type": "implementation",
+      "description": "Add IPC handlers and expose Word export API to renderer",
+      "depends_on": [
+        "phase-5-service",
+        "phase-2-types"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Add docx:export IPC handler",
+          "service": "main",
+          "files_to_modify": [
+            "src/main/ipc/handlers.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/main/ipc/handlers.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'docx:export' src/main/ipc/handlers.ts",
+            "expected": "src/main/ipc/handlers.ts"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Expose Word export methods in preload.ts",
+          "service": "main",
+          "files_to_modify": [
+            "src/main/preload.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/main/preload.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'docx' src/main/preload.ts",
+            "expected": "src/main/preload.ts"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-7-ui",
+      "name": "UI Integration",
+      "type": "implementation",
+      "description": "Add export format selection UI in the editor view",
+      "depends_on": [
+        "phase-6-ipc"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-7-1",
+          "description": "Add export format selection dropdown to EditorView",
+          "service": "renderer",
+          "files_to_modify": [
+            "src/renderer/views/EditorView.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/renderer/views/EditorView.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'Export Word' src/renderer/views/EditorView.tsx || grep -l 'docx' src/renderer/views/EditorView.tsx",
+            "expected": "src/renderer/views/EditorView.tsx"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-8-tests",
+      "name": "Unit Tests",
+      "type": "implementation",
+      "description": "Add unit tests for Word document generation service",
+      "depends_on": [
+        "phase-5-service"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-8-1",
+          "description": "Create unit tests for docx-service",
+          "service": "tests",
+          "files_to_modify": [],
+          "files_to_create": [
+            "tests/unit/docx-service.test.ts"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f tests/unit/docx-service.test.ts && echo 'OK'",
+            "expected": "OK"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-9-integration",
+      "name": "Integration Testing",
+      "type": "integration",
+      "description": "Verify end-to-end Word export flow works correctly",
+      "depends_on": [
+        "phase-7-ui",
+        "phase-8-tests"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-9-1",
+          "description": "End-to-end verification of Word export flow",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Start dev server with npm run dev",
+              "Create or open a project",
+              "Add content with headings, lists, code blocks",
+              "Click Export and select Word format",
+              "Choose save location",
+              "Verify .docx file is created",
+              "Open file in Word/LibreOffice to verify content"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 9,
+    "total_subtasks": 17,
+    "services_involved": [
+      "main",
+      "renderer",
+      "tests"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-2-types",
+            "phase-3-elements"
+          ],
+          "reason": "Both depend only on phase-1-setup, different file sets"
+        },
+        {
+          "phases": [
+            "phase-7-ui",
+            "phase-8-tests"
+          ],
+          "reason": "UI work can happen while tests are being written, independent file sets"
+        }
+      ],
+      "recommended_workers": 1,
+      "speedup_estimate": "Element converters can be parallelized but service work is sequential"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 1"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit",
+      "integration"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All existing tests pass",
+      "New unit tests pass for docx-service",
+      "Word documents can be generated and exported",
+      "Generated .docx files open correctly in Word/LibreOffice",
+      "Existing PDF export still works",
+      "No console errors during export"
+    ],
+    "verification_steps": [
+      {
+        "name": "TypeScript Compilation",
+        "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && npm run build",
+        "expected_outcome": "Build completes without errors",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Unit Tests",
+        "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && npm test",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Linting",
+        "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && npm run lint",
+        "expected_outcome": "No linting errors",
+        "type": "lint",
+        "required": false,
+        "blocking": false
+      }
+    ],
+    "reasoning": "Medium risk change requires unit tests and manual verification. The docx library is well-tested but we need to ensure proper integration with existing markdown parsing infrastructure."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "npm test"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [],
+      "services_to_test": [
+        "main"
+      ]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": [
+        "export-word"
+      ]
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:3000/",
+          "checks": [
+            "renders",
+            "no-console-errors"
+          ]
+        },
+        {
+          "url": "http://localhost:3000/editor/:projectId",
+          "checks": [
+            "export-button-visible",
+            "format-selection-works"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    },
+    "manual_verification": {
+      "required": true,
+      "checks": [
+        "Open exported .docx in Microsoft Word",
+        "Open exported .docx in LibreOffice Writer",
+        "Verify headings render with correct sizes",
+        "Verify lists render correctly",
+        "Verify code blocks have monospace font",
+        "Verify tables have proper structure",
+        "Verify images are embedded correctly"
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "updated_at": "2026-01-07T07:11:30.898Z",
+  "last_updated": "2026-01-07T07:22:06.179032+00:00"
+}

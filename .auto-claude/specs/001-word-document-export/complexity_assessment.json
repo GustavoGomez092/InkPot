@@ -1,0 +1,81 @@
+{
+  "complexity": "standard",
+  "workflow_type": "feature",
+  "confidence": 0.85,
+  "reasoning": "Adding Word export follows clear existing patterns from PDF export. The markdown parser and MarkdownElement structure are already format-agnostic and reusable. Requires research on docx library API but scope is well-contained to main process export services.",
+
+  "analysis": {
+    "scope": {
+      "estimated_files": 8,
+      "estimated_services": 1,
+      "is_cross_cutting": false,
+      "notes": "Changes localized to main process (src/main/). Files: 1) new word-service.ts, 2) handlers.ts (add IPC handlers), 3) ipc-contracts.ts (add types), 4) schemas.ts (add validation), 5) preload.ts (expose API), 6-8) UI components for format selection. Markdown parser is already reusable."
+    },
+    "integrations": {
+      "external_services": [],
+      "new_dependencies": ["docx"],
+      "research_needed": true,
+      "notes": "docx.js is the most popular Node.js library for Word document generation. Well-documented, maintained, and widely used. No external API calls - purely local file generation."
+    },
+    "infrastructure": {
+      "docker_changes": false,
+      "database_changes": false,
+      "config_changes": false,
+      "notes": "No infrastructure changes needed. Word export uses same file system patterns as PDF export. No new environment variables or configuration required."
+    },
+    "knowledge": {
+      "patterns_exist": true,
+      "research_required": true,
+      "unfamiliar_tech": ["docx"],
+      "notes": "PDF export provides excellent pattern to follow. Key reusable components: parseMarkdown() function and MarkdownElement interface. Research needed specifically for docx library API (Document, Paragraph, TextRun, Table objects)."
+    },
+    "risk": {
+      "level": "low",
+      "concerns": [
+        "Word styling may not perfectly match PDF styling",
+        "Mermaid diagrams need special handling (image embedding)",
+        "Cross-platform compatibility of generated .docx files"
+      ],
+      "notes": "Low risk - additive feature that doesn't modify existing PDF functionality. docx library is mature and well-tested. Fallback gracefully if diagram conversion fails."
+    }
+  },
+
+  "recommended_phases": [
+    "discovery",
+    "requirements",
+    "research",
+    "context",
+    "spec_writing",
+    "planning",
+    "validation"
+  ],
+
+  "flags": {
+    "needs_research": true,
+    "needs_self_critique": false,
+    "needs_infrastructure_setup": false
+  },
+
+  "validation_recommendations": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "minimal_mode": false,
+    "test_types_required": ["unit", "integration"],
+    "security_scan_required": false,
+    "staging_deployment_required": false,
+    "reasoning": "Medium risk - new export format touching multiple files. Unit tests for Word service functions, integration tests for IPC handlers. No security concerns as it's local file generation only."
+  },
+
+  "key_insights": {
+    "reusable_components": [
+      "parseMarkdown() - already format-agnostic",
+      "MarkdownElement interface - defines content structure",
+      "IPC handler patterns from PDF export",
+      "File system utilities (showSaveDialog, writeFile)"
+    ],
+    "architectural_approach": "Create parallel word-service.ts following pdf-service.ts pattern. Convert MarkdownElements to docx objects using docx library. Add export:word IPC channel alongside existing pdf: channels.",
+    "implementation_strategy": "1) Research docx library API, 2) Create word-service.ts with element-to-docx converters, 3) Add IPC handlers, 4) Update UI with format selection dropdown"
+  },
+
+  "created_at": "2025-01-06T19:00:00.000Z"
+}

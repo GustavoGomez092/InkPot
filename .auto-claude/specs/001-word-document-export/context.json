@@ -1,0 +1,68 @@
+{
+  "task_description": "Add Word document (.docx) export capability to InkPot, which currently only supports PDF export",
+  "scoped_services": ["main", "renderer"],
+  "files_to_modify": [
+    "package.json",
+    "src/shared/types/ipc-contracts.ts",
+    "src/shared/validation/schemas.ts",
+    "src/main/ipc/handlers.ts",
+    "src/main/preload.ts",
+    "src/renderer/views/EditorView.tsx"
+  ],
+  "files_to_reference": [
+    "src/main/services/pdf-service.ts",
+    "src/main/pdf/Document.tsx",
+    "src/main/pdf/markdown-parser.ts",
+    "src/main/pdf/components/MarkdownElements.tsx",
+    "src/main/ipc/handlers.ts"
+  ],
+  "patterns": {
+    "service_pattern": "Services use async functions with console logging (emoji prefixes for debugging), try/catch with meaningful errors, and separate generation from export (buffer vs file)",
+    "ipc_handler_pattern": "IPC handlers use wrapIPCHandler wrapper, Zod schema validation, Prisma for database access, and return structured response objects",
+    "element_pattern": "Markdown elements are parsed into MarkdownElement[] by parseMarkdown(), then converted to format-specific output (React components for PDF, docx objects for Word)",
+    "preload_pattern": "APIs exposed via electronAPI object with channel-based grouping (pdf, themes, projects, etc.)"
+  },
+  "existing_implementations": {
+    "markdown_parser": {
+      "file": "src/main/pdf/markdown-parser.ts",
+      "exports": "parseMarkdown() function and MarkdownElement type",
+      "note": "This is format-agnostic and MUST be reused for Word export - do not create new parser"
+    },
+    "pdf_service": {
+      "file": "src/main/services/pdf-service.ts",
+      "functions": ["generatePDF()", "exportPDF()", "previewPDF()"],
+      "pattern": "Accept content, theme, projectDir; return Buffer; write to file in export function"
+    },
+    "ipc_handlers": {
+      "file": "src/main/ipc/handlers.ts",
+      "channels": ["pdf:export", "pdf:preview", "pdf:saveMermaidImage"],
+      "pattern": "Use wrapIPCHandler, validate with Zod, fetch from Prisma, return { success, data }"
+    }
+  },
+  "technology_stack": {
+    "runtime": "Electron",
+    "main_process": "TypeScript",
+    "renderer": "React + TypeScript",
+    "build_tool": "Vite",
+    "database": "Prisma with LibSQL",
+    "pdf_generation": "@react-pdf/renderer",
+    "word_generation": "docx (to be installed)",
+    "validation": "Zod"
+  },
+  "docx_library_notes": {
+    "critical_gotchas": [
+      "Use HeadingLevel.HEADING_1 constants, NOT strings",
+      "Create separate Paragraph elements for line breaks, NEVER use \\n in TextRun",
+      "All measurements in DXA units (1440 DXA = 1 inch, 20 DXA = 1 point)",
+      "Images REQUIRE type parameter ('png', 'jpg', 'gif', etc.)",
+      "Lists use LevelFormat.BULLET constant, NOT string 'bullet'"
+    ],
+    "key_imports": [
+      "Document", "Packer", "Paragraph", "TextRun", "Table", "TableRow", "TableCell",
+      "ImageRun", "HeadingLevel", "AlignmentType", "LevelFormat", "NumberFormat",
+      "WidthType", "BorderStyle", "ShadingType", "convertInchesToTwip"
+    ]
+  },
+  "created_at": "2026-01-06T23:03:55.211771",
+  "updated_at": "2026-01-07T00:00:00.000000"
+}
