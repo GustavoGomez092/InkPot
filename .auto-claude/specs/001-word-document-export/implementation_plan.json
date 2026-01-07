@@ -249,7 +249,9 @@
             "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/HorizontalRule.ts && echo 'OK'",
             "expected": "OK"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created HorizontalRule.ts element converter that converts markdown horizontal rule elements to DOCX paragraphs with a bottom border. Uses standard patterns: spacing in DXA units, colors without '#' prefix, BorderStyle.SINGLE with 1pt width.",
+          "updated_at": "2026-01-07T07:32:05.420641+00:00"
         },
         {
           "id": "subtask-3-9",
@@ -265,7 +267,9 @@
             "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/elements/index.ts && echo 'OK'",
             "expected": "OK"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created barrel file index.ts that exports all 8 DOCX element converters: createHeadingParagraph, createParagraphElement, createListParagraphs, createCodeBlockParagraphs, createTableElement, createImageParagraph, createBlockquoteElement, createHorizontalRuleElement. Uses .js extension in imports for ESM compatibility. Commit: 2219a44",
+          "updated_at": "2026-01-07T07:33:24.134656+00:00"
         }
       ]
     },
@@ -295,7 +299,9 @@
             "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && test -f src/main/docx/Document.ts && echo 'OK'",
             "expected": "OK"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created Document.ts builder that converts markdown elements to Word document. Features: parseMarkdown() integration from pdf/markdown-parser, all element type handling (heading, paragraph, list, checklist, codeBlock, blockquote, horizontalRule, image, table, mermaidDiagram, pageBreak), theme-based styling, Mermaid diagram support via data URLs, docx Packer buffer generation. Follows patterns from pdf/Document.tsx. Commit: 7644335",
+          "updated_at": "2026-01-07T07:36:00.707250+00:00"
         }
       ]
     },
@@ -325,7 +331,9 @@
             "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'generateDocx' src/main/services/docx-service.ts",
             "expected": "src/main/services/docx-service.ts"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created docx-service.ts with generateDocx, exportDocx, and previewDocx functions following the pdf-service.ts pattern exactly. Features: theme-based styling, mermaid diagram support, proper error handling with console logging. Commit: 75ada65",
+          "updated_at": "2026-01-07T07:37:28.247021+00:00"
         }
       ]
     },
@@ -356,7 +364,9 @@
             "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'docx:export' src/main/ipc/handlers.ts",
             "expected": "src/main/ipc/handlers.ts"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added docx:export IPC handler to handlers.ts. Follows pdf:export pattern exactly: imports exportDocxSchema for validation, imports generateDocx and exportDocx from docx-service, handler retrieves project with theme, reads content from file, generates DOCX buffer, exports to output path, and optionally opens file after export. Commit: 5a44957",
+          "updated_at": "2026-01-07T07:39:13.021032+00:00"
         },
         {
           "id": "subtask-6-2",
@@ -374,7 +384,9 @@
             "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'docx' src/main/preload.ts",
             "expected": "src/main/preload.ts"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added docx namespace to preload.ts electronAPI object with export method that invokes \"docx:export\" IPC channel. Follows existing patterns from pdf, cover, and other namespaces. Verification passed: grep found 'docx' in preload.ts. Commit: 51c71cd",
+          "updated_at": "2026-01-07T07:40:34.936447+00:00"
         }
       ]
     },
@@ -610,5 +622,5 @@
   "status": "in_progress",
   "planStatus": "in_progress",
   "updated_at": "2026-01-07T07:11:30.898Z",
-  "last_updated": "2026-01-07T07:30:41.099174+00:00"
+  "last_updated": "2026-01-07T07:40:34.936458+00:00"
 }

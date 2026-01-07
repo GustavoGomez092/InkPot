@@ -119,11 +119,83 @@
         }
       ],
       "status": "completed"
+    },
+    "subtask-3-8": {
+      "attempts": [
+        {
+          "session": 11,
+          "timestamp": "2026-01-06T23:32:12.270616",
+          "approach": "Implemented: Create HorizontalRule element converter",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-3-9": {
+      "attempts": [
+        {
+          "session": 12,
+          "timestamp": "2026-01-06T23:33:32.940881",
+          "approach": "Implemented: Create barrel file for element exports",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-4-1": {
+      "attempts": [
+        {
+          "session": 13,
+          "timestamp": "2026-01-06T23:36:09.942103",
+          "approach": "Implemented: Create Document.ts builder that converts markdown elements to Word document",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-5-1": {
+      "attempts": [
+        {
+          "session": 14,
+          "timestamp": "2026-01-06T23:37:36.138488",
+          "approach": "Implemented: Create docx-service.ts with generateDocx and exportDocx functions",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-6-1": {
+      "attempts": [
+        {
+          "session": 15,
+          "timestamp": "2026-01-06T23:39:20.734395",
+          "approach": "Implemented: Add docx:export IPC handler",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-6-2": {
+      "attempts": [
+        {
+          "session": 16,
+          "timestamp": "2026-01-06T23:40:40.474998",
+          "approach": "Implemented: Expose Word export methods in preload.ts",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
     }
   },
   "stuck_subtasks": [],
   "metadata": {
     "created_at": "2026-01-06T23:11:55.910670",
-    "last_updated": "2026-01-06T23:30:49.086486"
+    "last_updated": "2026-01-06T23:40:40.475083"
   }
 }
