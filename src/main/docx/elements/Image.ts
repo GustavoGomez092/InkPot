@@ -29,6 +29,39 @@ function pointsToDxa(points: number): number {
 }
 
 /**
+ * Convert DXA units to points (20 DXA = 1 point)
+ */
+function dxaToPoints(dxa: number): number {
+  return dxa / 20;
+}
+
+/**
+ * Convert inches to DXA (twips) - 1 inch = 1440 DXA
+ */
+function inchesToDxa(inches: number): number {
+  return Math.round(inches * 1440);
+}
+
+/**
+ * Calculate the content width in DXA based on theme page settings
+ * Content width = page width - left margin - right margin
+ */
+function calculateContentWidth(theme: ThemeData): number {
+  const pageWidthInches = theme.pageWidth || 8.5; // Default US Letter
+  const marginLeftInches = theme.marginLeft || 1;
+  const marginRightInches = theme.marginRight || 1;
+  const contentWidthInches = pageWidthInches - marginLeftInches - marginRightInches;
+  return inchesToDxa(contentWidthInches);
+}
+
+/**
+ * Calculate the content width in points based on theme page settings
+ */
+function calculateContentWidthPoints(theme: ThemeData): number {
+  return dxaToPoints(calculateContentWidth(theme));
+}
+
+/**
  * Extract base64 data from a data URL
  * Returns the buffer and detected image type
  */
@@ -91,15 +124,10 @@ function getImageTypeFromPath(filePath: string): 'png' | 'jpg' | 'gif' | 'bmp' {
 }
 
 /**
- * Default max width for images in points (approximately 6 inches at 72 DPI)
- * This keeps images within typical document margins
+ * Default max height for images in points (approximately 9 inches)
+ * This prevents images from spanning multiple pages
  */
-const MAX_IMAGE_WIDTH = 432;
-
-/**
- * Default max height for images in points
- */
-const MAX_IMAGE_HEIGHT = 600;
+const MAX_IMAGE_HEIGHT = 648;
 
 /**
  * Read PNG dimensions from buffer
@@ -189,12 +217,16 @@ function getImageDimensions(buffer: Buffer, imageType: 'png' | 'jpg' | 'gif' | '
 /**
  * Calculate scaled dimensions to fit within max bounds while preserving aspect ratio
  * Uses actual image dimensions if available, otherwise falls back to defaults
+ * Wide images are allowed to span the full document content width
  */
 function calculateDimensions(
   actualDimensions: { width: number; height: number } | null,
-  maxWidth: number = MAX_IMAGE_WIDTH,
+  theme: ThemeData,
   maxHeight: number = MAX_IMAGE_HEIGHT
 ): { width: number; height: number } {
+  // Calculate max width from theme's page dimensions (full content width)
+  const maxWidth = calculateContentWidthPoints(theme);
+
   // If we have actual dimensions, scale to fit within bounds while preserving aspect ratio
   if (actualDimensions && actualDimensions.width > 0 && actualDimensions.height > 0) {
     const { width: imgWidth, height: imgHeight } = actualDimensions;
@@ -203,7 +235,7 @@ function calculateDimensions(
     let width = imgWidth;
     let height = imgHeight;
 
-    // Scale down if wider than max
+    // Scale down if wider than max (full content width)
     if (width > maxWidth) {
       width = maxWidth;
       height = width / aspectRatio;
@@ -222,10 +254,10 @@ function calculateDimensions(
   }
 
   // Default to a reasonable size that fits most documents
-  // Use a more reasonable default aspect ratio (4:3) instead of tall (432:600)
+  // Use a more reasonable default aspect ratio (4:3)
   return {
-    width: Math.min(maxWidth, MAX_IMAGE_WIDTH),
-    height: Math.min(maxWidth * 0.75, MAX_IMAGE_HEIGHT), // 4:3 aspect ratio
+    width: Math.round(maxWidth),
+    height: Math.round(Math.min(maxWidth * 0.75, maxHeight)), // 4:3 aspect ratio
   };
 }
 
@@ -277,7 +309,8 @@ export function createImageParagraph(
     const actualDimensions = getImageDimensions(imageData, imageType);
 
     // Calculate scaled dimensions preserving aspect ratio
-    const dimensions = calculateDimensions(actualDimensions);
+    // Wide images are allowed to span the full document content width
+    const dimensions = calculateDimensions(actualDimensions, theme);
 
     // Create the ImageRun
     const imageRun = new ImageRun({
