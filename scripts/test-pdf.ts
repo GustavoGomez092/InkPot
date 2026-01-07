@@ -42,17 +42,18 @@ async function testPDFGeneration() {
 
 		console.log(`📄 Using theme: ${theme.name}`);
 
-		// Test markdown content
-		const testContent = `# Welcome to InkPot
+		// Test markdown content with emoji examples
+		const testContent = `# Welcome to InkPot 🎉
 
-This is a test document to verify PDF generation.
+This is a test document to verify PDF generation with emoji support! 😀
 
-## Features
+## Features ✨
 
-- **Bold text** works
-- *Italic text* works
-- \`Inline code\` works
-- [Links](https://example.com) work
+- **Bold text** works ✅
+- *Italic text* works 👍
+- \`Inline code\` works 💻
+- [Links](https://example.com) work 🔗
+- Emojis render correctly! 🚀
 
 ### Code Block
 
@@ -62,18 +63,32 @@ function hello() {
 }
 \`\`\`
 
-## Lists
+## Lists 📝
 
-1. Ordered item 1
-2. Ordered item 2
-3. Ordered item 3
+1. Ordered item 1 🥇
+2. Ordered item 2 🥈
+3. Ordered item 3 🥉
 
-- Unordered item A
-- Unordered item B
-- Unordered item C
+- Unordered item A 🔥
+- Unordered item B ⭐
+- Unordered item C 🌟
 
-> This is a blockquote
-> It spans multiple lines
+## Emoji Types Test
+
+### Basic Emojis
+Standard Unicode emojis: 😀 😂 🎉 🔥 ✅ ⭐ 🚀 🌍 ❤️ 👍
+
+### Emoji with Formatting
+**Bold emojis**: 🎯 🎨 🎭 | *Italic emojis*: 🎪 🎬 🎤
+
+### Skin Tone Modifiers
+Diverse representation: 👋🏻 👋🏼 👋🏽 👋🏾 👋🏿
+
+### Emoji in Context
+The project is going great! 🚀 Our team 👨‍👩‍👧‍👦 is working hard 💪 to deliver quality results ✨
+
+> This is a blockquote with emojis 📖
+> "Success is not final, failure is not fatal" 💫
 
 ---
 
@@ -81,26 +96,30 @@ function hello() {
 
 ---PAGE_BREAK---
 
-# Page 2
+# Page 2 📄
 
-This content should appear on the second page.
+This content should appear on the second page with more emoji tests! 🎊
+
+## International Flags 🌍
+
+🇺🇸 🇬🇧 🇨🇦 🇫🇷 🇩🇪 🇯🇵 🇨🇳 🇰🇷 🇮🇳 🇧🇷
 
 ## More Content
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Lorem ipsum dolor sit amet 🌸, consectetur adipiscing elit.
+Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua 🌟.
 
 ---
 
 ## Horizontal Rule
 
-Content above the line.
+Content above the line 👆
 
-Content below the line.
+Content below the line 👇
 
-## Final Section
+## Final Section ✅
 
-The end of our test document.
+The end of our test document. All emoji types should render correctly! 🎉
 `;
 
 		console.log("📝 Generating PDF from markdown...\n");
