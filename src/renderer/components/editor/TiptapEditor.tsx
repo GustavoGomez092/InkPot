@@ -400,7 +400,14 @@ function TiptapEditor({
       }
     };
 
-    const handleScrollOrResize = () => {
+    const handleScrollOrResize = (event: Event) => {
+      // Don't close if scrolling inside the emoji picker
+      if (event.type === 'scroll' && emojiPickerRef.current) {
+        const target = event.target as Node;
+        if (emojiPickerRef.current.contains(target)) {
+          return; // Scrolling inside picker, don't close
+        }
+      }
       setShowEmojiPicker(false);
     };
 
@@ -1225,9 +1232,10 @@ function TiptapEditor({
               if (!showEmojiPicker && emojiButtonRef.current) {
                 // Calculate position when opening
                 const rect = emojiButtonRef.current.getBoundingClientRect();
+                const pickerWidth = 320; // w-80 = 20rem = 320px
                 setEmojiPickerPosition({
                   top: rect.bottom + 4, // 4px gap below button
-                  left: rect.left,
+                  left: rect.right - pickerWidth, // Position picker to the left (expands towards editor)
                 });
               }
               setShowEmojiPicker(!showEmojiPicker);
