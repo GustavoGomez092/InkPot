@@ -84,6 +84,13 @@ export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, th
 
 /**
  * Get the bold variant of a font family for headings
+ *
+ * Maps React-PDF built-in font families to their bold variants.
+ * This is necessary because React-PDF requires explicit bold font names
+ * rather than using fontWeight: 'bold' for these standard PDF fonts.
+ *
+ * @param fontFamily - The base font family name
+ * @returns The bold variant font family name
  */
 function getBoldFont(fontFamily: string): string {
   if (fontFamily === 'Helvetica') return 'Helvetica-Bold';
