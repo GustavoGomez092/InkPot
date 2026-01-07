@@ -191,11 +191,23 @@
         }
       ],
       "status": "completed"
+    },
+    "subtask-7-1": {
+      "attempts": [
+        {
+          "session": 17,
+          "timestamp": "2026-01-06T23:42:41.710491",
+          "approach": "Implemented: Add export format selection dropdown to EditorView",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
     }
   },
   "stuck_subtasks": [],
   "metadata": {
     "created_at": "2026-01-06T23:11:55.910670",
-    "last_updated": "2026-01-06T23:40:40.475083"
+    "last_updated": "2026-01-06T23:42:41.710504"
   }
 }

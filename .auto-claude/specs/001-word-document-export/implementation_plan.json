@@ -416,7 +416,9 @@
             "command": "cd /Users/gustavogomez/projects/InkPot/InkPot && grep -l 'Export Word' src/renderer/views/EditorView.tsx || grep -l 'docx' src/renderer/views/EditorView.tsx",
             "expected": "src/renderer/views/EditorView.tsx"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added export format selection dropdown to EditorView. Features: exportFormat state (pdf | docx), format selection dropdown with PDF and Word options, dynamic export button label, handleExport function updated to support both PDF and DOCX exports via electronAPI.docx.export(), file dialog filters update based on selected format. Commit: 273299f",
+          "updated_at": "2026-01-07T07:42:28.252899+00:00"
         }
       ]
     },
@@ -622,5 +624,5 @@
   "status": "in_progress",
   "planStatus": "in_progress",
   "updated_at": "2026-01-07T07:11:30.898Z",
-  "last_updated": "2026-01-07T07:40:34.936458+00:00"
+  "last_updated": "2026-01-07T07:42:28.252929+00:00"
 }
