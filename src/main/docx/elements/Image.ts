@@ -102,19 +102,130 @@ const MAX_IMAGE_WIDTH = 432;
 const MAX_IMAGE_HEIGHT = 600;
 
 /**
+ * Read PNG dimensions from buffer
+ * PNG header format: 8-byte signature, then IHDR chunk with width/height as 4-byte big-endian integers
+ * Returns null if not a valid PNG or dimensions can't be read
+ */
+function getPngDimensions(buffer: Buffer): { width: number; height: number } | null {
+  // Check PNG signature: 137 80 78 71 13 10 26 10
+  const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (buffer.length < 24) return null;
+
+  for (let i = 0; i < 8; i++) {
+    if (buffer[i] !== pngSignature[i]) return null;
+  }
+
+  // IHDR chunk starts at byte 8
+  // Bytes 8-11: chunk length
+  // Bytes 12-15: chunk type (IHDR = 0x49484452)
+  // Bytes 16-19: width (big-endian)
+  // Bytes 20-23: height (big-endian)
+  const chunkType = buffer.toString('ascii', 12, 16);
+  if (chunkType !== 'IHDR') return null;
+
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+
+  return { width, height };
+}
+
+/**
+ * Read JPEG dimensions from buffer
+ * JPEG uses SOF0/SOF2 markers to store dimensions
+ * Returns null if not a valid JPEG or dimensions can't be read
+ */
+function getJpegDimensions(buffer: Buffer): { width: number; height: number } | null {
+  // Check JPEG signature: FFD8FF
+  if (buffer.length < 3 || buffer[0] !== 0xFF || buffer[1] !== 0xD8 || buffer[2] !== 0xFF) {
+    return null;
+  }
+
+  let offset = 2;
+  while (offset < buffer.length - 8) {
+    // Find marker
+    if (buffer[offset] !== 0xFF) {
+      offset++;
+      continue;
+    }
+
+    const marker = buffer[offset + 1];
+
+    // SOF0 (baseline) or SOF2 (progressive)
+    if (marker === 0xC0 || marker === 0xC2) {
+      // Skip marker and length (2 bytes each), precision (1 byte)
+      // Height is at offset+5 (2 bytes big-endian)
+      // Width is at offset+7 (2 bytes big-endian)
+      const height = buffer.readUInt16BE(offset + 5);
+      const width = buffer.readUInt16BE(offset + 7);
+      return { width, height };
+    }
+
+    // Skip to next marker
+    if (marker === 0xD8 || marker === 0xD9) {
+      offset += 2;
+    } else {
+      const length = buffer.readUInt16BE(offset + 2);
+      offset += 2 + length;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get image dimensions from buffer, supporting PNG and JPEG
+ */
+function getImageDimensions(buffer: Buffer, imageType: 'png' | 'jpg' | 'gif' | 'bmp'): { width: number; height: number } | null {
+  if (imageType === 'png') {
+    return getPngDimensions(buffer);
+  }
+  if (imageType === 'jpg') {
+    return getJpegDimensions(buffer);
+  }
+  // For GIF and BMP, we don't have parsers - return null to use defaults
+  return null;
+}
+
+/**
  * Calculate scaled dimensions to fit within max bounds while preserving aspect ratio
- * For now, we use sensible defaults since we can't easily get image dimensions
- * without additional dependencies
+ * Uses actual image dimensions if available, otherwise falls back to defaults
  */
 function calculateDimensions(
+  actualDimensions: { width: number; height: number } | null,
   maxWidth: number = MAX_IMAGE_WIDTH,
   maxHeight: number = MAX_IMAGE_HEIGHT
 ): { width: number; height: number } {
+  // If we have actual dimensions, scale to fit within bounds while preserving aspect ratio
+  if (actualDimensions && actualDimensions.width > 0 && actualDimensions.height > 0) {
+    const { width: imgWidth, height: imgHeight } = actualDimensions;
+    const aspectRatio = imgWidth / imgHeight;
+
+    let width = imgWidth;
+    let height = imgHeight;
+
+    // Scale down if wider than max
+    if (width > maxWidth) {
+      width = maxWidth;
+      height = width / aspectRatio;
+    }
+
+    // Scale down if still taller than max
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * aspectRatio;
+    }
+
+    return {
+      width: Math.round(width),
+      height: Math.round(height),
+    };
+  }
+
   // Default to a reasonable size that fits most documents
-  // Images will be scaled proportionally by Word if needed
+  // Use a more reasonable default aspect ratio (4:3) instead of tall (432:600)
   return {
     width: Math.min(maxWidth, MAX_IMAGE_WIDTH),
-    height: Math.min(maxHeight, MAX_IMAGE_HEIGHT),
+    height: Math.min(maxWidth * 0.75, MAX_IMAGE_HEIGHT), // 4:3 aspect ratio
   };
 }
 
@@ -162,8 +273,11 @@ export function createImageParagraph(
       imageType = getImageTypeFromPath(filePath);
     }
 
-    // Calculate dimensions
-    const dimensions = calculateDimensions();
+    // Get actual image dimensions for proper aspect ratio
+    const actualDimensions = getImageDimensions(imageData, imageType);
+
+    // Calculate scaled dimensions preserving aspect ratio
+    const dimensions = calculateDimensions(actualDimensions);
 
     // Create the ImageRun
     const imageRun = new ImageRun({

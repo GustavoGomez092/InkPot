@@ -203,11 +203,35 @@
         }
       ],
       "status": "completed"
+    },
+    "subtask-8-1": {
+      "attempts": [
+        {
+          "session": 18,
+          "timestamp": "2026-01-06T23:45:58.699476",
+          "approach": "Implemented: Create unit tests for docx-service",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-9-1": {
+      "attempts": [
+        {
+          "session": 19,
+          "timestamp": "2026-01-06T23:48:55.094306",
+          "approach": "Implemented: End-to-end verification of Word export flow",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
     }
   },
   "stuck_subtasks": [],
   "metadata": {
     "created_at": "2026-01-06T23:11:55.910670",
-    "last_updated": "2026-01-06T23:42:41.710504"
+    "last_updated": "2026-01-06T23:48:55.094331"
   }
 }

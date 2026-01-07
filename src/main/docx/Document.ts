@@ -7,6 +7,7 @@
 import {
   Document,
   Packer,
+  PageBreak,
   Paragraph,
   Table,
   TextRun,
@@ -23,6 +24,58 @@ import {
   createBlockquoteElement,
   createHorizontalRuleElement,
 } from './elements/index.js';
+
+/**
+ * Map custom font names to standard Word-compatible fonts
+ * Similar to PDF font mapping but using fonts commonly available in Word
+ *
+ * Sans-serif fonts map to Arial (universal) or Aptos (modern)
+ * Serif fonts map to Times New Roman (universal) or Cambria (modern)
+ * Monospace fonts map to Courier New
+ */
+const fontFamilyMap: Record<string, string> = {
+  // Sans-serif fonts → Arial (universally available in Word)
+  'Open Sans': 'Arial',
+  'Roboto': 'Arial',
+  'Montserrat': 'Arial',
+  'Inter': 'Arial',
+  'Lato': 'Arial',
+  'Source Sans Pro': 'Arial',
+  'Nunito': 'Arial',
+  'Poppins': 'Arial',
+  'Raleway': 'Arial',
+  'Work Sans': 'Arial',
+  'IBM Plex Sans': 'Arial',
+  'DM Sans': 'Arial',
+  'Helvetica': 'Arial',
+  // Serif fonts → Times New Roman (universally available in Word)
+  'Merriweather': 'Times New Roman',
+  'Playfair Display': 'Times New Roman',
+  'Lora': 'Times New Roman',
+  'Georgia': 'Georgia', // Georgia is available in Word
+  'PT Serif': 'Times New Roman',
+  'Libre Baskerville': 'Times New Roman',
+  'EB Garamond': 'Times New Roman',
+  'Crimson Text': 'Times New Roman',
+  'Noto Serif': 'Times New Roman',
+  'Source Serif Pro': 'Times New Roman',
+  'Times-Roman': 'Times New Roman',
+  // Monospace fonts → Courier New (universally available)
+  'Source Code Pro': 'Courier New',
+  'JetBrains Mono': 'Courier New',
+  'Fira Code': 'Courier New',
+  'IBM Plex Mono': 'Courier New',
+  'Courier': 'Courier New',
+};
+
+/**
+ * Get a safe font family name for Word rendering
+ * Maps custom font names to fonts commonly available in Microsoft Word
+ * Defaults to Arial (sans-serif) if font is not in the mapping
+ */
+function getSafeFontFamily(fontFamily: string): string {
+  return fontFamilyMap[fontFamily] || 'Arial';
+}
 
 /**
  * Simple hash function for diagram codes (matches PDF Document implementation)
@@ -302,12 +355,11 @@ function convertElement(
       return [createTableElement(element, theme)];
 
     case 'pageBreak':
-      // Word handles page breaks via section properties or manual break
-      // For simplicity, we add an empty paragraph with page break before
+      // Use PageBreak run inside a paragraph for proper page break
+      // This ensures the break is rendered correctly in Word
       return [
         new Paragraph({
-          pageBreakBefore: true,
-          children: [],
+          children: [new PageBreak()],
         }),
       ];
 
@@ -377,6 +429,21 @@ export async function createDocxDocument(
   console.log('📄 DOCX Document - Content contains mermaid:', content.includes('```mermaid'));
   console.log('📄 DOCX Document - Content (first 500 chars):', content.substring(0, 500));
 
+  // Create a safe theme with Word-compatible fonts
+  // This ensures consistent rendering across different systems
+  const safeTheme: ThemeData = {
+    ...theme,
+    bodyFont: getSafeFontFamily(theme.bodyFont),
+    headingFont: getSafeFontFamily(theme.headingFont),
+  };
+
+  console.log('📄 DOCX Document - Font mapping:', {
+    originalBody: theme.bodyFont,
+    safeBody: safeTheme.bodyFont,
+    originalHeading: theme.headingFont,
+    safeHeading: safeTheme.headingFont,
+  });
+
   // Parse markdown to structured elements
   let elements = parseMarkdown(content, projectDir);
   console.log('📄 DOCX Document - Parsed elements:', elements.length, 'total');
@@ -388,11 +455,11 @@ export async function createDocxDocument(
   // Apply pre-rendered Mermaid images
   elements = await applyMermaidImages(elements, mermaidDiagrams);
 
-  // Convert all elements to docx paragraphs/tables
+  // Convert all elements to docx paragraphs/tables using safe theme
   const documentChildren: (Paragraph | Table)[] = [];
 
   for (const element of elements) {
-    const converted = convertElement(element, theme);
+    const converted = convertElement(element, safeTheme);
     documentChildren.push(...converted);
   }
 
@@ -403,8 +470,8 @@ export async function createDocxDocument(
         children: [
           new TextRun({
             text: 'Empty document',
-            font: theme.bodyFont,
-            size: pointsToHalfPoints(theme.bodySize),
+            font: safeTheme.bodyFont,
+            size: pointsToHalfPoints(safeTheme.bodySize),
             color: '999999',
             italics: true,
           }),
