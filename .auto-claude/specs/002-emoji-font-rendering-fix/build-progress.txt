@@ -34,7 +34,7 @@
 
 ### Phase 1: Research & Foundation
 - [✓] 1.1 Test current emoji rendering behavior
-- [ ] 1.2 Research React-PDF emoji handling
+- [✓] 1.2 Research React-PDF emoji handling
 
 ### Phase 2: Emoji Detection & Parsing
 - [ ] 2.1 Create comprehensive emoji detection utility
@@ -101,3 +101,147 @@
 - Uses Apple emoji PNG images from CDN (64x64)
 - InlineText component currently does NOT use emoji detection (functions are disabled)
 - Hypothesis: Basic emojis may work, but complex sequences (ZWJ, skin tones) likely fail due to lack of proper segmentation
+
+---
+
+### Subtask 1.2 - React-PDF Emoji Documentation Research (2026-01-07)
+
+**Research Completed:** Comprehensive analysis of React-PDF's `Font.registerEmojiSource()` API
+
+#### React-PDF Emoji Capabilities
+
+**Core Mechanism:**
+- PDF documents do NOT support color emoji fonts natively
+- React-PDF embeds emojis as images, not font glyphs
+- Uses `Font.registerEmojiSource()` to specify a CDN URL for emoji images
+- Requires internet connection at PDF render time to download emoji images
+
+**API Signature:**
+```javascript
+Font.registerEmojiSource({
+  format: 'png',                    // Image format (only PNG supported)
+  url: 'https://cdn.example.com/',  // Base URL for emoji images
+  withVariationSelectors: true      // Optional: handle variation selectors (U+FE0F)
+});
+```
+
+**Internal Implementation (from source code analysis):**
+1. Uses `emoji-regex` library to detect emoji characters in text
+2. Converts emoji to hexadecimal code points (e.g., "😀" → "1f600")
+3. Builds image URLs by appending code points to base URL
+4. Fetches emoji images asynchronously and caches them
+5. Replaces emoji with Object Substitution Characters (U+FFFC) + image attachments
+6. Embeds images directly in the PDF
+
+#### Supported Image Formats
+
+**PNG:** ✅ SUPPORTED
+- Official format for `registerEmojiSource()`
+- Works with Twemoji, emoji-datasource-apple, and other PNG-based sources
+- Typical resolutions: 64x64, 72x72, or higher
+- Provides good quality for PDF embedding
+
+**SVG:** ❌ NOT SUPPORTED
+- Cannot be used with `registerEmojiSource()`
+- PDF format limitation - must be raster images
+- SVG → PNG conversion required before use
+- React-PDF supports SVG components for vector graphics, but NOT for emoji embedding
+
+#### Why Current CDN Solution May Fail
+
+**1. Variation Selector Issues**
+- Problem: Different emoji sources handle variation selectors (U+FE0F) differently
+- Example: "❤️" = ["❤", "️"] (canonical + variation selector)
+- Older React-PDF versions removed variation selectors unconditionally
+- Solution: Use `withVariationSelectors: true` for emoji-datasource-apple
+- Fixed in React-PDF v4.3+ via PR #2467
+
+**2. CDN Availability/Shutdown**
+- MaxCDN (original examples) has been shut down
+- If CDN is unavailable/slow, emojis won't render
+- Network timeout issues can cause missing emojis
+- Recommendation: Use reliable CDNs (cdnjs.cloudflare.com, cdn.jsdelivr.net)
+
+**3. URL Pattern Mismatch**
+- Emoji sources use different URL patterns:
+  - Twemoji: `/{codepoint}.png`
+  - emoji-datasource-apple: `/{codepoint}.png`
+- Code point format must match source expectations
+- Compound emojis (ZWJ sequences) may need special handling
+
+**4. Internet Connectivity Requirement**
+- React-PDF downloads emoji images at render time
+- Offline rendering will fail without cached images
+- Network latency can impact PDF generation performance
+
+**5. Complex Emoji Sequences**
+- ZWJ sequences (👨‍👩‍👧) require proper segmentation
+- Skin tone modifiers (👍🏽) need correct code point extraction
+- Flag emojis (🇺🇸) are regional indicator pairs
+- Without proper emoji detection, these render as multiple separate images or fail
+
+#### Local Emoji Assets - Viability Assessment
+
+**Option 1: Bundle emoji-datasource-apple Package**
+- ✅ Viable for offline/Electron apps
+- Install via npm: `npm install emoji-datasource-apple`
+- Images located at: `node_modules/emoji-datasource-apple/img/apple/64/`
+- Can be copied to app bundle and referenced with local file:// URLs
+- Package size: ~50-100MB for full emoji set (consider this for app bundle size)
+
+**Option 2: Subset of Common Emojis**
+- ✅ Viable for reducing bundle size
+- Extract only frequently-used emojis (e.g., top 100)
+- Fallback to CDN for uncommon emojis
+- Requires custom emoji detection logic
+
+**Option 3: Local Server/CDN Proxy**
+- ✅ Viable for controlled environments
+- Host emoji images on local server
+- Point `registerEmojiSource()` to local endpoint
+- Good for corporate/enterprise deployments
+
+**Licensing Considerations:**
+- ⚠️ Apple emoji images: NOT licensed for commercial use
+- ✅ Google/Android (Noto): Apache License 2.0 (commercial OK)
+- ✅ Twitter (Twemoji): CC-BY 4.0 (commercial OK with attribution)
+- **Recommendation:** Switch to Twemoji or Noto for commercial apps
+
+#### Current Implementation Analysis
+
+**What We Have:**
+```javascript
+Font.registerEmojiSource({
+  format: 'png',
+  url: 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/',
+});
+```
+
+**Potential Issues:**
+1. Missing `withVariationSelectors: true` option
+2. Using Apple emoji (licensing concern for commercial use)
+3. No fallback for offline scenarios
+4. InlineText component not using emoji detection (main issue)
+
+**Recommended Fix:**
+1. Add `withVariationSelectors: true` to current config
+2. Implement proper emoji detection in InlineText (Phase 2)
+3. Consider switching to Twemoji for licensing safety
+4. Document CDN dependency and offline limitations
+
+#### Key Findings Summary
+
+1. **Format Support:** PNG only (SVG not supported)
+2. **CDN Requirement:** Internet connection needed at render time
+3. **Variation Selectors:** Critical for Apple emoji source (use `withVariationSelectors: true`)
+4. **Local Assets:** Viable but requires bundling (~50-100MB) and licensing consideration
+5. **Main Issue:** Not the CDN config, but the lack of emoji detection/segmentation in InlineText
+6. **Best Practice:** Use Twemoji or Noto emoji for commercial apps
+
+#### Next Steps (Phase 2)
+
+- Implement robust emoji detection with grapheme segmentation
+- Handle ZWJ sequences, skin tones, flags, and variation selectors
+- Update InlineText to use emoji detection utility
+- Add `withVariationSelectors: true` to Font.registerEmojiSource() config
+- Consider switching to Twemoji for licensing compliance
