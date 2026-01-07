@@ -215,33 +215,28 @@ function getImageDimensions(buffer: Buffer, imageType: 'png' | 'jpg' | 'gif' | '
 }
 
 /**
- * Calculate scaled dimensions to fit within max bounds while preserving aspect ratio
- * Uses actual image dimensions if available, otherwise falls back to defaults
- * Wide images are allowed to span the full document content width
+ * Calculate scaled dimensions to ALWAYS use full content width while preserving aspect ratio
+ * Images are stretched/scaled to fill the full page content width with automatic height
+ * Only limits height if it exceeds the max height threshold
  */
 function calculateDimensions(
   actualDimensions: { width: number; height: number } | null,
   theme: ThemeData,
   maxHeight: number = MAX_IMAGE_HEIGHT
 ): { width: number; height: number } {
-  // Calculate max width from theme's page dimensions (full content width)
-  const maxWidth = calculateContentWidthPoints(theme);
+  // Calculate full content width from theme's page dimensions
+  const fullWidth = calculateContentWidthPoints(theme);
 
-  // If we have actual dimensions, scale to fit within bounds while preserving aspect ratio
+  // If we have actual dimensions, ALWAYS scale to full content width while preserving aspect ratio
   if (actualDimensions && actualDimensions.width > 0 && actualDimensions.height > 0) {
     const { width: imgWidth, height: imgHeight } = actualDimensions;
     const aspectRatio = imgWidth / imgHeight;
 
-    let width = imgWidth;
-    let height = imgHeight;
+    // ALWAYS use full content width
+    let width = fullWidth;
+    let height = width / aspectRatio;
 
-    // Scale down if wider than max (full content width)
-    if (width > maxWidth) {
-      width = maxWidth;
-      height = width / aspectRatio;
-    }
-
-    // Scale down if still taller than max
+    // Only limit if taller than max height
     if (height > maxHeight) {
       height = maxHeight;
       width = height * aspectRatio;
@@ -253,11 +248,10 @@ function calculateDimensions(
     };
   }
 
-  // Default to a reasonable size that fits most documents
-  // Use a more reasonable default aspect ratio (4:3)
+  // Default to full content width with 4:3 aspect ratio
   return {
-    width: Math.round(maxWidth),
-    height: Math.round(Math.min(maxWidth * 0.75, maxHeight)), // 4:3 aspect ratio
+    width: Math.round(fullWidth),
+    height: Math.round(Math.min(fullWidth * 0.75, maxHeight)), // 4:3 aspect ratio
   };
 }
 
