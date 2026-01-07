@@ -11,6 +11,7 @@ import {
 	deleteFileSchema,
 	deleteProjectSchema,
 	deleteThemeSchema,
+	exportDocxSchema,
 	exportPDFSchema,
 	fileExistsSchema,
 	getAppPathSchema,
@@ -36,6 +37,7 @@ import { prisma } from "../database/client.js";
 // Import services
 import * as appData from "../services/app-data.js";
 import * as fileSystem from "../services/file-system.js";
+import { exportDocx, generateDocx } from "../services/docx-service.js";
 import {
 	calculatePageBreaks,
 	exportPDF,
@@ -1204,6 +1206,65 @@ export function registerIPCHandlers(): void {
 			const pageBreaks = calculatePageBreaks(projectData.content || "", theme);
 
 			return { pageBreaks };
+		}),
+	);
+
+	// ==================== DOCX Channel ====================
+
+	/**
+	 * Export DOCX
+	 */
+	ipcMain.handle(
+		"docx:export",
+		wrapIPCHandler(async (args) => {
+			const { projectId, outputPath, openAfterExport, mermaidDiagrams } =
+				exportDocxSchema.parse(args);
+
+			// Get project with theme
+			const project = await prisma.project.findUnique({
+				where: { id: projectId },
+				include: { theme: true },
+			});
+
+			if (!project) {
+				throw new Error(`Project not found: ${projectId}`);
+			}
+
+			// Get theme (use project theme or default to first built-in theme)
+			let theme = project.theme;
+			if (!theme) {
+				theme = await prisma.theme.findFirst({
+					where: { isBuiltIn: true },
+				});
+				if (!theme) {
+					throw new Error("No theme available");
+				}
+			}
+
+			// Read project content
+			const fileContent = await fileSystem.readFile(project.filePath);
+			const projectData = JSON.parse(fileContent);
+
+			// Get project directory for resolving image paths
+			const projectDir = path.dirname(project.filePath);
+
+			// Generate DOCX
+			const buffer = await generateDocx(
+				projectData.content || "",
+				theme,
+				projectDir,
+				mermaidDiagrams as Record<string, string> | undefined,
+			);
+
+			// Export to file
+			await exportDocx(buffer, outputPath);
+
+			// Open file after export if requested
+			if (openAfterExport) {
+				await shell.openPath(outputPath);
+			}
+
+			return { success: true, filePath: outputPath };
 		}),
 	);
 
