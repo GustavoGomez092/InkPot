@@ -24,11 +24,30 @@ function pointsToDxa(points: number): number {
 }
 
 /**
+ * Convert inches to DXA (twips) - 1 inch = 1440 DXA
+ */
+function inchesToDxa(inches: number): number {
+  return Math.round(inches * 1440);
+}
+
+/**
  * Convert points to half-points (used for font sizes in docx)
  * Font sizes in docx are specified in half-points (1 point = 2 half-points)
  */
 function pointsToHalfPoints(points: number): number {
   return Math.round(points * 2);
+}
+
+/**
+ * Calculate the content width in DXA based on theme page settings
+ * Content width = page width - left margin - right margin
+ */
+function calculateContentWidth(theme: ThemeData): number {
+  const pageWidthInches = theme.pageWidth || 8.5; // Default US Letter
+  const marginLeftInches = theme.marginLeft || 1;
+  const marginRightInches = theme.marginRight || 1;
+  const contentWidthInches = pageWidthInches - marginLeftInches - marginRightInches;
+  return inchesToDxa(contentWidthInches);
 }
 
 /**
@@ -49,7 +68,7 @@ function createCellBorders(color: string) {
 function createHeaderCell(
   content: string,
   theme: ThemeData,
-  columnCount: number
+  cellWidthDxa: number
 ): TableCell {
   const fontSize = theme.bodySize;
   const borderColor = theme.textColor.replace('#', '');
@@ -57,8 +76,8 @@ function createHeaderCell(
 
   return new TableCell({
     width: {
-      size: Math.floor(100 / columnCount),
-      type: WidthType.PERCENTAGE,
+      size: cellWidthDxa,
+      type: WidthType.DXA,
     },
     shading: {
       type: ShadingType.SOLID,
@@ -94,15 +113,15 @@ function createHeaderCell(
 function createDataCell(
   content: string,
   theme: ThemeData,
-  columnCount: number
+  cellWidthDxa: number
 ): TableCell {
   const fontSize = theme.bodySize;
   const borderColor = theme.textColor.replace('#', '');
 
   return new TableCell({
     width: {
-      size: Math.floor(100 / columnCount),
-      type: WidthType.PERCENTAGE,
+      size: cellWidthDxa,
+      type: WidthType.DXA,
     },
     borders: createCellBorders(borderColor),
     margins: {
@@ -131,10 +150,11 @@ function createDataCell(
  */
 function createHeaderRow(
   headers: string[],
-  theme: ThemeData
+  theme: ThemeData,
+  cellWidthDxa: number
 ): TableRow {
   const cells = headers.map((header) =>
-    createHeaderCell(header, theme, headers.length)
+    createHeaderCell(header, theme, cellWidthDxa)
   );
 
   return new TableRow({
@@ -149,7 +169,8 @@ function createHeaderRow(
 function createDataRow(
   cells: string[],
   theme: ThemeData,
-  columnCount: number
+  columnCount: number,
+  cellWidthDxa: number
 ): TableRow {
   // Ensure we have the right number of cells (pad with empty if needed)
   const normalizedCells = [...cells];
@@ -158,7 +179,7 @@ function createDataRow(
   }
 
   const tableCells = normalizedCells.map((cell) =>
-    createDataCell(cell, theme, columnCount)
+    createDataCell(cell, theme, cellWidthDxa)
   );
 
   return new TableRow({
@@ -183,29 +204,39 @@ export function createTableElement(
       ? rows[0].length
       : 1;
 
+  // Calculate table width and column widths in DXA units
+  // Using DXA instead of PERCENTAGE for better cross-platform compatibility
+  // (WidthType.PERCENTAGE doesn't work reliably in Google Docs, Apple Pages, etc.)
+  const tableWidthDxa = calculateContentWidth(theme);
+  const cellWidthDxa = Math.floor(tableWidthDxa / columnCount);
+
+  // Create columnWidths array for the table (all columns equal width)
+  const columnWidths = Array(columnCount).fill(cellWidthDxa);
+
   // Build table rows
   const tableRows: TableRow[] = [];
 
   // Add header row if headers exist
   if (headers.length > 0) {
-    tableRows.push(createHeaderRow(headers, theme));
+    tableRows.push(createHeaderRow(headers, theme, cellWidthDxa));
   }
 
   // Add data rows
   for (const row of rows) {
-    tableRows.push(createDataRow(row, theme, columnCount));
+    tableRows.push(createDataRow(row, theme, columnCount, cellWidthDxa));
   }
 
   // Handle empty table case
   if (tableRows.length === 0) {
-    tableRows.push(createDataRow([''], theme, 1));
+    tableRows.push(createDataRow([''], theme, 1, tableWidthDxa));
   }
 
   return new Table({
     width: {
-      size: 100,
-      type: WidthType.PERCENTAGE,
+      size: tableWidthDxa,
+      type: WidthType.DXA,
     },
+    columnWidths: columnWidths,
     rows: tableRows,
   });
 }
