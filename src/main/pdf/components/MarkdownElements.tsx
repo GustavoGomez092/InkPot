@@ -440,29 +440,42 @@ const TableElement: React.FC<{
       {/* Header Row */}
       {headers.length > 0 && (
         <View style={headerRowStyle}>
-          {headers.map((header, idx) => (
-            <Text
-              key={idx}
-              style={
-                idx === headers.length - 1
-                  ? { ...headerCellStyle, borderRight: 'none' }
-                  : headerCellStyle
-              }
-            >
-              {header}
-            </Text>
-          ))}
+          {headers.map((header, idx) => {
+            // Parse inline formatting for header cells to support emojis and formatting
+            const inlineElements = parseInlineFormatting(header);
+            return (
+              <Text
+                key={idx}
+                style={
+                  idx === headers.length - 1
+                    ? { ...headerCellStyle, borderRight: 'none' }
+                    : headerCellStyle
+                }
+              >
+                <InlineText elements={inlineElements} theme={theme} style={headerCellStyle} />
+              </Text>
+            );
+          })}
         </View>
       )}
 
       {/* Data Rows */}
       {rows.map((row, rowIdx) => (
         <View key={rowIdx} style={dataRowStyle}>
-          {row.map((cell, cellIdx) => (
-            <Text key={cellIdx} style={cellIdx === row.length - 1 ? lastCellStyle : cellStyle}>
-              {cell}
-            </Text>
-          ))}
+          {row.map((cell, cellIdx) => {
+            // Parse inline formatting for data cells to support emojis and formatting
+            const inlineElements = parseInlineFormatting(cell);
+            const isLastCell = cellIdx === row.length - 1;
+            return (
+              <Text key={cellIdx} style={isLastCell ? lastCellStyle : cellStyle}>
+                <InlineText
+                  elements={inlineElements}
+                  theme={theme}
+                  style={isLastCell ? lastCellStyle : cellStyle}
+                />
+              </Text>
+            );
+          })}
         </View>
       ))}
     </View>

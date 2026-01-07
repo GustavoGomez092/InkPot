@@ -35,11 +35,47 @@
         }
       ],
       "status": "completed"
+    },
+    "2.2": {
+      "attempts": [
+        {
+          "session": 5,
+          "timestamp": "2026-01-06T23:58:12.060903",
+          "approach": "Implemented: Create unit tests for the emoji detection utility to ensure all emoji types are properly detected",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "3.1": {
+      "attempts": [
+        {
+          "session": 6,
+          "timestamp": "2026-01-07T00:00:54.381490",
+          "approach": "Implemented: Refactor InlineText.tsx to use the new emoji detection utility and properly render text segments wit",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "3.2": {
+      "attempts": [
+        {
+          "session": 7,
+          "timestamp": "2026-01-07T00:03:42.806342",
+          "approach": "Implemented: Ensure Font.registerEmojiSource() in Document.tsx is configured optimally for cross-platform support",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
     }
   },
   "stuck_subtasks": [],
   "metadata": {
     "created_at": "2026-01-06T23:37:06.832301",
-    "last_updated": "2026-01-06T23:53:47.126845"
+    "last_updated": "2026-01-07T00:03:42.806356"
   }
 }
