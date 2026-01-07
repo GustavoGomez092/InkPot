@@ -12,9 +12,35 @@ import { type MarkdownElement, parseMarkdown } from './markdown-parser.js';
 
 // Register emoji support for PDFs using React-PDF's built-in emoji source
 // This uses Apple emoji images from a CDN for consistent emoji rendering across all platforms
+//
+// CONFIGURATION NOTES:
+// - format: 'png' is the only supported format (SVG not supported by PDF spec)
+// - withVariationSelectors: true enables proper handling of emoji variation selectors (U+FE0F)
+//   This is critical for Apple emoji source to correctly resolve emoji like ❤️, ✅, ⭐
+// - cdn.jsdelivr.net is used for reliability and performance (cdnjs.cloudflare.com is also viable)
+// - 64x64 resolution provides good quality while keeping file sizes reasonable
+//
+// PLATFORM CONSIDERATIONS:
+// - Requires internet connection during PDF generation to fetch emoji images
+// - Emoji appearance is consistent across macOS, Windows, and Linux (using Apple emoji set)
+// - Works in both development and production builds
+// - Compatible with Electron's PDF generation in sandboxed environments
+//
+// LICENSING NOTE:
+// - Apple emoji images are NOT licensed for commercial redistribution
+// - For commercial applications, consider switching to:
+//   * Twemoji: https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/72x72/ (CC-BY 4.0)
+//   * Noto Emoji: https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/png/128/ (Apache 2.0)
+// - Current configuration is acceptable for open-source/personal use
+//
+// FALLBACK OPTIONS:
+// - No built-in fallback mechanism if CDN is unavailable
+// - Emojis will fail to render if network is offline during PDF generation
+// - For offline support, consider bundling emoji images locally (~50-100MB)
 Font.registerEmojiSource({
   format: 'png',
   url: 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/',
+  withVariationSelectors: true, // Critical for proper emoji rendering with Apple emoji source
 });
 
 // Register font fallbacks for PDF generation
