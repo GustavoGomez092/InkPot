@@ -1,0 +1,25 @@
+{
+  "discovered_files": {
+    "src/main/docx/elements/Heading.ts": {
+      "description": "DOCX element converters use functions that take MarkdownElement and ThemeData, return docx Paragraph objects. Font sizes in docx are in half-points (multiply points by 2). Spacing uses DXA units (20 DXA = 1 point). Colors must strip the '#' prefix. Use HeadingLevel enum constants, not strings.",
+      "category": "patterns",
+      "discovered_at": "2026-01-07T07:18:10.621289+00:00"
+    },
+    "src/main/docx/elements/List.ts": {
+      "description": "List element converter returns an array of Paragraphs (one per item) rather than a single element. Uses manual bullet/number prefixes with TextRun instead of built-in Word numbering API. Indentation is handled via left indent with hanging indent for proper text wrapping. 15pt base indent + 20pt per nesting level.",
+      "category": "architecture",
+      "discovered_at": "2026-01-07T07:22:12.533464+00:00"
+    },
+    "src/main/docx/elements/CodeBlock.ts": {
+      "description": "CodeBlock element converter returns an array of Paragraphs (one per line) like List.ts. Uses ShadingType.SOLID for background color from theme.codeBackground. Preserves code indentation by replacing leading spaces with non-breaking spaces (\\u00A0). Empty lines need a non-breaking space to maintain height.",
+      "category": "docx-elements",
+      "discovered_at": "2026-01-07T07:24:19.572719+00:00"
+    },
+    "src/main/docx/elements/Image.ts": {
+      "description": "Image element converter uses ImageRun from docx library. Handles base64 data URLs (parsed to Buffer), local file paths (with fs.readFileSync), and gracefully degrades for remote URLs with placeholder text. Images are centered with optional alt text caption below. Default dimensions are 432x600 points (6 inches wide max).",
+      "category": "pattern",
+      "discovered_at": "2026-01-07T07:28:43.850202+00:00"
+    }
+  },
+  "last_updated": "2026-01-07T07:28:43.850210+00:00"
+}

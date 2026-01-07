@@ -1,0 +1,393 @@
+{
+  "integrations_researched": [
+    {
+      "name": "docx",
+      "type": "library",
+      "purpose": "Word document (.docx) generation",
+      "recommendation": "PRIMARY - Recommended for implementation",
+      "verified_package": {
+        "name": "docx",
+        "install_command": "npm install docx",
+        "version": "latest (actively maintained)",
+        "verified": true,
+        "npm_url": "https://www.npmjs.com/package/docx",
+        "github_url": "https://github.com/dolanmiu/docx"
+      },
+      "api_patterns": {
+        "imports": [
+          "import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType, LevelFormat, PageBreak, ExternalHyperlink } from 'docx'"
+        ],
+        "initialization": "const doc = new Document({ sections: [{ children: [...] }] })",
+        "export_to_buffer": "const buffer = await Packer.toBuffer(doc)",
+        "export_to_blob": "const blob = await Packer.toBlob(doc)",
+        "key_functions": [
+          "new Document({ sections, styles, numbering })",
+          "Packer.toBuffer(doc)",
+          "Packer.toBlob(doc)",
+          "new Paragraph({ children, heading, alignment, numbering, style })",
+          "new TextRun({ text, bold, italics, underline, color, size, font, strike })",
+          "new Table({ rows, columnWidths, margins })",
+          "new TableRow({ children, tableHeader })",
+          "new TableCell({ children, borders, shading, width })",
+          "new ImageRun({ type, data, transformation: { width, height } })",
+          "new PageBreak()",
+          "new ExternalHyperlink({ link, children })"
+        ],
+        "verified_against": "GitHub README, anthropics/skills documentation, official docx.js.org"
+      },
+      "configuration": {
+        "env_vars": [],
+        "config_files": [],
+        "dependencies": [],
+        "typescript_support": true
+      },
+      "features_supported": {
+        "headings": {
+          "supported": true,
+          "api": "new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun('text')] })",
+          "levels": "HeadingLevel.HEADING_1 through HEADING_6, plus TITLE"
+        },
+        "paragraphs": {
+          "supported": true,
+          "api": "new Paragraph({ children: [new TextRun('text')], alignment: AlignmentType.CENTER })"
+        },
+        "text_formatting": {
+          "supported": true,
+          "bold": "new TextRun({ text: 'bold', bold: true })",
+          "italic": "new TextRun({ text: 'italic', italics: true })",
+          "strikethrough": "new TextRun({ text: 'strike', strike: true })",
+          "underline": "new TextRun({ text: 'underlined', underline: { type: UnderlineType.SINGLE } })",
+          "inline_code": "Character style with monospace font",
+          "colors": "new TextRun({ text: 'colored', color: 'FF0000' })"
+        },
+        "lists": {
+          "supported": true,
+          "api_bullet": "numbering config with LevelFormat.BULLET",
+          "api_ordered": "numbering config with LevelFormat.DECIMAL",
+          "nesting": "Supported via level property"
+        },
+        "tables": {
+          "supported": true,
+          "api": "new Table({ rows: [new TableRow({ children: [new TableCell({ children: [new Paragraph('text')] })] })] })"
+        },
+        "images": {
+          "supported": true,
+          "api": "new ImageRun({ type: 'png', data: buffer, transformation: { width: 200, height: 200 } })",
+          "formats": ["png", "jpg", "jpeg", "gif", "bmp", "svg"],
+          "note": "REQUIRES type parameter - always specify image format"
+        },
+        "links": {
+          "supported": true,
+          "api": "new ExternalHyperlink({ link: 'https://...', children: [new TextRun('text')] })"
+        },
+        "code_blocks": {
+          "supported": true,
+          "approach": "Paragraph with monospace font and background shading"
+        },
+        "blockquotes": {
+          "supported": true,
+          "approach": "Paragraph with left indent and optional border styling"
+        },
+        "page_breaks": {
+          "supported": true,
+          "api": "new PageBreak()"
+        },
+        "horizontal_rules": {
+          "supported": true,
+          "approach": "Paragraph with bottom border"
+        },
+        "document_metadata": {
+          "supported": true,
+          "properties": ["title", "author", "subject", "creator", "description", "keywords"]
+        },
+        "page_setup": {
+          "supported": true,
+          "margins": "in DXA (1440 = 1 inch)",
+          "orientation": "PageOrientation.PORTRAIT or LANDSCAPE"
+        },
+        "custom_styles": {
+          "supported": true,
+          "api": "Document styles.paragraphStyles and styles.characterStyles configuration"
+        }
+      },
+      "gotchas": [
+        "NEVER use \\n for line breaks in TextRun - always use separate Paragraph elements",
+        "Always use LevelFormat.BULLET constant, NOT the string 'bullet' for lists",
+        "NEVER use unicode bullets - they create fake lists that don't work properly",
+        "Each numbering reference creates an INDEPENDENT numbered list - same reference continues numbering, different reference restarts at 1",
+        "ImageRun REQUIRES the type parameter - always specify 'png', 'jpg', etc.",
+        "Set column widths at BOTH table level AND cell level (in DXA units)",
+        "Use ShadingType.CLEAR to prevent black backgrounds in cells",
+        "Measurements are in DXA (twentieths of a point) - 1440 DXA = 1 inch",
+        "For TOC to work, use HeadingLevel constants (not custom styles) and include outlineLevel in style definitions"
+      ],
+      "research_sources": [
+        "https://github.com/dolanmiu/docx",
+        "https://docx.js.org/",
+        "https://github.com/anthropics/skills/blob/main/skills/docx/docx-js.md",
+        "https://www.npmjs.com/package/docx"
+      ]
+    },
+    {
+      "name": "markdown-docx",
+      "type": "library",
+      "purpose": "Direct markdown to Word document conversion",
+      "recommendation": "ALTERNATIVE - Simpler but less control",
+      "verified_package": {
+        "name": "markdown-docx",
+        "install_command": "npm install markdown-docx",
+        "version": "latest",
+        "verified": true,
+        "npm_url": "https://www.npmjs.com/package/markdown-docx",
+        "github_url": "https://github.com/vace/markdown-docx"
+      },
+      "api_patterns": {
+        "imports": [
+          "import markdownDocx, { Packer } from 'markdown-docx'",
+          "import { MarkdownDocx, Packer } from 'markdown-docx'"
+        ],
+        "initialization": "const doc = await markdownDocx(markdownString, options)",
+        "class_based": "const converter = new MarkdownDocx(markdown); const doc = await converter.toDocument({ title, creator, description })",
+        "export_to_buffer": "const buffer = await Packer.toBuffer(doc)",
+        "key_functions": [
+          "markdownDocx(markdown, options)",
+          "new MarkdownDocx(markdown).toDocument(metadata)",
+          "Packer.toBuffer(doc)",
+          "Packer.toBlob(doc)"
+        ],
+        "verified_against": "GitHub README, npm documentation"
+      },
+      "configuration": {
+        "env_vars": [],
+        "config_files": [],
+        "dependencies": [],
+        "typescript_support": true,
+        "options": {
+          "imageAdapter": "Function - Custom image processing handler",
+          "ignoreImage": "Boolean (default: false) - Skip image inclusion",
+          "ignoreFootnote": "Boolean (default: false) - Omit footnotes",
+          "ignoreHtml": "Boolean (default: false) - Exclude inline HTML",
+          "gfm": "Boolean (default: true) - Enable GitHub Flavored Markdown",
+          "theme": "Object - Customize colors and sizing",
+          "math": "Object - Math rendering configuration with engine and libreOfficeCompat options"
+        }
+      },
+      "features_supported": {
+        "headings": "H1-H6 supported",
+        "paragraphs": "Supported",
+        "text_formatting": "Bold, italic, strikethrough",
+        "lists": "Ordered and unordered",
+        "tables": "Full table support with alignment",
+        "images": "Auto-downloads from URLs, supports size via title attribute",
+        "links": "Supported",
+        "code_blocks": "Supported with syntax highlighting",
+        "blockquotes": "Supported",
+        "horizontal_rules": "Supported",
+        "task_lists": "Supported with checkboxes",
+        "footnotes": "Supported",
+        "math_equations": "LaTeX via KaTeX"
+      },
+      "theming": {
+        "customizable": true,
+        "properties": [
+          "heading1-heading6 (hex colors without #)",
+          "link (hex color)",
+          "code (hex color)",
+          "blockquote (hex color)",
+          "del (hex color for strikethrough)",
+          "heading1Size, heading2Size, heading3Size",
+          "spaceSize, codeSize",
+          "linkUnderline (boolean)"
+        ],
+        "example": "{ theme: { heading1: '5B21B6', link: '00fb0a', heading1Size: 66 } }"
+      },
+      "gotchas": [
+        "Less control over individual element styling compared to docx library",
+        "Theme system is limited to predefined properties",
+        "May not match PDF export styling exactly without customization",
+        "Image sizing uses title attribute: ![Alt](url \"600x400\")"
+      ],
+      "research_sources": [
+        "https://github.com/vace/markdown-docx",
+        "https://www.npmjs.com/package/markdown-docx"
+      ]
+    },
+    {
+      "name": "officegen",
+      "type": "library",
+      "purpose": "Office document generation (Word, PowerPoint, Excel)",
+      "recommendation": "NOT RECOMMENDED - Less maintained, older API",
+      "verified_package": {
+        "name": "officegen",
+        "install_command": "npm install officegen",
+        "version": "unknown",
+        "verified": true,
+        "github_url": "https://github.com/ziv-barber/officegen"
+      },
+      "api_patterns": {
+        "imports": ["const officegen = require('officegen')"],
+        "initialization": "const docx = officegen('docx')",
+        "key_functions": [
+          "officegen('docx')",
+          "docx.createP()",
+          "paragraph.addText('text', { options })",
+          "paragraph.addImage('filename.png')",
+          "docx.generate(outputStream)"
+        ],
+        "verified_against": "GitHub README"
+      },
+      "gotchas": [
+        "Stream-based API may be less intuitive",
+        "Created in 2013 - may have outdated patterns",
+        "Less comprehensive TypeScript support",
+        "Less active maintenance compared to docx library"
+      ],
+      "research_sources": [
+        "https://github.com/ziv-barber/officegen"
+      ]
+    },
+    {
+      "name": "@react-pdf/renderer",
+      "type": "library",
+      "purpose": "Current PDF generation library in InkPot",
+      "recommendation": "EXISTING - Reference for export architecture patterns",
+      "verified_package": {
+        "name": "@react-pdf/renderer",
+        "install_command": "npm install @react-pdf/renderer",
+        "version": "^4.3.1 (per package.json)",
+        "verified": true,
+        "already_installed": true
+      },
+      "existing_usage_patterns": {
+        "entry_point": "src/main/services/pdf-service.ts",
+        "document_creation": "src/main/pdf/Document.tsx",
+        "markdown_parsing": "src/main/pdf/markdown-parser.ts",
+        "components": "src/main/pdf/components/",
+        "key_functions": [
+          "generatePDF(content, theme, projectDir, coverData, mermaidDiagrams)",
+          "exportPDF(buffer, filePath)",
+          "previewPDF(content, theme, projectDir, coverData, mermaidDiagrams)",
+          "createPDFDocument(content, theme, projectDir, coverData, mermaidDiagrams)",
+          "parseMarkdown(markdown, projectDir)"
+        ],
+        "input_format": "Markdown string",
+        "intermediate_format": "MarkdownElement[] (parsed structured elements)",
+        "output_format": "PDF Buffer"
+      },
+      "markdown_element_types": [
+        "heading (with level 1-6, textAlign)",
+        "paragraph (with inline formatting, textAlign)",
+        "list (ordered/unordered, with nesting via indentLevels)",
+        "checklist (with checked states)",
+        "codeBlock (with language)",
+        "blockquote",
+        "pageBreak",
+        "horizontalRule",
+        "image (src, alt, title)",
+        "table (headers, rows)",
+        "mermaidDiagram (diagram code, caption)"
+      ],
+      "inline_element_types": [
+        "text",
+        "bold",
+        "italic",
+        "code",
+        "link (with href)",
+        "strike",
+        "lineBreak"
+      ],
+      "theme_interface": {
+        "page_dimensions": ["pageWidth", "pageHeight"],
+        "margins": ["marginTop", "marginBottom", "marginLeft", "marginRight"],
+        "fonts": ["bodyFont", "headingFont"],
+        "sizes": ["bodySize", "leading"],
+        "colors": ["backgroundColor", "textColor"],
+        "name": "theme.name"
+      },
+      "research_sources": [
+        "src/main/services/pdf-service.ts",
+        "src/main/pdf/Document.tsx",
+        "src/main/pdf/markdown-parser.ts"
+      ]
+    }
+  ],
+  "architecture_analysis": {
+    "current_export_flow": {
+      "step_1": "Markdown string input from editor",
+      "step_2": "parseMarkdown(markdown, projectDir) -> MarkdownElement[]",
+      "step_3": "createPDFDocument(content, theme, ...) -> React-PDF Document element",
+      "step_4": "renderToBuffer(document) -> PDF Buffer",
+      "step_5": "exportPDF(buffer, filePath) -> writes to file system"
+    },
+    "recommended_word_export_flow": {
+      "step_1": "Markdown string input from editor (same as PDF)",
+      "step_2": "parseMarkdown(markdown, projectDir) -> MarkdownElement[] (REUSE existing parser)",
+      "step_3": "createWordDocument(elements, theme, ...) -> docx Document object (NEW)",
+      "step_4": "Packer.toBuffer(document) -> Word Buffer (docx library)",
+      "step_5": "exportWord(buffer, filePath) -> writes to file system (NEW)"
+    },
+    "shared_components": [
+      "parseMarkdown() - markdown parser can be reused entirely",
+      "ThemeData interface - can be mapped to Word styling",
+      "CoverData interface - can be adapted for Word cover pages",
+      "IPC handlers pattern - extend for Word export"
+    ],
+    "new_components_needed": [
+      "src/main/word/Document.ts - Word document builder",
+      "src/main/word/components/ - Element converters",
+      "src/main/services/word-service.ts - Export service",
+      "IPC handlers for Word export"
+    ]
+  },
+  "implementation_recommendation": {
+    "primary_library": "docx",
+    "rationale": [
+      "Full control over document structure and styling",
+      "Can match PDF export styling by mapping ThemeData to Word styles",
+      "Existing MarkdownElement[] interface maps well to docx API",
+      "Strong TypeScript support",
+      "Actively maintained with good documentation",
+      "Works in Node.js environment (Electron main process)"
+    ],
+    "alternative_library": "markdown-docx",
+    "alternative_rationale": [
+      "Simpler implementation - pass markdown directly",
+      "Good for MVP or quick implementation",
+      "May have styling inconsistencies with PDF output"
+    ],
+    "mapping_strategy": {
+      "heading": "Paragraph with HeadingLevel",
+      "paragraph": "Paragraph with TextRun children",
+      "list_bullet": "Paragraph with numbering (LevelFormat.BULLET)",
+      "list_ordered": "Paragraph with numbering (LevelFormat.DECIMAL)",
+      "checklist": "Paragraph with checkbox character + text",
+      "codeBlock": "Paragraph with monospace font and shading",
+      "blockquote": "Paragraph with left indent",
+      "pageBreak": "PageBreak",
+      "horizontalRule": "Paragraph with bottom border",
+      "image": "ImageRun in Paragraph",
+      "table": "Table with TableRow and TableCell",
+      "inline_bold": "TextRun with bold: true",
+      "inline_italic": "TextRun with italics: true",
+      "inline_code": "TextRun with monospace font",
+      "inline_link": "ExternalHyperlink",
+      "inline_strike": "TextRun with strike: true"
+    }
+  },
+  "unverified_claims": [],
+  "recommendations": [
+    "Use the 'docx' library as the primary Word document generation solution",
+    "Reuse the existing parseMarkdown() function - no need to duplicate parsing logic",
+    "Create a word-service.ts parallel to pdf-service.ts for consistent architecture",
+    "Map the existing ThemeData interface to Word document styles",
+    "Consider adding a shared export abstraction layer for future format additions",
+    "Test with complex documents including tables, images, and nested lists",
+    "Mermaid diagrams will need special handling - convert to images first (same as PDF flow)"
+  ],
+  "context7_libraries_used": [
+    "/dolanmiu/docx",
+    "/vace/markdown-docx",
+    "/ziv-barber/officegen"
+  ],
+  "created_at": "2025-01-06T12:00:00Z"
+}

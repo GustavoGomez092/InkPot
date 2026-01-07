@@ -1,0 +1,72 @@
+{
+  "project_root": "/Users/gustavogomez/projects/InkPot/InkPot",
+  "project_type": "single",
+  "services": {
+    "main": {
+      "name": "main",
+      "path": "/Users/gustavogomez/projects/InkPot/InkPot",
+      "language": "TypeScript",
+      "framework": "React",
+      "type": "frontend",
+      "package_manager": "npm",
+      "default_port": 3000,
+      "build_tool": "Vite",
+      "styling": "Tailwind CSS",
+      "orm": "Prisma",
+      "dev_command": "npm run dev",
+      "key_directories": {
+        "src": {
+          "path": "src",
+          "purpose": "Source code"
+        },
+        "tests": {
+          "path": "tests",
+          "purpose": "Tests"
+        }
+      },
+      "dependencies": [
+        "@embedpdf/core",
+        "@embedpdf/engines",
+        "@embedpdf/plugin-loader",
+        "@embedpdf/plugin-pan",
+        "@embedpdf/plugin-render",
+        "@embedpdf/plugin-scroll",
+        "@embedpdf/plugin-viewport",
+        "@embedpdf/plugin-zoom",
+        "@fontsource/inter",
+        "@fontsource/jetbrains-mono",
+        "@fontsource/source-serif-4",
+        "@libsql/client",
+        "@prisma/adapter-libsql",
+        "@prisma/client",
+        "@radix-ui/react-dialog",
+        "@radix-ui/react-label",
+        "@radix-ui/react-select",
+        "@radix-ui/react-slot",
+        "@react-pdf/renderer",
+        "@tanstack/react-router"
+      ],
+      "dev_dependencies": [
+        "@electron-forge/cli",
+        "@electron-forge/maker-deb",
+        "@electron-forge/maker-rpm",
+        "@electron-forge/maker-squirrel",
+        "@electron-forge/maker-zip",
+        "@electron-forge/plugin-vite",
+        "@electron/rebuild",
+        "@playwright/test",
+        "@remotion/google-fonts",
+        "@tailwindcss/postcss"
+      ],
+      "testing": "Vitest",
+      "e2e_testing": "Playwright",
+      "test_directory": "tests"
+    }
+  },
+  "infrastructure": {},
+  "conventions": {
+    "js_linting": "ESLint",
+    "formatting": "Prettier",
+    "typescript": true
+  }
+}
