@@ -316,6 +316,22 @@ export interface PageBreak {
 }
 
 // ============================================================================
+// DOCX CHANNEL
+// ============================================================================
+
+export interface ExportDocxRequest {
+	projectId: string;
+	outputPath: string;
+	openAfterExport?: boolean;
+	mermaidDiagrams?: Record<string, string>; // Map of diagram code -> file path
+}
+
+export interface ExportDocxResponse {
+	filePath: string;
+	fileSize: number;
+}
+
+// ============================================================================
 // COVER CHANNEL
 // ============================================================================
 
@@ -560,6 +576,11 @@ export interface ElectronAPI {
 		saveMermaidImage: (
 			req: SaveMermaidImageRequest,
 		) => Promise<IPCResponse<SaveMermaidImageResponse>>;
+	};
+	docx: {
+		export: (
+			req: ExportDocxRequest,
+		) => Promise<IPCResponse<ExportDocxResponse>>;
 	};
 	cover: {
 		listTemplates: (
