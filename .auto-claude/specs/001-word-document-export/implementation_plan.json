@@ -629,17 +629,17 @@
     "qa_session": 0,
     "issues_found": [
       {
-        "description": "None - All 3 user-reported issues fixed and verified: (1) Mermaid chart aspect ratios with PNG/JPEG dimension reading, (2) Page breaks with PageBreak run inside Paragraph, (3) Font style with font family mapping"
+        "description": "None - All fixes verified"
       }
     ],
     "tests_passed": {},
-    "timestamp": "2026-01-07T19:57:57.405045+00:00",
+    "timestamp": "2026-01-07T21:01:25.308548+00:00",
     "ready_for_qa_revalidation": false
   },
   "status": "human_review",
   "planStatus": "review",
   "updated_at": "2026-01-06T23:55:00.000Z",
-  "last_updated": "2026-01-07T19:57:57.405055+00:00",
+  "last_updated": "2026-01-07T21:01:25.308560+00:00",
   "qa_iteration_history": [
     {
       "iteration": 1,
@@ -654,10 +654,31 @@
       "timestamp": "2026-01-07T19:58:11.542804+00:00",
       "issues": [],
       "duration_seconds": 356.55
+    },
+    {
+      "iteration": 1,
+      "status": "approved",
+      "timestamp": "2026-01-07T20:23:56.753290+00:00",
+      "issues": [],
+      "duration_seconds": 230.07
+    },
+    {
+      "iteration": 1,
+      "status": "approved",
+      "timestamp": "2026-01-07T20:44:15.308194+00:00",
+      "issues": [],
+      "duration_seconds": 280.15
+    },
+    {
+      "iteration": 1,
+      "status": "approved",
+      "timestamp": "2026-01-07T21:02:22.220517+00:00",
+      "issues": [],
+      "duration_seconds": 252.18
     }
   ],
   "qa_stats": {
-    "total_iterations": 2,
+    "total_iterations": 5,
     "last_iteration": 1,
     "last_status": "approved",
     "issues_by_type": {}
