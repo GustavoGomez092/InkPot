@@ -1,0 +1,264 @@
+{
+  "feature": "Emoji Font Rendering Fix",
+  "description": "Resolve emoji font rendering issues in React-PDF by implementing proper emoji detection, optimizing the CDN-based emoji source, and enabling robust cross-platform rendering. The existing Font.registerEmojiSource() will be validated and the disabled InlineText emoji handling will be fixed.",
+  "created_at": "2026-01-07T07:36:55.073Z",
+  "updated_at": "2026-01-07T07:37:05.314Z",
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "estimated_total_hours": 6,
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Research & Foundation",
+      "description": "Investigate React-PDF emoji handling capabilities, test current implementation, and establish the foundation for fixes",
+      "subtasks": [
+        {
+          "id": "1.1",
+          "title": "Test current emoji rendering behavior",
+          "description": "Create a test script that generates a PDF with various emoji types (standard, skin tones, ZWJ sequences, flags) to understand current failure modes and establish baseline behavior",
+          "acceptance_criteria": [
+            "Test script exists at scripts/test-emoji-pdf.ts",
+            "Script tests at least 10 different emoji types",
+            "Output clearly shows which emojis render vs fail",
+            "Document findings in build-progress.txt"
+          ],
+          "estimated_minutes": 30,
+          "status": "completed",
+          "notes": "Created comprehensive emoji test script at scripts/test-emoji-pdf.ts with 63+ emoji instances across 10 categories (standard, skin tones, ZWJ sequences, flags, keycaps, variation selectors, mixed content, formatted text, lists, edge cases). Script includes performance timing and generates timestamped PDF to Desktop. Documented test categories and expected baseline behavior in build-progress.txt. Manual verification required: run `tsx scripts/test-emoji-pdf.ts` and visually inspect the generated PDF to identify which emoji types render correctly vs fail.",
+          "updated_at": "2026-01-07T07:43:05.728834+00:00"
+        },
+        {
+          "id": "1.2",
+          "title": "Research React-PDF emoji handling",
+          "description": "Review React-PDF documentation and source code to understand Font.registerEmojiSource() behavior, supported formats, and known limitations",
+          "acceptance_criteria": [
+            "Document React-PDF emoji capabilities in build-progress.txt",
+            "Identify why current CDN solution may fail",
+            "List supported emoji image formats (PNG, SVG)",
+            "Determine if local emoji assets are viable"
+          ],
+          "estimated_minutes": 20,
+          "status": "pending",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Emoji Detection & Parsing",
+      "description": "Implement robust emoji detection that handles all Unicode emoji types including compound sequences",
+      "subtasks": [
+        {
+          "id": "2.1",
+          "title": "Create comprehensive emoji detection utility",
+          "description": "Build a utility module at src/main/pdf/utils/emoji-utils.ts that properly detects all emoji types using Unicode properties and grapheme segmentation",
+          "acceptance_criteria": [
+            "Detects basic emojis (\ud83d\ude00, \u2764\ufe0f)",
+            "Detects emoji with skin tone modifiers (\ud83d\udc4d\ud83c\udffd)",
+            "Detects ZWJ sequences (\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67)",
+            "Detects flag emojis (\ud83c\uddfa\ud83c\uddf8)",
+            "Detects keycap sequences (1\ufe0f\u20e3)",
+            "Function splitTextIntoSegments() returns array of {text, isEmoji} objects"
+          ],
+          "estimated_minutes": 45,
+          "status": "pending",
+          "notes": ""
+        },
+        {
+          "id": "2.2",
+          "title": "Add emoji segment tests",
+          "description": "Create unit tests for the emoji detection utility to ensure all emoji types are properly detected",
+          "acceptance_criteria": [
+            "Test file exists at src/main/pdf/utils/emoji-utils.test.ts",
+            "Tests cover all emoji categories from 2.1",
+            "Tests verify correct text/emoji segmentation",
+            "All tests pass"
+          ],
+          "estimated_minutes": 30,
+          "status": "pending",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Emoji Rendering Implementation",
+      "description": "Update the PDF rendering components to properly handle emojis with the new detection logic",
+      "subtasks": [
+        {
+          "id": "3.1",
+          "title": "Update InlineText component for emoji support",
+          "description": "Refactor InlineText.tsx to use the new emoji detection utility and properly render text segments with emojis, replacing the currently disabled implementation",
+          "acceptance_criteria": [
+            "InlineText uses emoji-utils for detection",
+            "Text is split into emoji/non-emoji segments",
+            "Each segment renders with appropriate styling",
+            "Removes @ts-expect-error comments from working code",
+            "Works with existing inline formatting (bold, italic, etc.)"
+          ],
+          "estimated_minutes": 45,
+          "status": "pending",
+          "notes": ""
+        },
+        {
+          "id": "3.2",
+          "title": "Verify and optimize emoji source configuration",
+          "description": "Ensure Font.registerEmojiSource() in Document.tsx is configured optimally for cross-platform support. Consider adding fallback options.",
+          "acceptance_criteria": [
+            "Emoji source uses most reliable CDN endpoint",
+            "Format (PNG/SVG) is optimal for quality/performance",
+            "Document any platform-specific considerations"
+          ],
+          "estimated_minutes": 30,
+          "status": "pending",
+          "notes": ""
+        },
+        {
+          "id": "3.3",
+          "title": "Handle emojis in headings and other elements",
+          "description": "Ensure emoji rendering works in all markdown element types (headings, lists, blockquotes, etc.), not just paragraphs",
+          "acceptance_criteria": [
+            "Emojis render in H1-H6 headings",
+            "Emojis render in list items",
+            "Emojis render in blockquotes",
+            "Emojis render in table cells"
+          ],
+          "estimated_minutes": 30,
+          "status": "pending",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Testing & Validation",
+      "description": "Comprehensive testing to verify emoji rendering across platforms and validate performance",
+      "subtasks": [
+        {
+          "id": "4.1",
+          "title": "Create emoji rendering integration test",
+          "description": "Build a comprehensive test that generates PDFs with various emoji scenarios and validates they render correctly",
+          "acceptance_criteria": [
+            "Test script covers all acceptance criteria emojis",
+            "Generates test PDF to Desktop for visual inspection",
+            "Test script runs successfully",
+            "Console output indicates success/failure clearly"
+          ],
+          "estimated_minutes": 30,
+          "status": "pending",
+          "notes": ""
+        },
+        {
+          "id": "4.2",
+          "title": "Performance validation",
+          "description": "Add performance measurement to verify emoji processing adds less than 100ms overhead to typical documents",
+          "acceptance_criteria": [
+            "Performance timing added to test script",
+            "Test with document containing 50+ emojis",
+            "Verify <100ms additional processing time",
+            "Document performance results in build-progress.txt"
+          ],
+          "estimated_minutes": 20,
+          "status": "pending",
+          "notes": ""
+        },
+        {
+          "id": "4.3",
+          "title": "Cross-platform verification documentation",
+          "description": "Document how to verify the solution works on macOS, Windows, and Linux. Note any platform-specific considerations.",
+          "acceptance_criteria": [
+            "Cross-platform testing instructions documented",
+            "Known limitations documented (if any)",
+            "Electron packaging considerations noted"
+          ],
+          "estimated_minutes": 15,
+          "status": "pending",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Cleanup & Documentation",
+      "description": "Final cleanup, code documentation, and PR preparation",
+      "subtasks": [
+        {
+          "id": "5.1",
+          "title": "Code cleanup and documentation",
+          "description": "Add JSDoc comments to new functions, remove dead code, ensure consistent code style",
+          "acceptance_criteria": [
+            "All new functions have JSDoc comments",
+            "Unused code removed from InlineText.tsx",
+            "Code passes linting (npm run lint)",
+            "Code is properly formatted"
+          ],
+          "estimated_minutes": 20,
+          "status": "pending",
+          "notes": ""
+        },
+        {
+          "id": "5.2",
+          "title": "Update test-pdf.ts to include emoji test cases",
+          "description": "Update the existing test script to include emoji test cases so emoji rendering is validated during normal testing",
+          "acceptance_criteria": [
+            "test-pdf.ts includes emoji examples",
+            "Script generates PDF with visible emojis",
+            "Existing tests still pass"
+          ],
+          "estimated_minutes": 15,
+          "status": "pending",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "qa_checklist": {
+    "items": [
+      "Standard Unicode emojis render correctly in PDF export",
+      "Emoji appearance is consistent between editor and PDF output",
+      "No missing glyph boxes or substituted characters for emojis",
+      "Solution works across macOS, Windows, and Linux",
+      "Performance impact is minimal (<100ms additional processing for typical document)",
+      "Emojis work in headings, paragraphs, lists, blockquotes, and tables",
+      "ZWJ sequences and skin tone modifiers render correctly",
+      "Code passes linting and formatting checks",
+      "All unit tests pass"
+    ],
+    "status": "pending",
+    "tested_by": "",
+    "issues": "",
+    "tests_passed": ""
+  },
+  "dependencies": {
+    "npm_packages": [],
+    "external_services": [
+      "cdn.jsdelivr.net (for emoji-datasource-apple images)"
+    ],
+    "files_to_modify": [
+      "src/main/pdf/Document.tsx",
+      "src/main/pdf/components/InlineText.tsx",
+      "scripts/test-pdf.ts"
+    ],
+    "files_to_create": [
+      "src/main/pdf/utils/emoji-utils.ts",
+      "src/main/pdf/utils/emoji-utils.test.ts",
+      "scripts/test-emoji-pdf.ts"
+    ]
+  },
+  "architecture_notes": "The solution builds on React-PDF's built-in emoji support via Font.registerEmojiSource(). The key fix is implementing proper emoji detection using Unicode grapheme segmentation to correctly identify emoji boundaries (especially for compound emojis like ZWJ sequences). The InlineText component will be refactored to segment text into emoji/non-emoji parts, allowing React-PDF to apply the registered emoji font only where needed. This approach avoids bundling large emoji assets locally while maintaining cross-platform consistency through the Apple emoji CDN.",
+  "risks": [
+    {
+      "risk": "CDN availability - if jsdelivr.net is unavailable, emojis won't render",
+      "mitigation": "Document this dependency; consider local fallback in future iteration"
+    },
+    {
+      "risk": "React-PDF may have bugs with certain emoji sequences",
+      "mitigation": "Test comprehensive emoji set; document any unsupported sequences"
+    },
+    {
+      "risk": "Performance with many emojis could exceed 100ms threshold",
+      "mitigation": "Optimize emoji detection; use efficient regex patterns; benchmark early"
+    }
+  ],
+  "last_updated": "2026-01-07T07:43:05.728859+00:00"
+}
