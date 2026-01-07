@@ -365,7 +365,9 @@ function TiptapEditor({
 }: TiptapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerPosition, setEmojiPickerPosition] = useState({ top: 0, left: 0 });
   const [mermaidModalOpen, setMermaidModalOpen] = useState(false);
   const [editingDiagramId, setEditingDiagramId] = useState<string | undefined>();
   const [editingDiagramCode, setEditingDiagramCode] = useState<string>('');
@@ -390,7 +392,7 @@ function TiptapEditor({
     },
   });
 
-  // Close emoji picker when clicking outside
+  // Close emoji picker when clicking outside, scrolling, or resizing
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
@@ -398,9 +400,19 @@ function TiptapEditor({
       }
     };
 
+    const handleScrollOrResize = () => {
+      setShowEmojiPicker(false);
+    };
+
     if (showEmojiPicker) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScrollOrResize, true); // Use capture to catch all scrolls
+      window.addEventListener('resize', handleScrollOrResize);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('scroll', handleScrollOrResize, true);
+        window.removeEventListener('resize', handleScrollOrResize);
+      };
     }
   }, [showEmojiPicker]);
 
@@ -1206,16 +1218,34 @@ function TiptapEditor({
         {/* Emoji picker */}
         <div className="relative" ref={emojiPickerRef}>
           <Button
+            ref={emojiButtonRef}
             size="icon"
             variant={showEmojiPicker ? 'default' : 'ghost'}
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            onClick={() => {
+              if (!showEmojiPicker && emojiButtonRef.current) {
+                // Calculate position when opening
+                const rect = emojiButtonRef.current.getBoundingClientRect();
+                setEmojiPickerPosition({
+                  top: rect.bottom + 4, // 4px gap below button
+                  left: rect.left,
+                });
+              }
+              setShowEmojiPicker(!showEmojiPicker);
+            }}
             type="button"
             title="Insert emoji"
           >
             <Smile className="h-4 w-4" />
           </Button>
           {showEmojiPicker && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg p-2 z-50 w-80 max-h-64 overflow-y-auto">
+            <div
+              className="fixed bg-card border border-border rounded-lg shadow-lg p-2 w-80 max-h-64 overflow-y-auto"
+              style={{
+                top: `${emojiPickerPosition.top}px`,
+                left: `${emojiPickerPosition.left}px`,
+                zIndex: 9999
+              }}
+            >
               {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
                 <div key={category} className="mb-3">
                   <div className="text-xs font-semibold text-muted-foreground mb-1 px-1">
