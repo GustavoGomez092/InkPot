@@ -1,0 +1,15 @@
+{
+  "discovered_files": {
+    "src/main/pdf/Document.tsx": {
+      "description": "Emoji source already registered via Font.registerEmojiSource() using Apple emoji CDN at cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/ with PNG format",
+      "category": "pdf-emoji",
+      "discovered_at": "2026-01-07T07:40:09.708950+00:00"
+    },
+    "src/main/pdf/components/InlineText.tsx": {
+      "description": "Contains disabled emoji handling code (isEmoji, splitTextWithEmoji, renderTextWithEmoji) marked with @ts-expect-error. TODO comment says 'React-PDF doesn't handle mixed fonts well' - this is where the fix needs to happen",
+      "category": "pdf-emoji",
+      "discovered_at": "2026-01-07T07:40:09.739686+00:00"
+    }
+  },
+  "last_updated": "2026-01-07T07:40:09.739699+00:00"
+}
