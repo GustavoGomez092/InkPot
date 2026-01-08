@@ -640,9 +640,21 @@ export function registerIPCHandlers(): void {
 			});
 
 			return {
-				filePath,
-				canceled: filePath === null,
+				filePath: filePath ?? null,
+				canceled: !filePath,
 			};
+		}),
+	);
+
+	/**
+	 * Check if file exists
+	 */
+	ipcMain.handle(
+		"file:exists",
+		wrapIPCHandler(async (args) => {
+			const { filePath } = fileExistsSchema.parse(args);
+			const exists = await fileSystem.fileExists(filePath);
+			return { exists };
 		}),
 	);
 
@@ -653,9 +665,7 @@ export function registerIPCHandlers(): void {
 		"file:read",
 		wrapIPCHandler(async (args) => {
 			const { filePath } = readFileSchema.parse(args);
-
 			const content = await fileSystem.readFile(filePath);
-
 			return { content };
 		}),
 	);
@@ -667,24 +677,8 @@ export function registerIPCHandlers(): void {
 		"file:write",
 		wrapIPCHandler(async (args) => {
 			const { filePath, content } = writeFileSchema.parse(args);
-
 			await fileSystem.writeFile(filePath, content);
-
 			return { success: true };
-		}),
-	);
-
-	/**
-	 * Check if file exists
-	 */
-	ipcMain.handle(
-		"file:exists",
-		wrapIPCHandler(async (args) => {
-			const { filePath } = fileExistsSchema.parse(args);
-
-			const exists = await fileSystem.fileExists(filePath);
-
-			return { exists };
 		}),
 	);
 
@@ -695,104 +689,20 @@ export function registerIPCHandlers(): void {
 		"file:delete",
 		wrapIPCHandler(async (args) => {
 			const { filePath } = deleteFileSchema.parse(args);
-
 			await fileSystem.deleteFile(filePath);
-
 			return { success: true };
 		}),
 	);
 
 	/**
-	 * Save mermaid diagram as image
+	 * Save Mermaid image
 	 */
 	ipcMain.handle(
 		"file:save-mermaid-image",
 		wrapIPCHandler(async (args) => {
-			const { svgContent, outputPath } = saveMermaidImageSchema.parse(args);
-
-			// Convert SVG to PNG using sharp
-			await fileSystem.saveMermaidImage(svgContent, outputPath);
-
+			const { filePath, svgContent } = saveMermaidImageSchema.parse(args);
+			await fileSystem.writeFile(filePath, svgContent);
 			return { success: true };
-		}),
-	);
-
-	// ==================== PDF Channel ====================
-
-	/**
-	 * Preview PDF
-	 */
-	ipcMain.handle(
-		"pdf:preview",
-		wrapIPCHandler(async (args) => {
-			const { content, themeId } = previewPDFSchema.parse(args);
-
-			// Get theme
-			let theme = null;
-			if (themeId) {
-				theme = await prisma.theme.findUnique({ where: { id: themeId } });
-			}
-
-			// Generate PDF
-			const pdfPath = await previewPDF(content, theme);
-
-			return { pdfPath };
-		}),
-	);
-
-	/**
-	 * Export PDF
-	 */
-	ipcMain.handle(
-		"pdf:export",
-		wrapIPCHandler(async (args) => {
-			const { content, outputPath, themeId, projectName } =
-				exportPDFSchema.parse(args);
-
-			// Get theme
-			let theme = null;
-			if (themeId) {
-				theme = await prisma.theme.findUnique({ where: { id: themeId } });
-			}
-
-			// Export PDF
-			const finalPath = await exportPDF(
-				content,
-				outputPath,
-				theme,
-				projectName,
-			);
-
-			return { path: finalPath };
-		}),
-	);
-
-	// ==================== DOCX Channel ====================
-
-	/**
-	 * Export DOCX
-	 */
-	ipcMain.handle(
-		"docx:export",
-		wrapIPCHandler(async (args) => {
-			const { content, outputPath, themeId, projectName } =
-				exportDocxSchema.parse(args);
-
-			// Get theme
-			let theme = null;
-			if (themeId) {
-				theme = await prisma.theme.findUnique({ where: { id: themeId } });
-			}
-
-			// Export DOCX
-			const finalPath = await exportDocx(
-				content,
-				outputPath,
-				theme,
-				projectName,
-			);
-
-			return { path: finalPath };
 		}),
 	);
 
@@ -804,10 +714,8 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"app:get-path",
 		wrapIPCHandler(async (args) => {
-			const { path: pathType } = getAppPathSchema.parse(args);
-
-			const appPath = appData.getAppPath(pathType);
-
+			const { name } = getAppPathSchema.parse(args);
+			const appPath = appData.getPath(name);
 			return { path: appPath };
 		}),
 	);
@@ -819,44 +727,328 @@ export function registerIPCHandlers(): void {
 		"app:get-version",
 		wrapIPCHandler(async (args) => {
 			getAppVersionSchema.parse(args);
-
-			const version = appData.getAppVersion();
-
+			const version = appData.getVersion();
 			return { version };
 		}),
 	);
 
+	// ==================== PDF Export Channel ====================
+
 	/**
-	 * Maximize or restore window
+	 * Generate PDF
 	 */
 	ipcMain.handle(
-		"window:toggle-maximize",
-		wrapIPCHandler(async () => {
-			const mainWindow = getMainWindow();
-			if (mainWindow) {
-				const isMaximized = isMainWindowMaximized();
-				if (isMaximized) {
-					mainWindow.unmaximize();
-				} else {
-					mainWindow.maximize();
+		"pdf:generate",
+		wrapIPCHandler(async (args) => {
+			const {
+				projectId,
+				projectName,
+				content,
+				themeId,
+				coverPage,
+				hasToc,
+				tocMinLevel,
+				tocMaxLevel,
+			} = z
+				.object({
+					projectId: z.string().uuid(),
+					projectName: z.string(),
+					content: z.string(),
+					themeId: z.string().uuid().nullable(),
+					coverPage: z
+						.object({
+							enabled: z.boolean(),
+							title: z.string().optional(),
+							subtitle: z.string().optional(),
+							author: z.string().optional(),
+							date: z.string().optional(),
+							templateId: z.string().uuid().optional(),
+						})
+						.optional(),
+					hasToc: z.boolean().optional(),
+					tocMinLevel: z.number().optional(),
+					tocMaxLevel: z.number().optional(),
+				})
+				.parse(args);
+
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({
+					where: { id: themeId },
+				});
+
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
 				}
 			}
 
-			return { success: true };
+			// Generate PDF
+			const pdfData = await generatePDF({
+				projectId,
+				projectName,
+				content,
+				theme,
+				coverPage,
+				hasToc,
+				tocMinLevel,
+				tocMaxLevel,
+			});
+
+			return {
+				success: true,
+				size: pdfData.length,
+			};
 		}),
 	);
 
 	/**
-	 * Open URL in default browser
+	 * Preview PDF
 	 */
 	ipcMain.handle(
-		"shell:open-external",
+		"pdf:preview",
 		wrapIPCHandler(async (args) => {
-			const { url } = z.object({ url: z.string().url() }).parse(args);
+			const { projectId, projectName, content, themeId, coverPage, hasToc, tocMinLevel, tocMaxLevel } =
+				previewPDFSchema.parse(args);
 
-			await shell.openExternal(url);
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({
+					where: { id: themeId },
+				});
 
-			return { success: true };
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
+				}
+			}
+
+			// Generate PDF
+			const pdfBuffer = await previewPDF({
+				projectId,
+				projectName,
+				content,
+				theme,
+				coverPage,
+				hasToc,
+				tocMinLevel,
+				tocMaxLevel,
+			});
+
+			return {
+				success: true,
+				pdfBuffer: pdfBuffer.toString("base64"),
+			};
+		}),
+	);
+
+	/**
+	 * Export PDF
+	 */
+	ipcMain.handle(
+		"pdf:export",
+		wrapIPCHandler(async (args) => {
+			const {
+				projectId,
+				projectName,
+				content,
+				themeId,
+				coverPage,
+				hasToc,
+				tocMinLevel,
+				tocMaxLevel,
+			} = exportPDFSchema.parse(args);
+
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({
+					where: { id: themeId },
+				});
+
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
+				}
+			}
+
+			// Construct file path
+			const desktopPath = appData.getPath("desktop");
+			const fileName = `${projectName}.pdf`;
+			const filePath = path.join(desktopPath, fileName);
+
+			// Export PDF
+			const pdfBuffer = await exportPDF({
+				projectId,
+				projectName,
+				content,
+				theme,
+				coverPage,
+				hasToc,
+				tocMinLevel,
+				tocMaxLevel,
+			});
+
+			await fileSystem.writeFile(filePath, pdfBuffer);
+
+			return {
+				success: true,
+				filePath,
+				fileName,
+			};
+		}),
+	);
+
+	/**
+	 * Calculate page breaks in PDF
+	 */
+	ipcMain.handle(
+		"pdf:calculate-page-breaks",
+		wrapIPCHandler(async (args) => {
+			const { content, themeId, coverPage, hasToc, tocMinLevel, tocMaxLevel } = z
+				.object({
+					content: z.string(),
+					themeId: z.string().uuid().nullable(),
+					coverPage: z
+						.object({
+							enabled: z.boolean(),
+							title: z.string().optional(),
+							subtitle: z.string().optional(),
+							author: z.string().optional(),
+							date: z.string().optional(),
+							templateId: z.string().uuid().optional(),
+						})
+						.optional(),
+					hasToc: z.boolean().optional(),
+					tocMinLevel: z.number().optional(),
+					tocMaxLevel: z.number().optional(),
+				})
+				.parse(args);
+
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({
+					where: { id: themeId },
+				});
+
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
+				}
+			}
+
+			// Calculate page breaks
+			const pageBreaks = await calculatePageBreaks({
+				content,
+				theme,
+				coverPage,
+				hasToc,
+				tocMinLevel,
+				tocMaxLevel,
+			});
+
+			return {
+				pageBreaks,
+			};
+		}),
+	);
+
+	// ==================== DOCX Export Channel ====================
+
+	/**
+	 * Generate DOCX
+	 */
+	ipcMain.handle(
+		"docx:generate",
+		wrapIPCHandler(async (args) => {
+			const { projectId, projectName, content, themeId } = z
+				.object({
+					projectId: z.string().uuid(),
+					projectName: z.string(),
+					content: z.string(),
+					themeId: z.string().uuid().nullable(),
+				})
+				.parse(args);
+
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({
+					where: { id: themeId },
+				});
+
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
+				}
+			}
+
+			// Generate DOCX
+			const docxData = await generateDocx({
+				projectId,
+				projectName,
+				content,
+				theme,
+			});
+
+			return {
+				success: true,
+				size: docxData.length,
+			};
+		}),
+	);
+
+	/**
+	 * Export DOCX
+	 */
+	ipcMain.handle(
+		"docx:export",
+		wrapIPCHandler(async (args) => {
+			const { projectId, projectName, content, themeId } = exportDocxSchema.parse(args);
+
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({
+					where: { id: themeId },
+				});
+
+				if (!theme) {
+					throw new Error(`Theme not found: ${themeId}`);
+				}
+			}
+
+			// Construct file path
+			const desktopPath = appData.getPath("desktop");
+			const fileName = `${projectName}.docx`;
+			const filePath = path.join(desktopPath, fileName);
+
+			// Export DOCX
+			const docxBuffer = await exportDocx({
+				projectId,
+				projectName,
+				content,
+				theme,
+			});
+
+			await fileSystem.writeFile(filePath, docxBuffer);
+
+			return {
+				success: true,
+				filePath,
+				fileName,
+			};
+		}),
+	);
+
+	// ==================== Window Channel ====================
+
+	/**
+	 * Check if main window is maximized
+	 */
+	ipcMain.handle(
+		"window:is-maximized",
+		wrapIPCHandler(async () => {
+			const isMaximized = isMainWindowMaximized();
+			return { isMaximized };
 		}),
 	);
 }
