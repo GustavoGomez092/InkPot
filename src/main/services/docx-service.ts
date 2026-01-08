@@ -7,6 +7,21 @@ import { writeFile } from "node:fs/promises";
 import type { ThemeData } from "@shared/types/ipc-contracts.js";
 import { createDocxDocument } from "../docx/Document.js";
 
+export interface CoverData {
+	hasCoverPage: boolean;
+	title?: string | null;
+	subtitle?: string | null;
+	author?: string | null;
+	logoPath?: string | null;
+	backgroundPath?: string | null;
+}
+
+export interface TOCConfiguration {
+	enabled: boolean;
+	minLevel: number;
+	maxLevel: number;
+}
+
 /**
  * Generate DOCX buffer from markdown content
  */
@@ -15,6 +30,8 @@ export async function generateDocx(
 	theme: ThemeData,
 	projectDir?: string,
 	mermaidDiagrams?: Record<string, string>,
+	coverData?: CoverData,
+	tocConfig?: TOCConfiguration,
 ): Promise<Buffer> {
 	try {
 		console.log("📄 Generating DOCX with theme:", theme.name);
@@ -23,12 +40,22 @@ export async function generateDocx(
 			content.substring(0, 500),
 		);
 
+		if (coverData?.hasCoverPage) {
+			console.log("📑 Cover page enabled:", coverData);
+		}
+
+		if (tocConfig?.enabled) {
+			console.log("📑 TOC enabled (levels", tocConfig.minLevel, "-", tocConfig.maxLevel, ")");
+		}
+
 		// Create DOCX document buffer
 		const buffer = await createDocxDocument(
 			content,
 			theme,
 			projectDir,
 			mermaidDiagrams,
+			coverData,
+			tocConfig,
 		);
 
 		console.log("✅ DOCX generated successfully");

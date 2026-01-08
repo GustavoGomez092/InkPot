@@ -540,6 +540,9 @@ function EditorView() {
   const [coverTitle, setCoverTitle] = useState<string | null>(null);
   const [coverSubtitle, setCoverSubtitle] = useState<string | null>(null);
   const [coverAuthor, setCoverAuthor] = useState<string | null>(null);
+  const [hasToc, setHasToc] = useState<boolean>(true);
+  const [tocMinLevel, setTocMinLevel] = useState<number>(1);
+  const [tocMaxLevel, setTocMaxLevel] = useState<number>(3);
   const [projectThemeId, setProjectThemeId] = useState<string | null>(null);
   const [availableThemes, setAvailableThemes] = useState<Array<{ id: string; name: string }>>([]);
   const [activeTheme, setActiveTheme] = useState<{
@@ -563,6 +566,9 @@ function EditorView() {
     title: '',
     subtitle: '',
     author: '',
+    hasToc: true,
+    tocMinLevel: 1,
+    tocMaxLevel: 3,
   });
   const charCountUpdateRef = useRef<NodeJS.Timeout | null>(null);
   const isDragging = useRef(false);
@@ -622,6 +628,11 @@ function EditorView() {
           setCoverTitle(result.data.project.coverTitle);
           setCoverSubtitle(result.data.project.coverSubtitle);
           setCoverAuthor(result.data.project.coverAuthor);
+
+          // Load TOC settings
+          setHasToc(result.data.project.hasToc ?? true);
+          setTocMinLevel(result.data.project.tocMinLevel ?? 1);
+          setTocMaxLevel(result.data.project.tocMaxLevel ?? 3);
 
           // Load theme data for editor styling - use project's theme
           const projectThemeId = result.data.project.themeId;
@@ -739,6 +750,9 @@ function EditorView() {
           coverTitle: coverData.title || null,
           coverSubtitle: coverData.subtitle || null,
           coverAuthor: coverData.author || null,
+          hasToc: coverData.hasToc,
+          tocMinLevel: coverData.tocMinLevel,
+          tocMaxLevel: coverData.tocMaxLevel,
         });
 
         if (result.success) {
@@ -748,6 +762,9 @@ function EditorView() {
           setCoverTitle(coverData.title || null);
           setCoverSubtitle(coverData.subtitle || null);
           setCoverAuthor(coverData.author || null);
+          setHasToc(coverData.hasToc);
+          setTocMinLevel(coverData.tocMinLevel);
+          setTocMaxLevel(coverData.tocMaxLevel);
         } else {
           throw new Error('Failed to save cover data');
         }
@@ -1444,6 +1461,9 @@ function EditorView() {
                   initialTitle={coverTitle}
                   initialSubtitle={coverSubtitle}
                   initialAuthor={coverAuthor}
+                  initialHasToc={hasToc}
+                  initialTocMinLevel={tocMinLevel}
+                  initialTocMaxLevel={tocMaxLevel}
                   onDataChange={(data) => {
                     // Update ref for saving
                     coverDataRef.current = data;
