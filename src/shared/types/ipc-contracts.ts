@@ -108,6 +108,7 @@ export interface ThemeData {
 	textColor: string;
 	headingColor: string;
 	linkColor: string;
+	linkUnderline: boolean;
 	codeBackground: string;
 }
 
@@ -118,6 +119,12 @@ export interface CoverPageData {
 	subtitle: string | null;
 	author: string | null;
 	date: string | null;
+}
+
+export interface TOCConfiguration {
+	enabled: boolean;
+	minLevel: number; // 1-6
+	maxLevel: number; // 1-6
 }
 
 export interface CoverAssetData {
@@ -140,6 +147,9 @@ export interface LoadedProject {
 	coverAuthor: string | null;
 	coverDate: string | null;
 	coverTemplateId: string | null;
+	hasToc: boolean;
+	tocMinLevel: number;
+	tocMaxLevel: number;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -153,6 +163,7 @@ export interface SaveProjectRequest {
 	content: string;
 	themeId?: string;
 	coverPage?: Partial<CoverPageData>;
+	toc?: Partial<TOCConfiguration>;
 }
 
 export interface SaveProjectResponse {
@@ -283,6 +294,7 @@ export interface PreviewPDFRequest {
 	projectId: string;
 	content?: string; // Optional live content for real-time preview
 	mermaidDiagrams?: Record<string, string>; // Map of diagram code -> file path
+	tocConfig?: TOCConfiguration; // Optional TOC configuration override
 }
 
 export interface PreviewPDFResponse {
@@ -296,6 +308,7 @@ export interface ExportPDFRequest {
 	outputPath: string;
 	openAfterExport?: boolean;
 	mermaidDiagrams?: Record<string, string>; // Map of diagram code -> file path
+	tocConfig?: TOCConfiguration; // Optional TOC configuration override
 }
 
 export interface ExportPDFResponse {

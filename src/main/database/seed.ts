@@ -62,6 +62,7 @@ async function seedThemes(): Promise<void> {
 			textColor: "#000000",
 			headingColor: "#1a1a1a",
 			linkColor: "#0066CC",
+			linkUnderline: true,
 			codeBackground: "#F5F5F5",
 		},
 		{
@@ -88,6 +89,7 @@ async function seedThemes(): Promise<void> {
 			textColor: "#2d2d2d",
 			headingColor: "#000000",
 			linkColor: "#2563EB",
+			linkUnderline: true,
 			codeBackground: "#E5E7EB",
 		},
 		{
@@ -114,6 +116,7 @@ async function seedThemes(): Promise<void> {
 			textColor: "#1a1a1a",
 			headingColor: "#000000",
 			linkColor: "#8B4513",
+			linkUnderline: true,
 			codeBackground: "#F0EDE6",
 		},
 	];

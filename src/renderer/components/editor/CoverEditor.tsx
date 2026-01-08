@@ -13,6 +13,9 @@ export interface CoverData {
   title: string;
   subtitle: string;
   author: string;
+  hasToc: boolean;
+  tocMinLevel: number;
+  tocMaxLevel: number;
 }
 
 interface CoverEditorProps {
@@ -20,6 +23,9 @@ interface CoverEditorProps {
   initialTitle?: string | null;
   initialSubtitle?: string | null;
   initialAuthor?: string | null;
+  initialHasToc?: boolean;
+  initialTocMinLevel?: number;
+  initialTocMaxLevel?: number;
   onUpdate?: () => void;
   onDataChange?: (data: CoverData) => void;
 }
@@ -29,12 +35,18 @@ export function CoverEditor({
   initialTitle,
   initialSubtitle,
   initialAuthor,
+  initialHasToc,
+  initialTocMinLevel,
+  initialTocMaxLevel,
   onUpdate,
   onDataChange,
 }: CoverEditorProps) {
   const [title, setTitle] = useState(initialTitle || '');
   const [subtitle, setSubtitle] = useState(initialSubtitle || '');
   const [author, setAuthor] = useState(initialAuthor || '');
+  const [hasToc, setHasToc] = useState(initialHasToc ?? true);
+  const [tocMinLevel, setTocMinLevel] = useState(initialTocMinLevel ?? 1);
+  const [tocMaxLevel, setTocMaxLevel] = useState(initialTocMaxLevel ?? 3);
   const [logoAsset, setLogoAsset] = useState<CoverAsset | null>(null);
   const [backgroundAsset, setBackgroundAsset] = useState<CoverAsset | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
@@ -44,9 +56,9 @@ export function CoverEditor({
   // Notify parent when data changes
   useEffect(() => {
     if (onDataChange) {
-      onDataChange({ title, subtitle, author });
+      onDataChange({ title, subtitle, author, hasToc, tocMinLevel, tocMaxLevel });
     }
-  }, [title, subtitle, author, onDataChange]);
+  }, [title, subtitle, author, hasToc, tocMinLevel, tocMaxLevel, onDataChange]);
 
   // Load existing assets
   useEffect(() => {
@@ -290,6 +302,89 @@ export function CoverEditor({
               placeholder="By Alex Johnson"
               className="w-full"
             />
+          </CardContent>
+        </Card>
+
+        {/* Table of Contents Settings */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold">Table of Contents</h3>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Enable/Disable TOC */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="hasToc"
+                checked={hasToc}
+                onChange={(e) => setHasToc(e.target.checked)}
+                className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-2"
+              />
+              <label htmlFor="hasToc" className="text-sm font-medium cursor-pointer">
+                Include Table of Contents
+              </label>
+            </div>
+
+            {/* TOC Level Configuration (only show when TOC is enabled) */}
+            {hasToc && (
+              <div className="space-y-3 pt-2 border-t border-border">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="tocMinLevel" className="block text-sm font-medium mb-1">
+                      Minimum Level
+                    </label>
+                    <select
+                      id="tocMinLevel"
+                      value={tocMinLevel}
+                      onChange={(e) => {
+                        const newMin = Number(e.target.value);
+                        setTocMinLevel(newMin);
+                        // Ensure max is not less than min
+                        if (tocMaxLevel < newMin) {
+                          setTocMaxLevel(newMin);
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value={1}>H1</option>
+                      <option value={2}>H2</option>
+                      <option value={3}>H3</option>
+                      <option value={4}>H4</option>
+                      <option value={5}>H5</option>
+                      <option value={6}>H6</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="tocMaxLevel" className="block text-sm font-medium mb-1">
+                      Maximum Level
+                    </label>
+                    <select
+                      id="tocMaxLevel"
+                      value={tocMaxLevel}
+                      onChange={(e) => {
+                        const newMax = Number(e.target.value);
+                        setTocMaxLevel(newMax);
+                        // Ensure min is not greater than max
+                        if (tocMinLevel > newMax) {
+                          setTocMinLevel(newMax);
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value={1}>H1</option>
+                      <option value={2}>H2</option>
+                      <option value={3}>H3</option>
+                      <option value={4}>H4</option>
+                      <option value={5}>H5</option>
+                      <option value={6}>H6</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Choose which heading levels to include in the table of contents
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

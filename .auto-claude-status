@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "002-emoji-font-rendering-fix",
+  "spec": "003-working-pdf-hyperlinks",
   "state": "complete",
   "subtasks": {
-    "completed": 12,
-    "total": 12,
+    "completed": 20,
+    "total": 20,
     "in_progress": 0,
     "failed": 0
   },
   "phase": {
-    "current": "Cleanup & Documentation",
+    "current": "Testing and Verification",
     "id": null,
-    "total": 2
+    "total": 5
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 130,
-    "started_at": "2026-01-06T23:37:06.832656"
+    "number": 142,
+    "started_at": "2026-01-06T23:40:00.095829"
   },
-  "last_update": "2026-01-07T00:46:40.845294"
+  "last_update": "2026-01-07T01:09:15.885028"
 }

@@ -17,12 +17,17 @@ type PDFStyle = any;
 interface MarkdownElementsProps {
   elements: MarkdownElement[];
   theme: ThemeData;
+  validAnchorIds?: Set<string>; // For resolving internal links to headings
 }
 
 /**
  * Render markdown elements to React-PDF components
  */
-export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, theme }) => {
+export const MarkdownElements: React.FC<MarkdownElementsProps> = ({
+  elements,
+  theme,
+  validAnchorIds,
+}) => {
   return (
     <>
       {elements.map((element, idx) => {
@@ -30,22 +35,57 @@ export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, th
 
         switch (element.type) {
           case 'heading':
-            return <HeadingElement key={key} element={element} theme={theme} />;
+            return (
+              <HeadingElement
+                key={key}
+                element={element}
+                theme={theme}
+                validAnchorIds={validAnchorIds}
+              />
+            );
 
           case 'paragraph':
-            return <ParagraphElement key={key} element={element} theme={theme} />;
+            return (
+              <ParagraphElement
+                key={key}
+                element={element}
+                theme={theme}
+                validAnchorIds={validAnchorIds}
+              />
+            );
 
           case 'list':
-            return <ListElement key={key} element={element} theme={theme} />;
+            return (
+              <ListElement
+                key={key}
+                element={element}
+                theme={theme}
+                validAnchorIds={validAnchorIds}
+              />
+            );
 
           case 'checklist':
-            return <ChecklistElement key={key} element={element} theme={theme} />;
+            return (
+              <ChecklistElement
+                key={key}
+                element={element}
+                theme={theme}
+                validAnchorIds={validAnchorIds}
+              />
+            );
 
           case 'codeBlock':
             return <CodeBlockElement key={key} element={element} theme={theme} />;
 
           case 'blockquote':
-            return <BlockquoteElement key={key} element={element} theme={theme} />;
+            return (
+              <BlockquoteElement
+                key={key}
+                element={element}
+                theme={theme}
+                validAnchorIds={validAnchorIds}
+              />
+            );
 
           case 'horizontalRule':
             return <HorizontalRuleElement key={key} theme={theme} />;
@@ -103,7 +143,8 @@ function getBoldFont(fontFamily: string): string {
 const HeadingElement: React.FC<{
   element: MarkdownElement;
   theme: ThemeData;
-}> = ({ element, theme }) => {
+  validAnchorIds?: Set<string>;
+}> = ({ element, theme, validAnchorIds }) => {
   const level = element.level || 1;
 
   const sizes = {
@@ -136,9 +177,14 @@ const HeadingElement: React.FC<{
   };
 
   return (
-    <Text style={style}>
+    <Text style={style} id={element.anchorId}>
       {element.inline ? (
-        <InlineText elements={element.inline} theme={theme} style={style} />
+        <InlineText
+          elements={element.inline}
+          theme={theme}
+          style={style}
+          validAnchorIds={validAnchorIds}
+        />
       ) : (
         element.content
       )}
@@ -150,7 +196,8 @@ const HeadingElement: React.FC<{
 const ParagraphElement: React.FC<{
   element: MarkdownElement;
   theme: ThemeData;
-}> = ({ element, theme }) => {
+  validAnchorIds?: Set<string>;
+}> = ({ element, theme, validAnchorIds }) => {
   const style: PDFStyle = {
     fontSize: theme.bodySize,
     fontFamily: theme.bodyFont,
@@ -164,7 +211,12 @@ const ParagraphElement: React.FC<{
   return (
     <Text style={style}>
       {element.inline ? (
-        <InlineText elements={element.inline} theme={theme} style={style} />
+        <InlineText
+          elements={element.inline}
+          theme={theme}
+          style={style}
+          validAnchorIds={validAnchorIds}
+        />
       ) : (
         element.content
       )}
@@ -176,7 +228,8 @@ const ParagraphElement: React.FC<{
 const ListElement: React.FC<{
   element: MarkdownElement;
   theme: ThemeData;
-}> = ({ element, theme }) => {
+  validAnchorIds?: Set<string>;
+}> = ({ element, theme, validAnchorIds }) => {
   const itemStyle: PDFStyle = {
     fontSize: theme.bodySize,
     fontFamily: theme.bodyFont,
@@ -207,7 +260,12 @@ const ListElement: React.FC<{
             }}
           >
             <Text style={itemStyle}>{prefix}</Text>
-            <InlineText elements={inlineElements} theme={theme} style={itemStyle} />
+            <InlineText
+              elements={inlineElements}
+              theme={theme}
+              style={itemStyle}
+              validAnchorIds={validAnchorIds}
+            />
           </Text>
         );
       })}
@@ -219,7 +277,8 @@ const ListElement: React.FC<{
 const ChecklistElement: React.FC<{
   element: MarkdownElement;
   theme: ThemeData;
-}> = ({ element, theme }) => {
+  validAnchorIds?: Set<string>;
+}> = ({ element, theme, validAnchorIds }) => {
   const itemStyle: PDFStyle = {
     fontSize: theme.bodySize,
     fontFamily: theme.bodyFont,
@@ -240,7 +299,12 @@ const ChecklistElement: React.FC<{
         return (
           <Text key={`checklist-${idx}-${item.slice(0, 10)}`} style={itemStyle}>
             <Text style={itemStyle}>{checkbox}</Text>
-            <InlineText elements={inlineElements} theme={theme} style={itemStyle} />
+            <InlineText
+              elements={inlineElements}
+              theme={theme}
+              style={itemStyle}
+              validAnchorIds={validAnchorIds}
+            />
           </Text>
         );
       })}
@@ -288,7 +352,8 @@ const CodeBlockElement: React.FC<{
 const BlockquoteElement: React.FC<{
   element: MarkdownElement;
   theme: ThemeData;
-}> = ({ element, theme }) => {
+  validAnchorIds?: Set<string>;
+}> = ({ element, theme, validAnchorIds }) => {
   const style: PDFStyle = {
     fontSize: theme.bodySize,
     fontFamily: theme.bodyFont,
@@ -307,7 +372,11 @@ const BlockquoteElement: React.FC<{
   return (
     <View style={style}>
       <Text>
-        {element.inline ? <InlineText elements={element.inline} theme={theme} /> : element.content}
+        {element.inline ? (
+          <InlineText elements={element.inline} theme={theme} validAnchorIds={validAnchorIds} />
+        ) : (
+          element.content
+        )}
       </Text>
     </View>
   );

@@ -222,6 +222,9 @@ export function registerIPCHandlers(): void {
 					coverAuthor: project.coverAuthor,
 					coverDate: project.coverDate,
 					coverTemplateId: project.coverTemplateId,
+					hasToc: project.hasToc,
+					tocMinLevel: project.tocMinLevel,
+					tocMaxLevel: project.tocMaxLevel,
 					createdAt: project.createdAt.toISOString(),
 					updatedAt: project.updatedAt.toISOString(),
 				},
@@ -235,7 +238,7 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"projects:save",
 		wrapIPCHandler(async (args) => {
-			const { id, content, themeId, coverPage } = saveProjectSchema.parse(args);
+			const { id, content, themeId, coverPage, toc } = saveProjectSchema.parse(args);
 
 			// Get project
 			const project = await prisma.project.findUnique({
@@ -264,6 +267,9 @@ export function registerIPCHandlers(): void {
 				coverAuthor?: string | null;
 				coverDate?: string | null;
 				coverTemplateId?: string | null;
+				hasToc?: boolean;
+				tocMinLevel?: number;
+				tocMaxLevel?: number;
 			} = {};
 
 			if (themeId !== undefined) {
@@ -288,6 +294,18 @@ export function registerIPCHandlers(): void {
 				}
 				if (coverPage.templateId !== undefined) {
 					updates.coverTemplateId = coverPage.templateId;
+				}
+			}
+
+			if (toc) {
+				if (toc.enabled !== undefined) {
+					updates.hasToc = toc.enabled;
+				}
+				if (toc.minLevel !== undefined) {
+					updates.tocMinLevel = toc.minLevel;
+				}
+				if (toc.maxLevel !== undefined) {
+					updates.tocMaxLevel = toc.maxLevel;
 				}
 			}
 
@@ -657,20 +675,6 @@ export function registerIPCHandlers(): void {
 	);
 
 	/**
-	 * Delete file
-	 */
-	ipcMain.handle(
-		"file:delete",
-		wrapIPCHandler(async (args) => {
-			const { filePath } = deleteFileSchema.parse(args);
-
-			await fileSystem.deleteFile(filePath);
-
-			return { success: true };
-		}),
-	);
-
-	/**
 	 * Check if file exists
 	 */
 	ipcMain.handle(
@@ -685,330 +689,35 @@ export function registerIPCHandlers(): void {
 	);
 
 	/**
-	 * Save image from data URL to project assets folder
+	 * Delete file
 	 */
 	ipcMain.handle(
-		"file:save-image",
+		"file:delete",
 		wrapIPCHandler(async (args) => {
-			const { projectId, imageDataUrl, fileName } = z
-				.object({
-					projectId: z.string().uuid(),
-					imageDataUrl: z.string(),
-					fileName: z.string().optional(),
-				})
-				.parse(args);
+			const { filePath } = deleteFileSchema.parse(args);
 
-			// Get project
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-			});
+			await fileSystem.deleteFile(filePath);
 
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
-
-			// Create assets directory for project
-			const projectDir = path.dirname(project.filePath);
-			const assetsDir = path.join(projectDir, "assets");
-			await fileSystem.createDirectory(assetsDir);
-
-			// Extract file extension from data URL
-			const matches = imageDataUrl.match(/^data:image\/([^;]+);base64,/);
-			const extension = matches ? `.${matches[1]}` : ".png";
-
-			// Generate unique filename
-			const baseName = fileName
-				? path.parse(fileName).name
-				: `image-${Date.now()}`;
-			const safeFileName = fileSystem.getSafeFilename(
-				fileSystem.generateUniqueFilename(baseName, extension),
-			);
-			const absolutePath = path.join(assetsDir, safeFileName);
-
-			// Write file
-			await fileSystem.writeFileFromDataURL(absolutePath, imageDataUrl);
-
-			// Get file size
-			const stats = await fileSystem.getFileStats(absolutePath);
-
-			// Return relative path (assets/filename.ext)
-			const relativePath = `assets/${safeFileName}`;
-
-			return {
-				relativePath,
-				absolutePath,
-				fileName: safeFileName,
-				fileSize: stats.size,
-			};
+			return { success: true };
 		}),
 	);
 
 	/**
-	 * Get project assets path
+	 * Save mermaid diagram as image
 	 */
 	ipcMain.handle(
-		"file:get-project-assets-path",
+		"file:save-mermaid-image",
 		wrapIPCHandler(async (args) => {
-			const { projectId } = z
-				.object({
-					projectId: z.string().uuid(),
-				})
-				.parse(args);
+			const { svgContent, outputPath } = saveMermaidImageSchema.parse(args);
 
-			// Get project
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-			});
+			// Convert SVG to PNG using sharp
+			await fileSystem.saveMermaidImage(svgContent, outputPath);
 
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
-
-			const projectPath = path.dirname(project.filePath);
-			const assetsPath = path.join(projectPath, "assets");
-
-			// Ensure assets directory exists
-			await fileSystem.createDirectory(assetsPath);
-
-			return {
-				assetsPath,
-				projectPath,
-			};
+			return { success: true };
 		}),
 	);
 
-	/**
-	 * Get absolute path for image (converts relative path to file:// URL)
-	 */
-	/**
-	 * Get image absolute path from relative path
-	 */
-	ipcMain.handle(
-		"file:get-image-path",
-		wrapIPCHandler(async (args) => {
-			const { projectId, relativePath } = z
-				.object({
-					projectId: z.string().uuid(),
-					relativePath: z.string(),
-				})
-				.parse(args);
-
-			// Get project
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-			});
-
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
-
-			const projectPath = path.dirname(project.filePath);
-			const absolutePath = path.join(projectPath, relativePath);
-
-			// Check if file exists
-			if (!(await fileSystem.fileExists(absolutePath))) {
-				throw new Error(`Image file not found: ${absolutePath}`);
-			}
-
-			// Read image and convert to base64 data URL
-			const fs = await import("node:fs/promises");
-			const imageBuffer = await fs.readFile(absolutePath);
-			const extension = path.extname(absolutePath).toLowerCase();
-			const mimeTypes: { [key: string]: string } = {
-				".png": "image/png",
-				".jpg": "image/jpeg",
-				".jpeg": "image/jpeg",
-				".gif": "image/gif",
-				".webp": "image/webp",
-				".svg": "image/svg+xml",
-			};
-			const mimeType = mimeTypes[extension] || "image/png";
-			const base64 = imageBuffer.toString("base64");
-			const dataUrl = `data:${mimeType};base64,${base64}`;
-
-			return {
-				absolutePath,
-				dataUrl,
-			};
-		}),
-	); // ==================== PDF Channel ====================
-
-	/**
-	 * Export PDF
-	 */
-	ipcMain.handle(
-		"pdf:export",
-		wrapIPCHandler(async (args) => {
-			const { projectId, outputPath, openAfterExport, mermaidDiagrams } =
-				exportPDFSchema.parse(args);
-
-			// Get project with theme
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-				include: { theme: true },
-			});
-
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
-
-			// Get theme (use project theme or default to first built-in theme)
-			let theme = project.theme;
-			if (!theme) {
-				theme = await prisma.theme.findFirst({
-					where: { isBuiltIn: true },
-				});
-				if (!theme) {
-					throw new Error("No theme available");
-				}
-			}
-
-			// Read project content
-			const fileContent = await fileSystem.readFile(project.filePath);
-			const projectData = JSON.parse(fileContent);
-
-			// Get project directory for resolving image paths
-			const projectDir = path.dirname(project.filePath);
-
-			// Get cover assets if cover page is enabled
-			let coverData:
-				| {
-						hasCoverPage: boolean;
-						title?: string | null;
-						subtitle?: string | null;
-						author?: string | null;
-						logoPath?: string | null;
-						backgroundPath?: string | null;
-				  }
-				| undefined;
-			if (project.hasCoverPage) {
-				const coverAssets = await prisma.projectCoverAsset.findMany({
-					where: { projectId },
-				});
-
-				const logoAsset = coverAssets.find((a) => a.assetType === "logo");
-				const backgroundAsset = coverAssets.find(
-					(a) => a.assetType === "background",
-				);
-
-				// Convert images to base64 data URLs for PDF generation
-				let logoDataUrl: string | undefined;
-				let backgroundDataUrl: string | undefined;
-
-				if (logoAsset && (await fileSystem.fileExists(logoAsset.filePath))) {
-					const fs = await import("node:fs/promises");
-					const buffer = await fs.readFile(logoAsset.filePath);
-					const base64 = buffer.toString("base64");
-					logoDataUrl = `data:${logoAsset.mimeType};base64,${base64}`;
-				}
-
-				if (
-					backgroundAsset &&
-					(await fileSystem.fileExists(backgroundAsset.filePath))
-				) {
-					const fs = await import("node:fs/promises");
-					const buffer = await fs.readFile(backgroundAsset.filePath);
-					const base64 = buffer.toString("base64");
-					backgroundDataUrl = `data:${backgroundAsset.mimeType};base64,${base64}`;
-				}
-
-				coverData = {
-					hasCoverPage: true,
-					title: project.coverTitle,
-					subtitle: project.coverSubtitle,
-					author: project.coverAuthor,
-					logoPath: logoDataUrl,
-					backgroundPath: backgroundDataUrl,
-				};
-			}
-
-			// Generate PDF
-			const buffer = await generatePDF(
-				projectData.content || "",
-				theme,
-				projectDir,
-				coverData,
-				mermaidDiagrams as Record<string, string> | undefined,
-			);
-
-			// Export to file
-			await exportPDF(buffer, outputPath);
-
-			// Open file after export if requested
-			if (openAfterExport) {
-				await shell.openPath(outputPath);
-			}
-
-			return { success: true, filePath: outputPath };
-		}),
-	);
-
-	/**
-	 * Save Mermaid Diagram Image
-	 * Saves PNG image (converted in renderer using Canvas API) to project's assets folder
-	 * Canvas-based conversion preserves foreignObject HTML content
-	 */
-	ipcMain.handle(
-		"pdf:saveMermaidImage",
-		wrapIPCHandler(async (args) => {
-			const { projectId, diagramCode, svgString } =
-				saveMermaidImageSchema.parse(args);
-
-			console.log(
-				`🎨 Saving mermaid diagram (data length: ${svgString.length} bytes)`,
-			);
-
-			// Get project to find its directory
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-			});
-
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
-
-			const projectDir = path.dirname(project.filePath);
-			const assetsDir = path.join(projectDir, ".inkpot", "diagrams");
-
-			// Ensure assets directory exists
-			await fileSystem.createDirectory(assetsDir);
-
-			// Create a hash of the diagram code for the filename (matches renderer implementation)
-			let hash = 0;
-			for (let i = 0; i < diagramCode.length; i++) {
-				const char = diagramCode.charCodeAt(i);
-				hash = (hash << 5) - hash + char;
-				hash = hash & hash; // Convert to 32bit integer
-			}
-			const hashString = Math.abs(hash).toString(36);
-			const fileName = `mermaid-${hashString}.png`;
-			const absolutePath = path.join(assetsDir, fileName);
-
-			// Save PNG file from data URL
-			// The renderer has already converted SVG to PNG to preserve foreignObject content
-			const fs = await import("node:fs/promises");
-
-			// Extract base64 data from data URL
-			const base64Data = svgString.replace(/^data:image\/png;base64,/, "");
-			const buffer = Buffer.from(base64Data, "base64");
-
-			await fs.writeFile(absolutePath, buffer);
-
-			// Get file size
-			const stats = await fs.stat(absolutePath);
-
-			console.log(
-				`✅ Saved mermaid diagram: ${fileName} (${stats.size} bytes)`,
-			);
-			console.log(`📁 Absolute path: ${absolutePath}`);
-
-			// Return absolute file path - Electron can load local files directly
-			return {
-				filePath: absolutePath,
-				fileSize: stats.size,
-			};
-		}),
-	);
+	// ==================== PDF Channel ====================
 
 	/**
 	 * Preview PDF
@@ -1016,196 +725,45 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"pdf:preview",
 		wrapIPCHandler(async (args) => {
-			console.log("📥 pdf:preview - Received args:", {
-				projectId: args.projectId,
-				hasContent: !!args.content,
-				hasMermaidDiagrams: !!args.mermaidDiagrams,
-				mermaidDiagramKeys: args.mermaidDiagrams
-					? Object.keys(args.mermaidDiagrams)
-					: [],
-				mermaidDiagramSample: args.mermaidDiagrams
-					? Object.entries(args.mermaidDiagrams)
-							.slice(0, 1)
-							.map(([k, v]) => ({ key: k, value: v, valueType: typeof v }))
-					: [],
-			});
-
-			// Try parsing with detailed error
-			let projectId: string;
-			let liveContent: string | undefined;
-			let mermaidDiagrams: Record<string, string> | undefined;
-
-			try {
-				const parsed = previewPDFSchema.parse(args);
-				projectId = parsed.projectId;
-				liveContent = parsed.content;
-				mermaidDiagrams = parsed.mermaidDiagrams;
-			} catch (error) {
-				console.error("❌ Validation error:", error);
-				if (error instanceof Error && "issues" in error) {
-					console.error("❌ Zod issues:", (error as any).issues);
-				}
-				throw error;
-			}
-
-			// Get project with theme
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-				include: { theme: true },
-			});
-
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
-
-			// Get theme (use project theme or default to first built-in theme)
-			let theme = project.theme;
-			if (!theme) {
-				theme = await prisma.theme.findFirst({
-					where: { isBuiltIn: true },
-				});
-				if (!theme) {
-					throw new Error("No theme available");
-				}
-			}
-
-			// Use live content if provided, otherwise read from file
-			let content: string;
-			if (liveContent !== undefined) {
-				content = liveContent;
-				console.log(
-					"🔍 IPC Handler - Using live content, contains mermaid:",
-					content.includes("```mermaid"),
-				);
-			} else {
-				const fileContent = await fileSystem.readFile(project.filePath);
-				const projectData = JSON.parse(fileContent);
-				content = projectData.content || "";
-				console.log(
-					"🔍 IPC Handler - Using saved content, contains mermaid:",
-					content.includes("```mermaid"),
-				);
-			}
-			console.log(
-				"🔍 IPC Handler - Content (first 500 chars):",
-				content.substring(0, 500),
-			);
-
-			// Get project directory for resolving image paths
-			const projectDir = path.dirname(project.filePath);
-
-			// Get cover assets if cover page is enabled
-			let coverData:
-				| {
-						hasCoverPage: boolean;
-						title?: string | null;
-						subtitle?: string | null;
-						author?: string | null;
-						logoPath?: string | null;
-						backgroundPath?: string | null;
-				  }
-				| undefined;
-			if (project.hasCoverPage) {
-				const coverAssets = await prisma.projectCoverAsset.findMany({
-					where: { projectId },
-				});
-
-				const logoAsset = coverAssets.find((a) => a.assetType === "logo");
-				const backgroundAsset = coverAssets.find(
-					(a) => a.assetType === "background",
-				);
-
-				// Convert images to base64 data URLs for PDF generation
-				let logoDataUrl: string | undefined;
-				let backgroundDataUrl: string | undefined;
-
-				if (logoAsset && (await fileSystem.fileExists(logoAsset.filePath))) {
-					const fs = await import("node:fs/promises");
-					const buffer = await fs.readFile(logoAsset.filePath);
-					const base64 = buffer.toString("base64");
-					logoDataUrl = `data:${logoAsset.mimeType};base64,${base64}`;
-				}
-
-				if (
-					backgroundAsset &&
-					(await fileSystem.fileExists(backgroundAsset.filePath))
-				) {
-					const fs = await import("node:fs/promises");
-					const buffer = await fs.readFile(backgroundAsset.filePath);
-					const base64 = buffer.toString("base64");
-					backgroundDataUrl = `data:${backgroundAsset.mimeType};base64,${base64}`;
-				}
-
-				coverData = {
-					hasCoverPage: true,
-					title: project.coverTitle,
-					subtitle: project.coverSubtitle,
-					author: project.coverAuthor,
-					logoPath: logoDataUrl,
-					backgroundPath: backgroundDataUrl,
-				};
-			}
-
-			// Generate preview
-			console.log(
-				"🎨 Generating PDF preview with mermaidDiagrams:",
-				mermaidDiagrams,
-			);
-			const pdfDataUrl = await previewPDF(
-				content,
-				theme,
-				projectDir,
-				coverData,
-				mermaidDiagrams as Record<string, string> | undefined,
-			);
-
-			// For now, we don't have pageCount and fileSize from previewPDF
-			// These would require parsing the PDF or tracking during generation
-			return {
-				pdfDataUrl,
-				pageCount: 1, // Placeholder - would need PDF parsing to get actual count
-				fileSize: Buffer.from(pdfDataUrl.split(",")[1], "base64").length,
-			};
-		}),
-	); /**
-	 * Calculate page breaks
-	 */
-	ipcMain.handle(
-		"pdf:calculate-page-breaks",
-		wrapIPCHandler(async (args) => {
-			// This handler receives just projectId similar to preview
-			const input = args as unknown as { projectId: string };
-			const { projectId } = input;
-
-			// Get project with theme
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-				include: { theme: true },
-			});
-
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
+			const { content, themeId } = previewPDFSchema.parse(args);
 
 			// Get theme
-			let theme = project.theme;
-			if (!theme) {
-				theme = await prisma.theme.findFirst({
-					where: { isBuiltIn: true },
-				});
-				if (!theme) {
-					throw new Error("No theme available");
-				}
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({ where: { id: themeId } });
 			}
 
-			// Read project content
-			const fileContent = await fileSystem.readFile(project.filePath);
-			const projectData = JSON.parse(fileContent);
+			// Generate PDF
+			const pdfPath = await previewPDF(content, theme);
 
-			// Calculate page breaks
-			const pageBreaks = calculatePageBreaks(projectData.content || "", theme);
+			return { pdfPath };
+		}),
+	);
 
-			return { pageBreaks };
+	/**
+	 * Export PDF
+	 */
+	ipcMain.handle(
+		"pdf:export",
+		wrapIPCHandler(async (args) => {
+			const { content, outputPath, themeId, projectName } =
+				exportPDFSchema.parse(args);
+
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({ where: { id: themeId } });
+			}
+
+			// Export PDF
+			const finalPath = await exportPDF(
+				content,
+				outputPath,
+				theme,
+				projectName,
+			);
+
+			return { path: finalPath };
 		}),
 	);
 
@@ -1217,577 +775,88 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"docx:export",
 		wrapIPCHandler(async (args) => {
-			const { projectId, outputPath, openAfterExport, mermaidDiagrams } =
+			const { content, outputPath, themeId, projectName } =
 				exportDocxSchema.parse(args);
 
-			// Get project with theme
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-				include: { theme: true },
-			});
-
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
+			// Get theme
+			let theme = null;
+			if (themeId) {
+				theme = await prisma.theme.findUnique({ where: { id: themeId } });
 			}
 
-			// Get theme (use project theme or default to first built-in theme)
-			let theme = project.theme;
-			if (!theme) {
-				theme = await prisma.theme.findFirst({
-					where: { isBuiltIn: true },
-				});
-				if (!theme) {
-					throw new Error("No theme available");
-				}
-			}
-
-			// Read project content
-			const fileContent = await fileSystem.readFile(project.filePath);
-			const projectData = JSON.parse(fileContent);
-
-			// Get project directory for resolving image paths
-			const projectDir = path.dirname(project.filePath);
-
-			// Generate DOCX
-			const buffer = await generateDocx(
-				projectData.content || "",
+			// Export DOCX
+			const finalPath = await exportDocx(
+				content,
+				outputPath,
 				theme,
-				projectDir,
-				mermaidDiagrams as Record<string, string> | undefined,
+				projectName,
 			);
 
-			// Export to file
-			await exportDocx(buffer, outputPath);
-
-			// Open file after export if requested
-			if (openAfterExport) {
-				await shell.openPath(outputPath);
-			}
-
-			return { success: true, filePath: outputPath };
+			return { path: finalPath };
 		}),
 	);
 
-	// ==================== Theme Preference Channel ====================
+	// ==================== App Data Channel ====================
 
 	/**
-	 * Get current theme preference
+	 * Get app path
 	 */
 	ipcMain.handle(
-		"theme:get",
-		wrapIPCHandler(async () => {
-			const { themeService } = await import("../services/theme-service.js");
-			return themeService.getTheme();
-		}),
-	);
-
-	/**
-	 * Set theme preference
-	 */
-	ipcMain.handle(
-		"theme:set",
+		"app:get-path",
 		wrapIPCHandler(async (args) => {
-			const { themeService } = await import("../services/theme-service.js");
-			const theme = args as unknown;
+			const { path: pathType } = getAppPathSchema.parse(args);
 
-			if (theme !== "light" && theme !== "dark") {
-				throw new Error(`Invalid theme: ${theme}. Must be "light" or "dark".`);
-			}
+			const appPath = appData.getAppPath(pathType);
 
-			themeService.setTheme(theme);
-			return undefined;
+			return { path: appPath };
 		}),
 	);
-
-	// ==================== App Channel ====================
 
 	/**
 	 * Get app version
 	 */
 	ipcMain.handle(
-		"app:version",
+		"app:get-version",
 		wrapIPCHandler(async (args) => {
 			getAppVersionSchema.parse(args);
-			return {
-				version: appData.getAppVersion(),
-				name: appData.getAppName(),
-			};
+
+			const version = appData.getAppVersion();
+
+			return { version };
 		}),
 	);
-
-	/**
-	 * Get app paths
-	 */
-	ipcMain.handle(
-		"app:paths",
-		wrapIPCHandler(async (args) => {
-			getAppPathSchema.parse(args);
-			return {
-				appData: appData.getAppDataPath(),
-				projects: appData.getProjectsPath(),
-				themes: appData.getThemesPath(),
-				fonts: appData.getFontsPath(),
-				...appData.getSystemPaths(),
-			};
-		}),
-	);
-
-	// ============================================================================
-	// COVER CHANNEL
-	// ============================================================================
-
-	/**
-	 * Upload a cover asset (logo or background)
-	 */
-	ipcMain.handle(
-		"cover:upload-asset",
-		wrapIPCHandler(async (args) => {
-			const {
-				projectId,
-				assetType,
-				filePath: sourcePath,
-			} = z
-				.object({
-					projectId: z.string().uuid(),
-					assetType: z.enum(["logo", "background"]),
-					filePath: z.string(),
-				})
-				.parse(args);
-
-			// Get project
-			const project = await prisma.project.findUnique({
-				where: { id: projectId },
-			});
-
-			if (!project) {
-				throw new Error(`Project not found: ${projectId}`);
-			}
-
-			// Validate source file exists
-			if (!(await fileSystem.fileExists(sourcePath))) {
-				throw new Error(`File not found: ${sourcePath}`);
-			}
-
-			// Get file info
-			const stats = await fileSystem.getFileStats(sourcePath);
-			const extension = path.extname(sourcePath).toLowerCase();
-
-			// Validate file type
-			const validExtensions = [".png", ".jpg", ".jpeg", ".svg"];
-			if (!validExtensions.includes(extension)) {
-				throw new Error(
-					`Invalid file type. Allowed: ${validExtensions.join(", ")}`,
-				);
-			}
-
-			// Validate file size (max 10MB)
-			const maxSize = 10 * 1024 * 1024;
-			if (stats.size > maxSize) {
-				throw new Error(
-					`File too large. Maximum size: ${maxSize / 1024 / 1024}MB`,
-				);
-			}
-
-			// Create assets directory for project
-			const projectDir = path.dirname(project.filePath);
-			const assetsDir = path.join(projectDir, "assets", "cover");
-			await fileSystem.createDirectory(assetsDir);
-
-			// Generate unique filename
-			const originalFileName = path.basename(sourcePath);
-			const baseName = path.parse(originalFileName).name;
-			const safeFileName = fileSystem.getSafeFilename(
-				fileSystem.generateUniqueFilename(
-					`${assetType}-${baseName}`,
-					extension,
-				),
-			);
-			const destinationPath = path.join(assetsDir, safeFileName);
-
-			// Copy file
-			const fs = await import("node:fs/promises");
-			await fs.copyFile(sourcePath, destinationPath);
-
-			// Get image dimensions if it's an image
-			let width: number | null = null;
-			let height: number | null = null;
-
-			if ([".png", ".jpg", ".jpeg"].includes(extension)) {
-				try {
-					const fs = await import("node:fs/promises");
-					const buffer = await fs.readFile(destinationPath);
-					const sizeOf = (await import("image-size")).default;
-					const dimensions = sizeOf(buffer);
-					width = dimensions.width ?? null;
-					height = dimensions.height ?? null;
-				} catch (error) {
-					console.warn("Failed to get image dimensions:", error);
-				}
-			}
-
-			// Determine MIME type
-			const mimeTypes: { [key: string]: string } = {
-				".png": "image/png",
-				".jpg": "image/jpeg",
-				".jpeg": "image/jpeg",
-				".svg": "image/svg+xml",
-			};
-			const mimeType = mimeTypes[extension] || "image/png";
-
-			// Delete existing asset of this type for this project
-			await prisma.projectCoverAsset.deleteMany({
-				where: { projectId, assetType },
-			});
-
-			// Create database record
-			const asset = await prisma.projectCoverAsset.create({
-				data: {
-					projectId,
-					assetType,
-					originalFileName,
-					filePath: destinationPath,
-					fileSize: stats.size,
-					mimeType,
-					width,
-					height,
-				},
-			});
-
-			return {
-				id: asset.id,
-				assetType: asset.assetType as "logo" | "background",
-				storedPath: asset.filePath,
-				originalFileName: asset.originalFileName,
-				width: asset.width ?? 0,
-				height: asset.height ?? 0,
-				fileSize: asset.fileSize,
-			};
-		}),
-	);
-
-	/**
-	 * Delete a cover asset
-	 */
-	ipcMain.handle(
-		"cover:delete-asset",
-		wrapIPCHandler(async (args) => {
-			const { projectId, assetType } = z
-				.object({
-					projectId: z.string().uuid(),
-					assetType: z.enum(["logo", "background"]),
-				})
-				.parse(args);
-
-			// Find asset
-			const asset = await prisma.projectCoverAsset.findFirst({
-				where: { projectId, assetType },
-			});
-
-			if (!asset) {
-				return { success: true }; // Already deleted
-			}
-
-			// Delete file if it exists
-			if (await fileSystem.fileExists(asset.filePath)) {
-				await fileSystem.deleteFile(asset.filePath);
-			}
-
-			// Delete database record
-			await prisma.projectCoverAsset.delete({
-				where: { id: asset.id },
-			});
-
-			return { success: true };
-		}),
-	);
-
-	/**
-	 * Get all cover assets for a project
-	 */
-	ipcMain.handle(
-		"cover:get-assets",
-		wrapIPCHandler(async (args) => {
-			const { projectId } = z
-				.object({
-					projectId: z.string().uuid(),
-				})
-				.parse(args);
-
-			const assets = await prisma.projectCoverAsset.findMany({
-				where: { projectId },
-			});
-
-			return {
-				assets: assets.map((asset) => ({
-					id: asset.id,
-					type: asset.assetType as "logo" | "background",
-					filePath: asset.filePath,
-					width: asset.width,
-					height: asset.height,
-				})),
-			};
-		}),
-	);
-
-	/**
-	 * Update cover data (title, subtitle, author)
-	 */
-	ipcMain.handle(
-		"cover:update-data",
-		wrapIPCHandler(async (args) => {
-			const {
-				projectId,
-				hasCoverPage,
-				coverTitle,
-				coverSubtitle,
-				coverAuthor,
-			} = z
-				.object({
-					projectId: z.string().uuid(),
-					hasCoverPage: z.boolean(),
-					coverTitle: z.string().nullable().optional(),
-					coverSubtitle: z.string().nullable().optional(),
-					coverAuthor: z.string().nullable().optional(),
-				})
-				.parse(args);
-
-			// Update project
-			await prisma.project.update({
-				where: { id: projectId },
-				data: {
-					hasCoverPage,
-					coverTitle,
-					coverSubtitle,
-					coverAuthor,
-				},
-			});
-
-			return { success: true };
-		}),
-	);
-
-	/**
-	 * Get cover asset as data URL for preview
-	 */
-	ipcMain.handle(
-		"cover:get-asset-data-url",
-		wrapIPCHandler(async (args) => {
-			const { assetId } = z
-				.object({
-					assetId: z.string().uuid(),
-				})
-				.parse(args);
-
-			// Get asset from database
-			const asset = await prisma.projectCoverAsset.findUnique({
-				where: { id: assetId },
-			});
-
-			if (!asset) {
-				throw new Error(`Asset not found: ${assetId}`);
-			}
-
-			// Check if file exists
-			if (!(await fileSystem.fileExists(asset.filePath))) {
-				throw new Error(`Asset file not found: ${asset.filePath}`);
-			}
-
-			// Read file and convert to base64 data URL
-			const fs = await import("node:fs/promises");
-			const buffer = await fs.readFile(asset.filePath);
-			const base64 = buffer.toString("base64");
-			const dataUrl = `data:${asset.mimeType};base64,${base64}`;
-
-			return { dataUrl };
-		}),
-	);
-
-	// ============================================================================
-	// FONTS CHANNEL
-	// ============================================================================
-
-	/**
-	 * Download a font from Google Fonts
-	 */
-	ipcMain.handle(
-		"fonts:download",
-		wrapIPCHandler(async (args) => {
-			const { family } = args as { family: string; variants?: string[] };
-
-			console.log(`📥 Downloading font: ${family}`);
-
-			try {
-				// For now, just return success if the font is one we already have
-				// In a real implementation, you would download from Google Fonts API
-				const supportedFonts = [
-					"Inter",
-					"Source Serif 4",
-					"JetBrains Mono",
-					"Roboto",
-					"Open Sans",
-					"Lato",
-					"Montserrat",
-					"Poppins",
-					"Merriweather",
-					"Playfair Display",
-					"Lora",
-					"PT Serif",
-				];
-
-				if (supportedFonts.includes(family)) {
-					console.log(`✅ Font ${family} is available`);
-					return { success: true, family };
-				}
-
-				console.log(`⚠️ Font ${family} not yet supported`);
-				return {
-					success: true,
-					family,
-					message: "Font will be mapped to closest match",
-				};
-			} catch (error) {
-				console.error(`❌ Failed to download font ${family}:`, error);
-				throw new Error(`Failed to download font: ${family}`);
-			}
-		}),
-	);
-
-	/**
-	 * Search for fonts
-	 */
-	ipcMain.handle(
-		"fonts:search",
-		wrapIPCHandler(async (args) => {
-			const { query, limit = 50 } = args as { query: string; limit?: number };
-
-			console.log(`🔍 Searching fonts: ${query}`);
-
-			// For now, return a curated list of Google Fonts
-			const fonts = [
-				{
-					family: "Inter",
-					category: "sans-serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Roboto",
-					category: "sans-serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Open Sans",
-					category: "sans-serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Lato",
-					category: "sans-serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Montserrat",
-					category: "sans-serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Source Serif 4",
-					category: "serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Merriweather",
-					category: "serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Playfair Display",
-					category: "serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Lora",
-					category: "serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "PT Serif",
-					category: "serif" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "JetBrains Mono",
-					category: "monospace" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-				{
-					family: "Source Code Pro",
-					category: "monospace" as const,
-					variants: ["regular", "italic", "600", "600italic"],
-					subsets: ["latin"],
-				},
-			];
-
-			const filtered = fonts
-				.filter((f) => f.family.toLowerCase().includes(query.toLowerCase()))
-				.slice(0, limit);
-
-			return { fonts: filtered };
-		}),
-	);
-
-	// ============================================================================
-	// WINDOW CHANNEL
-	// ============================================================================
-
-	/**
-	 * Minimize window
-	 */
-	ipcMain.handle("window:minimize", () => {
-		const mainWindow = getMainWindow();
-		if (mainWindow && !mainWindow.isDestroyed()) {
-			mainWindow.minimize();
-		}
-	});
 
 	/**
 	 * Maximize or restore window
 	 */
-	ipcMain.handle("window:maximize", () => {
-		const mainWindow = getMainWindow();
-		if (mainWindow && !mainWindow.isDestroyed()) {
-			if (mainWindow.isMaximized()) {
-				mainWindow.unmaximize();
-			} else {
-				mainWindow.maximize();
+	ipcMain.handle(
+		"window:toggle-maximize",
+		wrapIPCHandler(async () => {
+			const mainWindow = getMainWindow();
+			if (mainWindow) {
+				const isMaximized = isMainWindowMaximized();
+				if (isMaximized) {
+					mainWindow.unmaximize();
+				} else {
+					mainWindow.maximize();
+				}
 			}
-		}
-	});
+
+			return { success: true };
+		}),
+	);
 
 	/**
-	 * Close window
+	 * Open URL in default browser
 	 */
-	ipcMain.handle("window:close", () => {
-		const mainWindow = getMainWindow();
-		if (mainWindow && !mainWindow.isDestroyed()) {
-			mainWindow.close();
-		}
-	});
+	ipcMain.handle(
+		"shell:open-external",
+		wrapIPCHandler(async (args) => {
+			const { url } = z.object({ url: z.string().url() }).parse(args);
 
-	/**
-	 * Check if window is maximized
-	 */
-	ipcMain.handle("window:is-maximized", () => {
-		return isMainWindowMaximized();
-	});
+			await shell.openExternal(url);
+
+			return { success: true };
+		}),
+	);
 }

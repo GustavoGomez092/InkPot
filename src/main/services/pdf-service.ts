@@ -17,6 +17,12 @@ export interface CoverData {
 	backgroundPath?: string | null;
 }
 
+export interface TOCConfiguration {
+	enabled: boolean;
+	minLevel: number; // 1-6
+	maxLevel: number; // 1-6
+}
+
 /**
  * Generate PDF buffer from markdown content
  */
@@ -26,6 +32,7 @@ export async function generatePDF(
 	projectDir?: string,
 	coverData?: CoverData,
 	mermaidDiagrams?: Record<string, string>,
+	tocConfig?: TOCConfiguration,
 ): Promise<Buffer> {
 	try {
 		console.log("📄 Generating PDF with theme:", theme.name);
@@ -45,6 +52,7 @@ export async function generatePDF(
 			projectDir,
 			coverData,
 			mermaidDiagrams,
+			tocConfig,
 		);
 
 		// Render to buffer
@@ -91,12 +99,13 @@ export async function previewPDF(
 	projectDir?: string,
 	coverData?: CoverData,
 	mermaidDiagrams?: Record<string, string>,
+	tocConfig?: TOCConfiguration,
 ): Promise<string> {
 	try {
 		console.log("👁️  Generating PDF preview with theme:", theme.name);
 
 		// Generate PDF buffer
-		const buffer = await generatePDF(content, theme, projectDir, coverData, mermaidDiagrams);
+		const buffer = await generatePDF(content, theme, projectDir, coverData, mermaidDiagrams, tocConfig);
 
 		// Convert to base64 data URL
 		const base64 = buffer.toString("base64");

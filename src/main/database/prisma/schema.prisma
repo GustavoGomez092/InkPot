@@ -28,6 +28,11 @@ model Project {
   coverDate       String?
   coverTemplateId String?
 
+  // Table of Contents configuration
+  hasToc       Boolean @default(true) // Enable/disable TOC generation
+  tocMinLevel  Int     @default(1) // Minimum heading level to include (1-6)
+  tocMaxLevel  Int     @default(3) // Maximum heading level to include (1-6)
+
   // Metadata
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -78,6 +83,7 @@ model Theme {
   textColor       String @default("#000000")
   headingColor    String @default("#000000")
   linkColor       String @default("#0066CC")
+  linkUnderline   Boolean @default(true) // Underline links for accessibility
   codeBackground  String @default("#F5F5F5")
 
   // Metadata

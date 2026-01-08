@@ -5,6 +5,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { generateUniqueAnchorId } from "./utils/anchor-utils";
 
 export interface MarkdownElement {
 	type:
@@ -20,6 +21,7 @@ export interface MarkdownElement {
 		| "table"
 		| "mermaidDiagram";
 	level?: number; // For headings (1-6)
+	anchorId?: string; // For headings - unique anchor identifier for internal linking
 	ordered?: boolean; // For lists
 	items?: string[]; // For lists
 	indentLevels?: number[]; // For lists - tracks nesting level of each item (0 = top level, 1 = nested once, etc.)
@@ -41,6 +43,7 @@ export interface InlineElement {
 	type: "text" | "bold" | "italic" | "code" | "link" | "strike" | "lineBreak";
 	content: string;
 	href?: string; // For links
+	isInternal?: boolean; // For links - true if href starts with # (internal document reference)
 }
 
 /**
@@ -321,6 +324,7 @@ export function parseMarkdown(
 
 	const lines = markdown.split("\n");
 	const elements: MarkdownElement[] = [];
+	const usedIds = new Set<string>(); // Track used anchor IDs for duplicate handling
 	let i = 0;
 
 	while (i < lines.length) {
@@ -442,8 +446,11 @@ export function parseMarkdown(
 				headingText = alignMarkerMatch[3];
 			}
 
+			// Generate unique anchor ID for this heading
+			const anchorId = generateUniqueAnchorId(headingText, usedIds);
+
 			console.log(
-				`📝 Heading H${headingMatch[1].length}: "${headingText}"${textAlign ? ` [${textAlign}]` : ""}`,
+				`📝 Heading H${headingMatch[1].length}: "${headingText}"${textAlign ? ` [${textAlign}]` : ""} (anchor: ${anchorId})`,
 			);
 			elements.push({
 				type: "heading",
@@ -451,6 +458,7 @@ export function parseMarkdown(
 				content: headingText,
 				inline: parseInlineFormatting(headingText),
 				textAlign,
+				anchorId,
 			});
 			i++;
 			continue;
@@ -789,6 +797,7 @@ export function parseInlineFormatting(text: string): InlineElement[] {
 		end: number;
 		content: string;
 		href?: string;
+		isInternal?: boolean;
 	}> = [];
 
 	for (const pattern of patterns) {
@@ -797,12 +806,15 @@ export function parseInlineFormatting(text: string): InlineElement[] {
 		const allMatches = Array.from(text.matchAll(pattern.regex));
 		for (const match of allMatches) {
 			if (pattern.type === "link") {
+				const href = match[2];
+				const isInternal = href.startsWith("#");
 				matches.push({
 					type: pattern.type,
 					start: match.index ?? 0,
 					end: (match.index ?? 0) + match[0].length,
 					content: match[1],
-					href: match[2],
+					href: href,
+					isInternal: isInternal,
 				});
 			} else {
 				matches.push({
@@ -852,6 +864,7 @@ export function parseInlineFormatting(text: string): InlineElement[] {
 			type: match.type,
 			content: match.content,
 			href: match.href,
+			isInternal: match.isInternal,
 		});
 
 		lastEnd = match.end;

@@ -8,7 +8,9 @@ import type { ThemeData } from '@shared/types/ipc-contracts.js';
 import React from 'react';
 import { CoverPage } from './components/CoverPage.js';
 import { MarkdownElements } from './components/MarkdownElements.js';
+import { TableOfContents } from './components/TableOfContents.js';
 import { type MarkdownElement, parseMarkdown } from './markdown-parser.js';
+import { extractTableOfContents, filterTOCByLevel } from './utils/toc-utils.js';
 
 // Register emoji support for PDFs using React-PDF's built-in emoji source
 // This uses Apple emoji images from a CDN for consistent emoji rendering across all platforms
@@ -82,6 +84,12 @@ export interface CoverData {
   author?: string | null;
   logoPath?: string | null;
   backgroundPath?: string | null;
+}
+
+export interface TOCConfiguration {
+  enabled: boolean;
+  minLevel: number; // 1-6
+  maxLevel: number; // 1-6
 }
 
 /**
@@ -188,6 +196,22 @@ async function applyMermaidSVGs(
 }
 
 /**
+ * Collect all heading anchor IDs from parsed markdown elements
+ * Used to resolve internal links to headings
+ */
+function collectHeadingAnchors(elements: MarkdownElement[]): Set<string> {
+  const anchorIds = new Set<string>();
+
+  for (const element of elements) {
+    if (element.type === 'heading' && element.anchorId) {
+      anchorIds.add(element.anchorId);
+    }
+  }
+
+  return anchorIds;
+}
+
+/**
  * Generate PDF document element from markdown content with theme styling
  *
  * Parses markdown content into structured elements and creates a React-PDF Document
@@ -199,6 +223,7 @@ async function applyMermaidSVGs(
  * @param projectDir - Optional project directory for resolving relative image paths
  * @param coverData - Optional cover page configuration
  * @param mermaidDiagrams - Optional map of diagram hash to PNG file paths
+ * @param tocConfig - Optional table of contents configuration
  * @returns Promise resolving to a React-PDF Document element
  */
 export async function createPDFDocument(
@@ -206,7 +231,8 @@ export async function createPDFDocument(
   theme: ThemeData,
   projectDir?: string,
   coverData?: CoverData,
-  mermaidDiagrams?: Record<string, string>
+  mermaidDiagrams?: Record<string, string>,
+  tocConfig?: TOCConfiguration
 ) {
   console.log('📄 PDF Document - Content contains mermaid:', content.includes('```mermaid'));
   console.log('📄 PDF Document - Content (first 500 chars):', content.substring(0, 500));
@@ -221,6 +247,18 @@ export async function createPDFDocument(
 
   // Apply pre-rendered Mermaid SVGs (converts file paths to data URLs)
   elements = await applyMermaidSVGs(elements, mermaidDiagrams);
+
+  // Collect all heading anchor IDs for internal link resolution
+  const validAnchorIds = collectHeadingAnchors(elements);
+
+  // Extract TOC entries if TOC is enabled
+  let tocEntries = extractTableOfContents(elements);
+
+  // Filter TOC entries by configured heading levels
+  if (tocConfig && tocConfig.enabled) {
+    tocEntries = filterTOCByLevel(tocEntries, tocConfig.minLevel, tocConfig.maxLevel);
+    console.log('📑 TOC enabled with', tocEntries.length, 'entries (levels', tocConfig.minLevel, '-', tocConfig.maxLevel, ')');
+  }
 
   // Split elements by page breaks
   const pages: (typeof elements)[] = [];
@@ -273,6 +311,36 @@ export async function createPDFDocument(
     );
   }
 
+  // Add TOC page if enabled and has entries
+  if (tocConfig?.enabled && tocEntries.length > 0) {
+    allPages.push(
+      React.createElement(
+        Page,
+        {
+          key: 'toc-page',
+          size: {
+            width: safeTheme.pageWidth * 72, // Convert inches to points
+            height: safeTheme.pageHeight * 72,
+          },
+          style: {
+            backgroundColor: safeTheme.backgroundColor,
+            paddingTop: safeTheme.marginTop * 72,
+            paddingBottom: safeTheme.marginBottom * 72,
+            paddingLeft: safeTheme.marginLeft * 72,
+            paddingRight: safeTheme.marginRight * 72,
+            fontFamily: safeTheme.bodyFont,
+            fontSize: safeTheme.bodySize,
+            color: safeTheme.textColor,
+          },
+        },
+        React.createElement(TableOfContents, {
+          entries: tocEntries,
+          theme: safeTheme,
+        })
+      )
+    );
+  }
+
   // Add content pages
   allPages.push(
     ...pages.map((pageElements, idx) => {
@@ -301,6 +369,7 @@ export async function createPDFDocument(
           ? React.createElement(MarkdownElements, {
               elements: pageElements,
               theme: safeTheme,
+              validAnchorIds,
             })
           : React.createElement(EmptyPage)
       );

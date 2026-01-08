@@ -44,6 +44,13 @@ export const saveProjectSchema = z.object({
 			date: z.string().nullable().optional(),
 		})
 		.optional(),
+	toc: z
+		.object({
+			enabled: z.boolean().optional(),
+			minLevel: z.number().int().min(1).max(6).optional(),
+			maxLevel: z.number().int().min(1).max(6).optional(),
+		})
+		.optional(),
 });
 
 export const deleteProjectSchema = z.object({
@@ -86,6 +93,7 @@ export const createThemeSchema = z.object({
 	textColor: hexColorSchema,
 	headingColor: hexColorSchema,
 	linkColor: hexColorSchema,
+	linkUnderline: z.boolean().default(true),
 	codeBackground: hexColorSchema,
 });
 
@@ -131,12 +139,26 @@ export const exportPDFSchema = z.object({
 	outputPath: filePathSchema,
 	openAfterExport: z.boolean().optional(),
 	mermaidDiagrams: z.record(z.string(), z.string()).optional(), // Map of diagram code -> file path
+	tocConfig: z
+		.object({
+			enabled: z.boolean(),
+			minLevel: z.number().int().min(1).max(6),
+			maxLevel: z.number().int().min(1).max(6),
+		})
+		.optional(),
 });
 
 export const previewPDFSchema = z.object({
 	projectId: uuidSchema,
 	content: z.string().optional(), // Optional live content for real-time preview
 	mermaidDiagrams: z.record(z.string(), z.string()).optional(), // Map of diagram code -> file path
+	tocConfig: z
+		.object({
+			enabled: z.boolean(),
+			minLevel: z.number().int().min(1).max(6),
+			maxLevel: z.number().int().min(1).max(6),
+		})
+		.optional(),
 });
 
 // ============================================================================
