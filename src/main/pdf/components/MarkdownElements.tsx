@@ -84,6 +84,13 @@ export const MarkdownElements: React.FC<MarkdownElementsProps> = ({ elements, th
 
 /**
  * Get the bold variant of a font family for headings
+ *
+ * Maps React-PDF built-in font families to their bold variants.
+ * This is necessary because React-PDF requires explicit bold font names
+ * rather than using fontWeight: 'bold' for these standard PDF fonts.
+ *
+ * @param fontFamily - The base font family name
+ * @returns The bold variant font family name
  */
 function getBoldFont(fontFamily: string): string {
   if (fontFamily === 'Helvetica') return 'Helvetica-Bold';
@@ -440,29 +447,42 @@ const TableElement: React.FC<{
       {/* Header Row */}
       {headers.length > 0 && (
         <View style={headerRowStyle}>
-          {headers.map((header, idx) => (
-            <Text
-              key={idx}
-              style={
-                idx === headers.length - 1
-                  ? { ...headerCellStyle, borderRight: 'none' }
-                  : headerCellStyle
-              }
-            >
-              {header}
-            </Text>
-          ))}
+          {headers.map((header, idx) => {
+            // Parse inline formatting for header cells to support emojis and formatting
+            const inlineElements = parseInlineFormatting(header);
+            return (
+              <Text
+                key={idx}
+                style={
+                  idx === headers.length - 1
+                    ? { ...headerCellStyle, borderRight: 'none' }
+                    : headerCellStyle
+                }
+              >
+                <InlineText elements={inlineElements} theme={theme} style={headerCellStyle} />
+              </Text>
+            );
+          })}
         </View>
       )}
 
       {/* Data Rows */}
       {rows.map((row, rowIdx) => (
         <View key={rowIdx} style={dataRowStyle}>
-          {row.map((cell, cellIdx) => (
-            <Text key={cellIdx} style={cellIdx === row.length - 1 ? lastCellStyle : cellStyle}>
-              {cell}
-            </Text>
-          ))}
+          {row.map((cell, cellIdx) => {
+            // Parse inline formatting for data cells to support emojis and formatting
+            const inlineElements = parseInlineFormatting(cell);
+            const isLastCell = cellIdx === row.length - 1;
+            return (
+              <Text key={cellIdx} style={isLastCell ? lastCellStyle : cellStyle}>
+                <InlineText
+                  elements={inlineElements}
+                  theme={theme}
+                  style={isLastCell ? lastCellStyle : cellStyle}
+                />
+              </Text>
+            );
+          })}
         </View>
       ))}
     </View>

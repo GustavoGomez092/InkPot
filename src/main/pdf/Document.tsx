@@ -12,9 +12,35 @@ import { type MarkdownElement, parseMarkdown } from './markdown-parser.js';
 
 // Register emoji support for PDFs using React-PDF's built-in emoji source
 // This uses Apple emoji images from a CDN for consistent emoji rendering across all platforms
+//
+// CONFIGURATION NOTES:
+// - format: 'png' is the only supported format (SVG not supported by PDF spec)
+// - withVariationSelectors: true enables proper handling of emoji variation selectors (U+FE0F)
+//   This is critical for Apple emoji source to correctly resolve emoji like ❤️, ✅, ⭐
+// - cdn.jsdelivr.net is used for reliability and performance (cdnjs.cloudflare.com is also viable)
+// - 64x64 resolution provides good quality while keeping file sizes reasonable
+//
+// PLATFORM CONSIDERATIONS:
+// - Requires internet connection during PDF generation to fetch emoji images
+// - Emoji appearance is consistent across macOS, Windows, and Linux (using Apple emoji set)
+// - Works in both development and production builds
+// - Compatible with Electron's PDF generation in sandboxed environments
+//
+// LICENSING NOTE:
+// - Apple emoji images are NOT licensed for commercial redistribution
+// - For commercial applications, consider switching to:
+//   * Twemoji: https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/72x72/ (CC-BY 4.0)
+//   * Noto Emoji: https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/png/128/ (Apache 2.0)
+// - Current configuration is acceptable for open-source/personal use
+//
+// FALLBACK OPTIONS:
+// - No built-in fallback mechanism if CDN is unavailable
+// - Emojis will fail to render if network is offline during PDF generation
+// - For offline support, consider bundling emoji images locally (~50-100MB)
 Font.registerEmojiSource({
   format: 'png',
   url: 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/',
+  withVariationSelectors: true, // Critical for proper emoji rendering with Apple emoji source
 });
 
 // Register font fallbacks for PDF generation
@@ -37,7 +63,13 @@ const fontFamilyMap: Record<string, string> = {
 
 /**
  * Get a safe font family name for PDF rendering
- * Maps custom font names to React-PDF built-in fonts
+ *
+ * Maps custom font names to React-PDF built-in fonts to avoid font loading errors.
+ * React-PDF has built-in support for: Helvetica, Times-Roman, Courier, and their variants.
+ * Custom fonts would require registration and may cause network fetch errors.
+ *
+ * @param fontFamily - The requested font family name
+ * @returns A React-PDF built-in font family name (defaults to 'Helvetica')
  */
 function getSafeFontFamily(fontFamily: string): string {
   return fontFamilyMap[fontFamily] || 'Helvetica';
@@ -54,6 +86,12 @@ export interface CoverData {
 
 /**
  * Simple hash function for diagram codes (matches renderer implementation)
+ *
+ * Generates a consistent hash for Mermaid diagram code to match pre-rendered
+ * diagram files. Uses a simple DJB2-style hash algorithm converted to base36.
+ *
+ * @param code - The Mermaid diagram code to hash
+ * @returns A hash string in the format "diagram-{hash}"
  */
 function hashDiagramCode(code: string): string {
   let hash = 0;
@@ -67,9 +105,14 @@ function hashDiagramCode(code: string): string {
 
 /**
  * Apply pre-rendered diagram file paths to mermaid diagram elements
- * Converts file paths to data URLs to avoid path encoding issues
- * @param elements Parsed markdown elements
- * @param mermaidDiagrams Map of diagram hash -> file path to PNG image
+ *
+ * Converts file paths to data URLs to avoid path encoding issues in React-PDF.
+ * Reads PNG files from disk and embeds them as base64 data URLs for reliable
+ * PDF rendering across all platforms.
+ *
+ * @param elements - Parsed markdown elements
+ * @param mermaidDiagrams - Map of diagram hash to file path for PNG image
+ * @returns Promise resolving to elements with embedded diagram data URLs
  */
 async function applyMermaidSVGs(
   elements: MarkdownElement[],
@@ -146,6 +189,17 @@ async function applyMermaidSVGs(
 
 /**
  * Generate PDF document element from markdown content with theme styling
+ *
+ * Parses markdown content into structured elements and creates a React-PDF Document
+ * with proper theming, page breaks, cover page support, and embedded Mermaid diagrams.
+ * All emojis are automatically detected and rendered as images via Font.registerEmojiSource().
+ *
+ * @param content - Markdown content to convert to PDF
+ * @param theme - Theme configuration for styling (fonts, colors, spacing)
+ * @param projectDir - Optional project directory for resolving relative image paths
+ * @param coverData - Optional cover page configuration
+ * @param mermaidDiagrams - Optional map of diagram hash to PNG file paths
+ * @returns Promise resolving to a React-PDF Document element
  */
 export async function createPDFDocument(
   content: string,
