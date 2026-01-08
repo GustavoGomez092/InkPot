@@ -109,5 +109,5 @@ chrome-profiler-events*.json
 # yarn.lock
 # pnpm-lock.yaml
 
-# auto-claude
+# Auto Claude data directory
 .auto-claude/

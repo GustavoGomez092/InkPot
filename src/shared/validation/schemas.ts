@@ -140,6 +140,17 @@ export const previewPDFSchema = z.object({
 });
 
 // ============================================================================
+// DOCX CHANNEL SCHEMAS
+// ============================================================================
+
+export const exportDocxSchema = z.object({
+	projectId: uuidSchema,
+	outputPath: filePathSchema,
+	openAfterExport: z.boolean().optional(),
+	mermaidDiagrams: z.record(z.string(), z.string()).optional(), // Map of diagram code -> file path
+});
+
+// ============================================================================
 // COVER CHANNEL SCHEMAS
 // ============================================================================
 
@@ -283,6 +294,8 @@ export type IsFontCachedInput = z.infer<typeof isFontCachedSchema>;
 export type SaveMermaidImageInput = z.infer<typeof saveMermaidImageSchema>;
 export type ExportPDFInput = z.infer<typeof exportPDFSchema>;
 export type PreviewPDFInput = z.infer<typeof previewPDFSchema>;
+
+export type ExportDocxInput = z.infer<typeof exportDocxSchema>;
 
 export type ListCoverTemplatesInput = z.infer<typeof listCoverTemplatesSchema>;
 export type GetCoverTemplateInput = z.infer<typeof getCoverTemplateSchema>;

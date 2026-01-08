@@ -524,6 +524,7 @@ function EditorView() {
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'docx'>('pdf');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -1150,7 +1151,7 @@ function EditorView() {
     };
   }, []);
 
-  // PDF Export function
+  // Export function (PDF or DOCX)
   const handleExport = async () => {
     if (isExporting || !contentRef.current) return;
 
@@ -1166,34 +1167,56 @@ function EditorView() {
 
       const api = window.electronAPI;
 
+      // Determine file extension and filter based on format
+      const fileExtension = exportFormat === 'pdf' ? 'pdf' : 'docx';
+      const filterName = exportFormat === 'pdf' ? 'PDF Files' : 'Word Documents';
+      const formatLabel = exportFormat === 'pdf' ? 'PDF' : 'Word';
+
       // Show save dialog
       const saveResult = await api.file.saveDialog({
-        title: 'Export PDF',
-        defaultPath: `${projectName}.pdf`,
-        filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+        title: `Export ${formatLabel}`,
+        defaultPath: `${projectName}.${fileExtension}`,
+        filters: [{ name: filterName, extensions: [fileExtension] }],
       });
 
       if (saveResult.success && saveResult.data.filePath) {
         // Pre-render any Mermaid diagrams
         const mermaidDiagrams = await renderMermaidDiagrams(contentRef.current);
 
-        // Export PDF
-        const exportResult = await api.pdf.export({
-          projectId,
-          outputPath: saveResult.data.filePath,
-          openAfterExport: true,
-          mermaidDiagrams: Object.keys(mermaidDiagrams).length > 0 ? mermaidDiagrams : undefined,
-        });
+        if (exportFormat === 'pdf') {
+          // Export PDF
+          const exportResult = await api.pdf.export({
+            projectId,
+            outputPath: saveResult.data.filePath,
+            openAfterExport: true,
+            mermaidDiagrams: Object.keys(mermaidDiagrams).length > 0 ? mermaidDiagrams : undefined,
+          });
 
-        if (exportResult.success) {
-          alert(`PDF exported successfully to ${exportResult.data.filePath}`);
+          if (exportResult.success) {
+            alert(`PDF exported successfully to ${exportResult.data.filePath}`);
+          } else {
+            alert('Failed to export PDF');
+          }
         } else {
-          alert('Failed to export PDF');
+          // Export DOCX
+          const exportResult = await api.docx.export({
+            projectId,
+            outputPath: saveResult.data.filePath,
+            openAfterExport: true,
+            mermaidDiagrams: Object.keys(mermaidDiagrams).length > 0 ? mermaidDiagrams : undefined,
+          });
+
+          if (exportResult.success) {
+            alert(`Word document exported successfully to ${exportResult.data.filePath}`);
+          } else {
+            alert('Failed to export Word document');
+          }
         }
       }
     } catch (error) {
-      console.error('Failed to export PDF:', error);
-      alert(`Failed to export PDF: ${error instanceof Error ? error.message : String(error)}`);
+      const formatLabel = exportFormat === 'pdf' ? 'PDF' : 'Word document';
+      console.error(`Failed to export ${formatLabel}:`, error);
+      alert(`Failed to export ${formatLabel}: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsExporting(false);
     }
@@ -1301,8 +1324,17 @@ function EditorView() {
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground">Last saved: {formatLastSaved()}</span>
+            <select
+              className="px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'docx')}
+              disabled={isExporting}
+            >
+              <option value="pdf">PDF</option>
+              <option value="docx">Word (.docx)</option>
+            </select>
             <Button size="sm" onClick={handleExport} disabled={isExporting || !content}>
-              {isExporting ? 'Exporting...' : 'Export PDF'}
+              {isExporting ? 'Exporting...' : `Export ${exportFormat === 'pdf' ? 'PDF' : 'Word'}`}
             </Button>
           </div>
         </div>
