@@ -647,7 +647,7 @@ export function registerIPCHandlers(): void {
 	);
 
 	/**
-	 * Read file
+	 * Read file content
 	 */
 	ipcMain.handle(
 		"file:read",
@@ -661,7 +661,7 @@ export function registerIPCHandlers(): void {
 	);
 
 	/**
-	 * Write file
+	 * Write file content
 	 */
 	ipcMain.handle(
 		"file:write",
@@ -702,72 +702,35 @@ export function registerIPCHandlers(): void {
 		}),
 	);
 
-	/**
-	 * Get app path
-	 */
-	ipcMain.handle(
-		"app:get-path",
-		wrapIPCHandler(async (args) => {
-			const { name } = getAppPathSchema.parse(args);
-
-			const appPath = appData.getAppPath(name);
-
-			return { path: appPath };
-		}),
-	);
-
-	/**
-	 * Get app version
-	 */
-	ipcMain.handle(
-		"app:get-version",
-		wrapIPCHandler(async (args) => {
-			getAppVersionSchema.parse(args);
-
-			const version = appData.getAppVersion();
-
-			return { version };
-		}),
-	);
-
 	// ==================== PDF Channel ====================
 
 	/**
-	 * Generate PDF for preview
+	 * Preview PDF generation
 	 */
 	ipcMain.handle(
 		"pdf:preview",
 		wrapIPCHandler(async (args) => {
-			const { projectId, content, themeId, coverPage, toc } =
-				previewPDFSchema.parse(args);
+			const { id, content } = previewPDFSchema.parse(args);
 
-			const theme = themeId
-				? await prisma.theme.findUnique({
-						where: { id: themeId },
-				  })
-				: null;
-
-			const pdf = await generatePDF(content, {
-				theme: theme ?? undefined,
-				coverPage: coverPage ?? undefined,
-				toc: toc ?? undefined,
+			// Get project for theme data
+			const project = await prisma.project.findUnique({
+				where: { id },
+				include: { theme: true },
 			});
 
-			return { pdf: pdf.toString("base64") };
-		}),
-	);
+			if (!project) {
+				throw new Error(`Project not found: ${id}`);
+			}
 
-	/**
-	 * Calculate page breaks
-	 */
-	ipcMain.handle(
-		"pdf:calculate-page-breaks",
-		wrapIPCHandler(async (args) => {
-			const { content } = z.object({ content: z.string() }).parse(args);
+			// Generate PDF
+			const pdfBuffer = await generatePDF(content, project, {
+				preview: true,
+			});
 
-			const pageBreaks = calculatePageBreaks(content);
-
-			return { pageBreaks };
+			return {
+				success: true,
+				size: pdfBuffer.length,
+			};
 		}),
 	);
 
@@ -777,79 +740,47 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"pdf:export",
 		wrapIPCHandler(async (args) => {
-			const { projectId, content, filePath, themeId, coverPage, toc } =
-				exportPDFSchema.parse(args);
+			const { id, content, filePath } = exportPDFSchema.parse(args);
 
-			const theme = themeId
-				? await prisma.theme.findUnique({
-						where: { id: themeId },
-				  })
-				: null;
-
-			const pdf = await generatePDF(content, {
-				theme: theme ?? undefined,
-				coverPage: coverPage ?? undefined,
-				toc: toc ?? undefined,
+			// Get project for theme data
+			const project = await prisma.project.findUnique({
+				where: { id },
+				include: { theme: true },
 			});
 
-			await fileSystem.writeFile(filePath, pdf);
+			if (!project) {
+				throw new Error(`Project not found: ${id}`);
+			}
 
-			// Open the PDF file in the default viewer
-			shell.openPath(filePath);
+			// Generate PDF
+			const pdfBuffer = await generatePDF(content, project);
+
+			// Export PDF
+			await exportPDF(pdfBuffer, filePath);
 
 			return { success: true };
 		}),
 	);
 
 	/**
-	 * Save mermaid image
+	 * Calculate page breaks for PDF
 	 */
 	ipcMain.handle(
-		"mermaid:save-image",
+		"pdf:calculate-page-breaks",
 		wrapIPCHandler(async (args) => {
-			const { content, filePath, width, height } =
-				saveMermaidImageSchema.parse(args);
+			const { content } = z
+				.object({
+					content: z.string(),
+				})
+				.parse(args);
 
-			// This would require a mermaid rendering service
-			// For now, we'll just create a placeholder
-			await fileSystem.writeFile(filePath, content);
+			const pageBreaks = await calculatePageBreaks(content);
 
-			return { success: true };
+			return { pageBreaks };
 		}),
 	);
 
 	// ==================== DOCX Channel ====================
-
-	/**
-	 * Generate DOCX for preview
-	 */
-	ipcMain.handle(
-		"docx:generate",
-		wrapIPCHandler(async (args) => {
-			const { content, themeId, coverPage, toc } = z
-				.object({
-					content: z.string(),
-					themeId: z.string().optional(),
-					coverPage: z.any().optional(),
-					toc: z.any().optional(),
-				})
-				.parse(args);
-
-			const theme = themeId
-				? await prisma.theme.findUnique({
-						where: { id: themeId },
-				  })
-				: null;
-
-			const docx = await generateDocx(content, {
-				theme: theme ?? undefined,
-				coverPage: coverPage ?? undefined,
-				toc: toc ?? undefined,
-			});
-
-			return { docx: docx.toString("base64") };
-		}),
-	);
 
 	/**
 	 * Export DOCX
@@ -857,59 +788,90 @@ export function registerIPCHandlers(): void {
 	ipcMain.handle(
 		"docx:export",
 		wrapIPCHandler(async (args) => {
-			const { content, filePath, themeId, coverPage, toc } =
-				exportDocxSchema.parse(args);
+			const { id, content, filePath } = exportDocxSchema.parse(args);
 
-			const theme = themeId
-				? await prisma.theme.findUnique({
-						where: { id: themeId },
-				  })
-				: null;
-
-			const docx = await generateDocx(content, {
-				theme: theme ?? undefined,
-				coverPage: coverPage ?? undefined,
-				toc: toc ?? undefined,
+			// Get project for theme data
+			const project = await prisma.project.findUnique({
+				where: { id },
+				include: { theme: true },
 			});
 
-			await fileSystem.writeFile(filePath, docx);
+			if (!project) {
+				throw new Error(`Project not found: ${id}`);
+			}
+
+			// Generate DOCX
+			const docxBuffer = await generateDocx(content, project);
+
+			// Export DOCX
+			await exportDocx(docxBuffer, filePath);
 
 			return { success: true };
 		}),
 	);
 
-	// ==================== Window Channel ====================
+	// ==================== Mermaid Channel ====================
 
 	/**
-	 * Check if main window is maximized
+	 * Save Mermaid image
 	 */
 	ipcMain.handle(
-		"window:is-maximized",
+		"mermaid:save-image",
 		wrapIPCHandler(async (args) => {
-			z.object({}).parse(args);
+			const { svg, filePath } = saveMermaidImageSchema.parse(args);
 
-			const maximized = isMainWindowMaximized();
+			await fileSystem.writeFile(filePath, svg);
 
-			return { maximized };
+			return { success: true };
+		}),
+	);
+
+	// ==================== App Channel ====================
+
+	/**
+	 * Get app version
+	 */
+	ipcMain.handle(
+		"app:version",
+		wrapIPCHandler(async (args) => {
+			getAppVersionSchema.parse(args);
+
+			return {
+				version: process.env.APP_VERSION ?? "0.0.0",
+			};
 		}),
 	);
 
 	/**
-	 * Get main window bounds
+	 * Get app paths
 	 */
 	ipcMain.handle(
-		"window:get-bounds",
+		"app:paths",
+		wrapIPCHandler(async (args) => {
+			getAppPathSchema.parse(args);
+
+			return {
+				appData: appData.getAppDataPath(),
+				projects: appData.getProjectsPath(),
+				themes: appData.getThemesPath(),
+			};
+		}),
+	);
+
+	/**
+	 * Get main window state
+	 */
+	ipcMain.handle(
+		"app:window-state",
 		wrapIPCHandler(async (args) => {
 			z.object({}).parse(args);
 
 			const mainWindow = getMainWindow();
-			if (!mainWindow) {
-				throw new Error("Main window not found");
-			}
 
-			const bounds = mainWindow.getBounds();
-
-			return { bounds };
+			return {
+				isMaximized: isMainWindowMaximized(),
+				bounds: mainWindow?.getBounds(),
+			};
 		}),
 	);
 }
